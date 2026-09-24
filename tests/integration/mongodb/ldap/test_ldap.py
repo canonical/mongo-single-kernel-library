@@ -88,7 +88,7 @@ def test_build_and_deploy(
 
     # Create the roles on MongoDB
     create_mongodb_user_roles(
-        juju_k8s_model, substrate, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+        juju, substrate, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 
 

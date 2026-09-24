@@ -570,9 +570,22 @@ def juju(architecture: str) -> Generator[jubilant.Juju, Any, None]:
 
 
 @pytest.fixture(scope="module")
-def lxd_controller(lxd_cloud: str, juju: jubilant.Juju, substrate: Substrate):
+def lxd_cloud(juju: jubilant.Juju, substrate: Substrate):
     if substrate == "microk8s":
         yield ""
+        return
+
+    clouds = json.loads(juju.cli("clouds", "--format", "json", include_model=False))
+    for cloud, details in clouds.items():
+        if "lxd" == details.get("type"):
+            logger.info(f"Identified LXD cloud: {cloud}")
+            yield cloud
+
+
+@pytest.fixture(scope="module")
+def lxd_controller(lxd_cloud: str, juju: jubilant.Juju, substrate: Substrate):
+    if substrate == "microk8s":
+        yield None
         return
 
     controllers = json.loads(juju.cli("controllers", "--format", "json", include_model=False))
@@ -583,7 +596,7 @@ def lxd_controller(lxd_cloud: str, juju: jubilant.Juju, substrate: Substrate):
 
 
 @pytest.fixture(scope="module")
-def k8s_cloud(lxd_controller: str, juju: jubilant.Juju):
+def k8s_cloud(lxd_controller: str | None, juju: jubilant.Juju):
     """Provision a microk8s cloud, if a k8s cloud isn't already present, and return the name."""
     # Ask the controller that will host the model, not the client: the client list also carries
     # clouds the controller cannot use, such as the built-in `microk8s`, and picking one of those
@@ -664,7 +677,7 @@ def k8s_cloud(lxd_controller: str, juju: jubilant.Juju):
 
 
 @pytest.fixture(scope="module")
-def juju_k8s_model(architecture: str, k8s_cloud: str, lxd_controller: str):
+def juju_k8s_model(architecture: str, k8s_cloud: str, lxd_controller: str | None):
     with jubilant.temp_model(cloud=k8s_cloud, controller=lxd_controller) as juju_k8s:
         juju_k8s.wait_timeout = 1000
         juju_k8s.cli("set-model-constraints", f"arch={architecture}")
