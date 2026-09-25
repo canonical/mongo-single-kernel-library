@@ -113,9 +113,9 @@ def teardown_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     logger.info("Removing ldap certs SAAS")
     juju.cli("remove-saas", LDAP_CERT_OFFER)
     logger.info("Removing ldap offer")
-    juju_k8s_model.cli("remove-offer", LDAP_OFFER)
+    juju_k8s_model.cli("remove-offer", LDAP_OFFER, include_model=False)
     logger.info("Removing ldap cert offer")
-    juju_k8s_model.cli("remove-offer", LDAP_CERT_OFFER)
+    juju_k8s_model.cli("remove-offer", LDAP_CERT_OFFER, include_model=False)
 
 
 def create_mongodb_user_roles(

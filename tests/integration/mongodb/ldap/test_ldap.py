@@ -61,7 +61,8 @@ def test_build_and_deploy(
         juju.config(
             app_name,
             {
-                "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
+                "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))",
+                "ldap-user-to-dn-mapping": "",
             },
         )
     else:
