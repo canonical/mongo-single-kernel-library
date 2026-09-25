@@ -12,10 +12,10 @@ from __future__ import annotations
 import json
 import time
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 from ops.model import (
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class ConfigServerManager(Object, ManagerStatusProtocol):
+class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
     """Manage relations between the config server and the shard, on the config-server's side."""
 
     def __init__(
@@ -114,6 +114,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             ),
             AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
             AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
+            AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
         }
 
         if self.state.s3_relation:
@@ -238,6 +239,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
     def update_mongos_hosts(self) -> None:
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
         for relation in self.state.config_server_relation:
             if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
@@ -247,7 +252,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 {
                     AppShardingComponentKeys.HOST.value: json.dumps(
                         sorted(self.state.internal_hosts)
-                    )
+                    ),
+                    AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
                 },
             )
 
@@ -309,7 +315,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             with MongoConnection(self.state.mongos_config) as mongo:
                 cluster_shards = mongo.get_shard_members()
 
-            relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+            relation_shards = {
+                replica_set_name
+                for relation in self.state.config_server_relation
+                if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+                is not None
+            }
             if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
@@ -334,12 +345,16 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
         for relation in self.state.config_server_relation:
-            if relation.app.name not in cluster_shards:
+            shard_name = self.state.config_server_state(relation).shard_replset
+            if shard_name and shard_name not in cluster_shards:
                 self.add_shard(relation)
 
     def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.state.config_server_state(relation).shard_replset
+        if not shard_name:
+            logger.info("replica set name not yet added in databag, skipping")
+            return
 
         hosts = []
         for unit in relation.units:
@@ -393,8 +408,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
 
-        relation_shards = {relation.app.name for relation in self.state.config_server_relation}
-
+        relation_shards = {
+            replica_set_name
+            for relation in self.state.config_server_relation
+            if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+            is not None
+        }
         for shard_name in cluster_shards - relation_shards:
             try:
                 logger.info(f"Attempting to remove shard: {shard_name}")
@@ -408,7 +427,11 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
     def remove_shard_from_relation(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.state.config_server_state(relation).shard_replset
+
+        if not shard_name:
+            logger.info("No shard name in databag to remove.")
+            return
 
         self.remove_shard(shard_name)
 
@@ -472,13 +495,17 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return unreachable_hosts
 
         for relation in self.state.config_server_relation:
-            shard_name = relation.app.name
+            shard_name = self.state.config_server_state(relation).shard_replset
+
+            if not shard_name:
+                logger.info("replica set name not yet added in databag, skipping")
+                continue
             hosts = []
             for unit in relation.units:
                 unit_state = self.state.unit_peer_data_for(unit, relation)
                 hosts.append(unit_state.internal_address)
             if not hosts:
-                return unreachable_hosts
+                continue
 
             # use a URI that is not dependent on the operator password, as we are not guaranteed
             # that the shard has received the password yet.
@@ -490,7 +517,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         return unreachable_hosts
 
 
-class ShardManager(Object, ManagerStatusProtocol):
+@final
+class ShardManager(Object, AbstractManagerStatus[CharmState]):
     """Manage relations between the config server and the shard, on the shard's side."""
 
     def __init__(
@@ -635,7 +663,8 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.sync_cluster_passwords(operator_password, backup_password)
 
         # We have updated our auth, config-server can add the shard.
-        self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
+        self.state.shard_state.auth_updated = True
+        self.state.shard_state.shard_replset = self.state.app_peer_data.replica_set
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
@@ -734,6 +763,10 @@ class ShardManager(Object, ManagerStatusProtocol):
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
         if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
             self.state.app_peer_data.mongos_hosts = hosts
 
@@ -1006,3 +1039,16 @@ class ShardManager(Object, ManagerStatusProtocol):
             return []
 
         return charm_statuses or [ShardStatuses.ACTIVE_IDLE.value]
+
+    def reconcile_shard_state(self):
+        """Reconcile a shard state."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
+        if not self.state.shard_relation:
+            return
+
+        self.state.shard_state.shard_replset = self.state.app_peer_data.replica_set
+        self.state.shard_state.auth_updated = True
+        self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts

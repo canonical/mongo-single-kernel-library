@@ -17,11 +17,15 @@ MONGOS_SOCKET_URI_FMT = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongod
 
 @pytest.mark.skip_if_substrate("microk8s")
 def test_install_blocks_snap_install_failure(harness, mocker):
+    mock_exec = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch.object(harness.charm.status_handler, "set_running_status")
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.install", side_effect=WorkloadNotReadyError
     )
     with pytest.raises(WorkloadNotReadyError):
         harness.charm.on.install.emit()
+    mock_exec.assert_any_call(["systemctl", "restart", "snapd.service"])
+    mock_exec.assert_any_call(["systemctl", "is-active", "--quiet", "snapd.service"])
 
 
 def test_get_keyfile_contents_no_secret(mongos_harness: Harness[MongosTestCharm]):

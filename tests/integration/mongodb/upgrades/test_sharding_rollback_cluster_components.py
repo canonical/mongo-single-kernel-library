@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -28,8 +28,8 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import (
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import (
     assert_successful_run_upgrade_sequence,
     refresh_with_juju,
 )
@@ -77,6 +77,7 @@ async def test_build_and_deploy(
 async def test_rollback_on_shard_and_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongod_base_path: Path,
     mongodb_charm: str,
     mongod_resource: dict,
@@ -122,7 +123,9 @@ async def test_rollback_on_shard_and_config_server(
         ),
     )
 
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, channel="6/edge")
+    await refresh_with_juju(
+        ops_test, CONFIG_SERVER_APP_NAME, channel="8-transition/edge", charm_name=base_app_name
+    )
 
     # verify no writes were skipped during upgrade process
     shard_one_expected_writes = await stop_continous_writes(

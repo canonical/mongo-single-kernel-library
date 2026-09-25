@@ -7,6 +7,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 PEER_ADDR = {
     "lxd": {"private-address": "127.4.5.6"},
@@ -25,8 +26,8 @@ def test_app_hosts(
         expected_ips = {"10.0.0.10", "127.4.5.6"}
     else:
         expected_ips = {
-            "mongodb-k8s-1.mongodb-k8s-endpoints",
-            "mongodb-k8s-0.mongodb-k8s-endpoints",
+            f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}",
+            f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}",
         }
 
     assert expected_ips == resulting_ips
@@ -124,6 +125,7 @@ def test_is_shard_added_to_cluster_fail(
     state.app_peer_data.role = MongoDBRoles.SHARD
     state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
     state.shard_state.shard_integrated = False
+    state.shard_state.config_server_replset = "config-server"
 
     assert not state.is_shard_added_to_cluster()
     mock_get_shard_members.assert_not_called()
@@ -145,5 +147,6 @@ def test_is_shard_added_to_cluster_success(
     state.app_peer_data.role = MongoDBRoles.SHARD
     state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
     state.shard_state.shard_integrated = True
+    state.shard_state.config_server_replset = "config-server"
 
     assert state.is_shard_added_to_cluster()

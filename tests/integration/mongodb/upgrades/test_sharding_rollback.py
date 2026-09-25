@@ -5,14 +5,14 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
     stop_continous_writes,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -25,8 +25,8 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import refresh_charm, refresh_with_juju
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm, refresh_with_juju
 
 
 @pytest.mark.abort_on_fail
@@ -71,6 +71,7 @@ async def test_build_and_deploy(
 async def test_rollback_on_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongodb_charm,
     mongod_resource,
     add_continuous_writes_to_shards,
@@ -92,7 +93,9 @@ async def test_rollback_on_config_server(
     # await ops_test.model.applications[CONFIG_SERVER_APP_NAME].refresh(
     #     channel="6/edge", switch="ch:mongodb"
     # )
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/edge")
+    await refresh_with_juju(
+        ops_test, CONFIG_SERVER_APP_NAME, "8-transition/edge", charm_name=base_app_name
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],

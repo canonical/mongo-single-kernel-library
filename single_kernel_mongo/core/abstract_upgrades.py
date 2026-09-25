@@ -13,13 +13,13 @@ import copy
 import logging
 import secrets
 import string
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
 from data_platform_helpers.advanced_statuses.models import StatusObject, StatusObjectList
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
@@ -284,7 +284,9 @@ class AbstractUpgrade(ABC):
 # END: Useful classes
 
 
-class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, ABC):
+class GenericMongoDBUpgradeManager(
+    AbstractManagerStatus[CharmState], Generic[T], Object, metaclass=ABCMeta
+):
     """Substrate agnostif, abstract handler for upgrade events."""
 
     def __init__(
@@ -294,13 +296,13 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         *args,
         **kwargs,
     ):
-        self.name = "upgrade"
+        self.name: str = "upgrade"
         super(Generic, self).__init__(dependent, *args, **kwargs)  # type: ignore
-        self.dependent = dependent
-        self.substrate = self.dependent.substrate
-        self.upgrade_backend = upgrade_backend
+        self.dependent: T = dependent
+        self.substrate: Substrates = self.dependent.substrate
+        self.upgrade_backend: type[KubernetesUpgrade | MachineUpgrade] = upgrade_backend
         self.charm = dependent.charm
-        self.state = dependent.state
+        self.state: CharmState = dependent.state
 
     @property
     def _upgrade(self) -> KubernetesUpgrade | MachineUpgrade | None:
@@ -427,6 +429,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             return
         if (
             not during_upgrade
+            and self._upgrade.unit_state != UnitState.HEALTHY
             and self.state.db_initialised
             and self.dependent.mongo_manager.mongod_ready()
         ):
@@ -557,7 +560,10 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             # Config-Server has access to all the related shard applications.
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 relation_shards = {
-                    relation.app.name for relation in self.state.config_server_relation
+                    replica_set_name
+                    for relation in self.state.config_server_relation
+                    if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+                    is not None
                 }
                 cluster_shards = mongos.get_shard_members()
                 if len(relation_shards - cluster_shards):

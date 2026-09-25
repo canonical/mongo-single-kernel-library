@@ -5,7 +5,7 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
     execute_on_mongod,
@@ -13,7 +13,7 @@ from ..helpers.common import (
     remove_units,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     MONGOS_SOCKET,
     TEST_DB_NAME,
@@ -23,14 +23,14 @@ from ..helpers.mongos import (
     generate_mongos_uri,
     is_mongos_running,
 )
-from ..helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

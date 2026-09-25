@@ -5,13 +5,13 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
@@ -24,12 +24,12 @@ from ...helpers.sharding import (
     integrate_sharding_components,
     integrate_with_tls,
 )
-from ...helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
