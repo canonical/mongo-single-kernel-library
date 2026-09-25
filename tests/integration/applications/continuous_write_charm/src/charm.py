@@ -338,7 +338,7 @@ class ContinuousWritesApplication(CharmBase):
             logger.warning("No database configured.")
             return
 
-        db_name = event.params.get("db-name") or DATABASE_NAME
+        db_name = event.params.get("db-name") or self.database_name
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
 
         self._stop_continuous_writes(db_name, collection_name)
