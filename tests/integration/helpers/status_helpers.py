@@ -232,5 +232,9 @@ def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: s
     This might be a bit flaky but we don't really have a better solution until jubilant.
     """
     return none_has_status(
-        status, juju, app_name, status="waiting", message="Waiting for MongoDB restart."
+        status=status,
+        juju=juju,
+        app_name=app_name,
+        expected_status="waiting",
+        message="Waiting for MongoDB restart.",
     )
