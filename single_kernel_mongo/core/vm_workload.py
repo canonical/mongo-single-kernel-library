@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Kubernetes workload definition."""
+"""VM workload definition."""
 
 import subprocess
 from collections.abc import Mapping
