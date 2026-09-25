@@ -102,8 +102,8 @@ def consume_glauth_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     """Consumes the two offers from glauth in the testing model."""
     assert juju_k8s_model.model
 
-    juju.consume(f"admin/{juju_k8s_model.model}.{LDAP_OFFER}")
-    juju.consume(f"admin/{juju_k8s_model.model}.{LDAP_CERT_OFFER}")
+    juju.consume(f"{juju_k8s_model.model}.{LDAP_OFFER}", owner="admin")
+    juju.consume(f"{juju_k8s_model.model}.{LDAP_CERT_OFFER}", owner="admin")
 
 
 def teardown_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
@@ -139,6 +139,7 @@ def create_mongodb_user_roles(
         ip_address=ip_address,
         password=password,
         replica_set=app_name,
+        mongos=mongos,
     )
 
     result = execute_on_mongod(
