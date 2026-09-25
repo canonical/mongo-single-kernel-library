@@ -130,9 +130,11 @@ def test_vault_create_nonce(
     mongodb_container: Container | None,
     short_mock_fs_interactions,
 ):
-    snap = mocker.Mock(present=True)
-    snap_cache = mocker.patch("single_kernel_mongo.core.vm_workload.snap.SnapCache")
-    snap_cache.return_value.__getitem__.return_value = snap
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
     mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._set_os_config")
     peer_relation = testing.PeerRelation(
         id=1,

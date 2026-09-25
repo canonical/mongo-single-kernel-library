@@ -752,9 +752,11 @@ class MongosOperator(OperatorProtocol, Object):
                 "['nodeport', 'none']",
             )
             charm_statuses.append(MongosStatuses.INVALID_EXPOSE_EXTERNAL.value)
-
-        if not self.workload.workload_present:
-            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
+        try:
+            if not self.workload.workload_present:
+                charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
+        except WorkloadServiceError:
+            return charm_statuses
 
         if not self.state.mongos_cluster_relation:
             logger.info(

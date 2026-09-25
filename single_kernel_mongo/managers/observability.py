@@ -19,6 +19,7 @@ from single_kernel_mongo.config.models import OBSERVABILITY_CONFIG
 from single_kernel_mongo.config.relations import (
     ExternalProviderRelations,
 )
+from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from single_kernel_mongo.lib.charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from single_kernel_mongo.lib.charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
@@ -84,7 +85,12 @@ class ObservabilityManager(Object):
 
     def vault_metrics(self) -> dict[str, Any]:
         """The metrics specific to vault."""
-        if not self.dependent.workload.workload_present:
+        try:
+            if not self.dependent.vault_manager.workload_present:
+                return {}
+            if not self.dependent.workload.workload_present:
+                return {}
+        except WorkloadServiceError:
             return {}
         if self.dependent.vault_manager.get_degraded_state():
             return {}
