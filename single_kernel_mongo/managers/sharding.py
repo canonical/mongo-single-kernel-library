@@ -125,7 +125,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         }
 
         if self.state.s3_relation:
-            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            credentials = self.dependent.backup_events.s3_client.get_storage_connection_info()
             if cert_chain_list := credentials.get("tls-ca-chain", None):
                 relation_data[AppShardingComponentKeys.BACKUP_CA_SECRET.value] = json.dumps(
                     cert_chain_list
