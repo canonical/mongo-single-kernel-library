@@ -42,6 +42,14 @@ from tests.integration.helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
+from tests.integration.helpers.continuous_writes_helpers import (
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_common import deploy_application as jubilant_deploy_app
+from tests.integration.helpers.jubilant_common import existing_app
+from tests.integration.helpers.jubilant_common import relate_application as jubilant_relate_app
 from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -265,6 +273,25 @@ async def add_continuous_writes_to_shards(
     await clear_continous_writes(
         ops_test, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
     )
+
+
+@pytest.fixture
+def jubilant_continuous_writes_to_db(juju: jubilant.Juju, application_path: str):
+    """Continuously writget_app_name the duration of the test."""
+    db_app_name = existing_app(juju)
+    assert db_app_name
+
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+        jubilant_relate_app(juju, db_app_name, app_name)
+
+    start_continuous_writes(juju, app_name)
+    yield
+    stop_continuous_writes(juju, app_name)
+    clear_continuous_writes(juju, app_name)
 
 
 @pytest.fixture

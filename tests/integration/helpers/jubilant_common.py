@@ -120,7 +120,7 @@ def deploy_charm(
     mongod_resource: dict[str, str] | None = None,
     channel: str | None = None,
     revision: int | None = None,
-    config: dict[str, str] | None = None,
+    config: dict[str, jubilant.ConfigValue] | None = None,
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
     base: str | None = None,
@@ -335,6 +335,34 @@ def read_remote_file(
     return run_command_on_server(
         juju=juju, substrate=substrate, unit_name=unit_name, command=command, container=container
     )
+
+
+def delete_file_on_remote(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    file_path: str,
+    container: str = "mongod",
+) -> None:
+    """Deletes a file on a remote unit."""
+    command = f"rm -f {file_path}"
+    try:
+        run_command_on_server(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            command=command,
+            container=container,
+        )
+    except jubilant.CLIError as e:
+        logger.error(e.stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            e.cmd,
+            e.returncode,
+            e.stderr,
+        )
+    return
 
 
 def _uri(
