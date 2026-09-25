@@ -3,21 +3,19 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
 
+import jubilant
 import pytest
-from juju.model import Model
-from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    ProcessError,
+from single_kernel_mongo.config.statuses import LdapStatuses
+from tests.integration.helpers.constants import CONFIG_SERVER_APP_NAME, DEPLOYMENT_TIMEOUT
+from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
     mongodb_config_path,
-    wait_for_mongodb_units_blocked,
+    read_remote_file,
 )
-from tests.integration.helpers.ldap import (
+from tests.integration.helpers.jubilant_ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -27,11 +25,16 @@ from tests.integration.helpers.ldap import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from tests.integration.helpers.sharding import (
-    CLUSTER_COMPONENTS,
-    CONFIG_SERVER_APP_NAME,
+from tests.integration.helpers.jubilant_sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
+)
+from tests.integration.helpers.sharding import CLUSTER_COMPONENTS
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
+    none_is_restarting,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -44,17 +47,17 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest,
-    mongodb_charm: Path,
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource,
-    kubernetes_model: Model,
+    juju_k8s_model: jubilant.Juju,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
@@ -62,152 +65,216 @@ async def test_build_and_deploy(
             "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
     )
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
-    await integrate_sharding_components(ops_test)
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        idle_period=20,
-        timeout=DEPLOYMENT_TIMEOUT,
+    integrate_sharding_components(juju)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # deploy the glauth-k8s charm
-    await deploy_glauth(ops_test, kubernetes_model)
-    await consume_glauth_offers(ops_test, kubernetes_model)
+    deploy_glauth(juju_k8s_model)
 
-    db_app_name = CONFIG_SERVER_APP_NAME
+    # Consume the offers exposed by glauth
+    consume_glauth_offers(juju, juju_k8s_model)
 
-    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
+    # Apply the LDIF file on glauth-utils to create users and groups
+    apply_ldif(juju_k8s_model, "ldap_entries.ldif")
 
-    await create_mongodb_user_roles(
-        ops_test, substrate, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    create_mongodb_user_roles(
+        juju, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_integrate_ldap_only(ops_test: OpsTest, substrate: Substrate):
+def test_integrate_ldap_only(juju: jubilant.Juju):
     """Only integrate ldap endpoint, should go into blocked state."""
-    db_app_name = CONFIG_SERVER_APP_NAME
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{db_app_name}:ldap")
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        db_app_name,
-        status="TLS is mandatory for LDAP transport.",
-        timeout=300,
+    app_name = CONFIG_SERVER_APP_NAME
+    # Integrate LDAP only so it goes into blocked state
+    juju.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    app_name: [LdapStatuses.TLS_REQUIRED.value],
+                },
+                expected_app_statuses={},
+            )
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_integrate_also_ldap_cert(ops_test: OpsTest):
-    db_app_name = CONFIG_SERVER_APP_NAME
-    await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{db_app_name}:ldap-certificate-transfer"
-    )
+def test_integrate_also_ldap_cert(juju: jubilant.Juju):
+    app_name = CONFIG_SERVER_APP_NAME
+    juju.integrate(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
 
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
-    db_app_name = CONFIG_SERVER_APP_NAME
-    uri = await generate_mongodb_ldap_client(
-        ops_test,
+def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
+    app_name = CONFIG_SERVER_APP_NAME
+    # We create a client which should be able to write
+    uri = generate_mongodb_ldap_client(
+        juju,
         substrate,
-        db_app_name,
+        app_name,
         database="superdb",
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
         password="dogood",
         mongos=True,
     )
 
-    result = await execute_on_mongod(
-        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})"
-    )
+    result = execute_on_mongod(juju, substrate, app_name, uri, "db.test.insertOne({number: 1})")
     assert result.succeeded, "Failed to insert value with LDAP client"
+
+    result = execute_on_mongod(juju, substrate, app_name, uri, "db.test.findOne({number: 1})")
+    assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail
-async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
-    db_app_name = CONFIG_SERVER_APP_NAME
+def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
+    app_name = CONFIG_SERVER_APP_NAME
 
-    await ops_test.model.applications[db_app_name].set_config(
+    # We update the config to be able to login as johndoe@superheroes
+    juju.config(
+        app_name,
         {
             "ldap-user-to-dn-mapping": '[{"match": "([^@]+)@([^@]+)", "substitution": "cn={0},ou={1},ou=users,dc=glauth,dc=com"}]',
             "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))",
-        }
+        },
     )
 
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
     path = mongodb_config_path(substrate)
 
-    if substrate == "lxd":
-        cat_cmd = "exec --unit {} -- cat {}"
-    else:
-        cat_cmd = "ssh --container mongod {} cat {}"
-
-    for unit in ops_test.model.applications[db_app_name].units:
-        cat_cmd = cat_cmd.format(unit.name, path)
-        return_code, output, _ = await ops_test.juju(*cat_cmd.split())
-
-        if return_code != 0:
-            raise ProcessError("Could not cat configuration.")
-
+    # Check that all units have restarted and updated their configuration.
+    for unit in juju.status().get_units(app_name):
+        output = read_remote_file(
+            juju,
+            substrate,
+            unit,
+            path,
+        )
         configuration = safe_load(output)
-        assert configuration["security"]["ldap"].get("userToDNMapping", "") != ""
-        assert configuration["security"]["ldap"]["authz"].get("queryTemplate", "") != ""
+        assert (
+            configuration["security"]["ldap"].get("userToDNMapping", "")
+            == '[{"match": "([^@]+)@([^@]+)", "substitution": "cn={0},ou={1},ou=users,dc=glauth,dc=com"}]'
+        ), "Invalid userToDNMapping."
+        assert (
+            configuration["security"]["ldap"]["authz"].get("queryTemplate", "")
+            == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
+        ), "Invalid ldap Query Template."
 
-    uri = await generate_mongodb_ldap_client(
-        ops_test,
+    uri = generate_mongodb_ldap_client(
+        juju,
         substrate,
-        db_app_name,
+        app_name,
         database="superdb",
         username="johndoe@superheroes",
         password="dogood",
         mongos=True,
     )
+    result = execute_on_mongod(juju, substrate, app_name, uri, "db.test.insertOne({number: 2})")
+    assert result.succeeded, "Failed to write value with LDAP client"
 
-    result = await execute_on_mongod(
-        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
-    )
-
+    result = execute_on_mongod(juju, substrate, app_name, uri, "db.test.findOne({number: 2})")
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
+def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
     """Only integrate ldap endpoint, should go into blocked state."""
-    db_app_name = CONFIG_SERVER_APP_NAME
-    await ops_test.model.applications[db_app_name].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{db_app_name}:ldap"
-    )
+    app_name = CONFIG_SERVER_APP_NAME
+    # We remove the first relation integrated, it should go into blocked state
+    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
 
-    units = ops_test.model.applications[db_app_name].units
-
-    await ops_test.model.block_until(
-        *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
-    )
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        db_app_name,
-        status="GLauth TLS is integrated but LDAP is not.",
-        timeout=300,
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    app_name: [LdapStatuses.LDAP_REQUIRED.value],
+                },
+                expected_app_statuses={},
+            )
+            and none_is_restarting(status, juju, app_name)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
-    db_app_name = CONFIG_SERVER_APP_NAME
-    await ops_test.model.applications[db_app_name].remove_relation(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{db_app_name}:ldap-certificate-transfer"
-    )
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
+def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
+    app_name = CONFIG_SERVER_APP_NAME
+    juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
 
-    await teardown_offers(ops_test, kubernetes_model)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    # Remove the offers and tear down deployment
+    teardown_offers(juju, juju_k8s_model)

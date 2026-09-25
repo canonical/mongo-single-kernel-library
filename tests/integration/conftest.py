@@ -6,6 +6,7 @@ import dataclasses
 import json
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import time
@@ -24,6 +25,7 @@ import pytest
 import tomli
 import tomli_w
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 from yaml import safe_load
 
 from tests.integration.helpers.architecture import architecture as _architecture
@@ -54,6 +56,8 @@ from tests.integration.helpers.sharding import (
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
+
+MICROK8S_CLOUD_NAME = "mk8s"
 
 
 @pytest.fixture(scope="session")
@@ -563,3 +567,118 @@ def juju(architecture: str) -> Generator[jubilant.Juju, Any, None]:
     juju.wait_timeout = 1000
     juju.cli("set-model-constraints", f"arch={architecture}")
     yield juju
+
+
+@pytest.fixture(scope="module")
+def lxd_cloud(juju: jubilant.Juju, substrate: Substrate):
+    if substrate == "microk8s":
+        yield ""
+        return
+
+    clouds = json.loads(juju.cli("clouds", "--format", "json", include_model=False))
+    for cloud, details in clouds.items():
+        if "lxd" == details.get("type"):
+            logger.info(f"Identified LXD cloud: {cloud}")
+            yield cloud
+
+
+@pytest.fixture(scope="module")
+def lxd_controller(lxd_cloud: str, juju: jubilant.Juju, substrate: Substrate):
+    if substrate == "microk8s":
+        yield None
+        return
+
+    controllers = json.loads(juju.cli("controllers", "--format", "json", include_model=False))
+    for controller, details in controllers.get("controllers").items():
+        if lxd_cloud == details.get("cloud"):
+            logger.info(f"Identified LXD controller: {controller}")
+            yield controller
+
+
+@pytest.fixture(scope="module")
+def k8s_cloud(lxd_controller: str | None, juju: jubilant.Juju):
+    """Provision a microk8s cloud, if a k8s cloud isn't already present, and return the name."""
+    # Ask the controller that will host the model, not the client: the client list also carries
+    # clouds the controller cannot use, such as the built-in `microk8s`, and picking one of those
+    # makes `add-model` fail with "cloud not found".
+    cloud_args = ["clouds", "--format", "json"]
+    if lxd_controller:
+        cloud_args += ["--controller", lxd_controller]
+    clouds = json.loads(juju.cli(*cloud_args, include_model=False))
+    for cloud, details in clouds.items():
+        if "k8s" == details.get("type"):
+            logger.info(f"Identified existing k8s cloud: {cloud}")
+            yield cloud
+            return
+
+    try:
+        subprocess.run(["sudo", "snap", "install", "--classic", "microk8s"], check=True)
+        subprocess.run(["sudo", "snap", "install", "--classic", "kubectl"], check=True)
+        subprocess.run(["sudo", "microk8s", "enable", "dns"], check=True)
+        subprocess.run(["sudo", "microk8s", "enable", "hostpath-storage"], check=True)
+        subprocess.run(
+            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"],
+            check=True,
+        )
+
+        # Configure kubectl now
+        subprocess.run(["mkdir", "-p", str(pathlib.Path.home() / ".kube")], check=True)
+        kubeconfig = subprocess.check_output(["sudo", "microk8s", "config"])
+        with open(str(pathlib.Path.home() / ".kube" / "config"), "w") as f:
+            f.write(kubeconfig.decode())
+        for attempt in Retrying(stop=stop_after_delay(150), wait=wait_fixed(15)):
+            with attempt:
+                if (
+                    len(
+                        subprocess.check_output(
+                            "kubectl get po -A  --field-selector=status.phase!=Running",
+                            shell=True,
+                            stderr=subprocess.DEVNULL,
+                        ).decode()
+                    )
+                    != 0
+                ):  # We got sth different from "No resources found." in stderr
+                    raise Exception()
+
+        # add this microk8s as a juju k8s cloud, by explicitly providing its config
+        # this is done to bypass the issue with juju 3.9 necessitating strictly confined microk8s
+        config = kubeconfig.decode()
+        juju.cli(
+            "add-k8s",
+            MICROK8S_CLOUD_NAME,
+            "--client",
+            "--controller",
+            lxd_controller,
+            stdin=config,
+            include_model=False,
+        )
+
+    except subprocess.CalledProcessError as e:
+        pytest.exit(str(e))
+
+    yield MICROK8S_CLOUD_NAME
+
+    models = json.loads(juju.cli("models", "--format", "json", include_model=False))
+    for model in models["models"]:
+        if MICROK8S_CLOUD_NAME == model.get("cloud"):
+            logger.info(f"Destroying model {model.get('name')}...")
+            juju.destroy_model(model=model.get("name"), destroy_storage=True, force=True)
+
+    juju.cli(
+        "remove-k8s",
+        "--client",
+        MICROK8S_CLOUD_NAME,
+        "--controller",
+        lxd_controller,
+        include_model=False,
+    )
+    subprocess.run(["sudo", "snap", "remove", "--purge", "microk8s"], check=True)
+    subprocess.run(["sudo", "snap", "remove", "--purge", "kubectl"], check=True)
+
+
+@pytest.fixture(scope="module")
+def juju_k8s_model(architecture: str, k8s_cloud: str, lxd_controller: str | None):
+    with jubilant.temp_model(cloud=k8s_cloud, controller=lxd_controller) as juju_k8s:
+        juju_k8s.wait_timeout = 1000
+        juju_k8s.cli("set-model-constraints", f"arch={architecture}")
+        yield juju_k8s

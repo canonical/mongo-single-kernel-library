@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -197,4 +198,43 @@ def verify_unit_count(
 
     return all(
         count == len(status.get_units(app)) for app, count in _unit_count.items() if count >= 0
+    )
+
+
+def none_has_status(
+    status: jubilant.Status, juju: jubilant.Juju, app_name: str, expected_status: str, message: str
+) -> bool:
+    """Checks that no unit has a specific status in its status-detail output."""
+    relation_data: dict[str, dict[str, str]] = {}
+    for unit in status.get_units(app_name):
+        for relation in juju.show_unit(unit).relation_info:
+            if relation.endpoint == "status-peers":
+                relation_data[unit] = relation.local_unit.data
+                break
+
+    for data in relation_data.values():
+        for value in data.values():
+            try:
+                status_list = json.loads(value)
+                if any(
+                    _status["status"] == expected_status and _status["message"] == message
+                    for _status in status_list
+                ):
+                    return False
+            except json.JSONDecodeError:
+                continue
+    return True
+
+
+def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: str) -> bool:
+    """This checks that no unit is waiting for restart, based on the unit statuses.
+
+    This might be a bit flaky but we don't really have a better solution until jubilant.
+    """
+    return none_has_status(
+        status=status,
+        juju=juju,
+        app_name=app_name,
+        expected_status="waiting",
+        message="Waiting for MongoDB restart.",
     )
