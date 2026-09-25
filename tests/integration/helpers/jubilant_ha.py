@@ -127,7 +127,7 @@ def k8s_cut_network_from_unit_without_ip_change(model_name: str, machine_name: s
             with attempt:
                 try:
                     command_result = subprocess.check_output(  # nosec: B603
-                        shlex.split(f"microk8s.kubectl apply -f {temp_file.name}"),
+                        shlex.split(f"sudo k8s kubectl apply -f {temp_file.name}"),
                         env=env,
                         stderr=subprocess.STDOUT,
                     )
@@ -158,7 +158,7 @@ def _k8s_wait_network_chaos_injected(namespace: str) -> None:
         with attempt:
             output = subprocess.check_output(  # nosec: B603
                 shlex.split(
-                    f"microk8s.kubectl -n {namespace} get networkchaos network-loss-primary -o json"
+                    f"sudo k8s kubectl -n {namespace} get networkchaos network-loss-primary -o json"
                 ),
                 env=os.environ,
                 stderr=subprocess.STDOUT,
@@ -183,7 +183,7 @@ def cut_network_from_unit(
         machine_name: lxc container hostname or k8s pod name
         ip_change: Whether to change the IP address of the unit on the network cut (VM only)
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         if ip_change:
             lxd_cut_network_from_unit_with_ip_change(machine_name)
         else:
@@ -203,7 +203,7 @@ def restore_network_to_unit(
         machine_name: lxc container hostname or k8s pod name
         ip_change: Whether the network cut changed the IP address of the unit (VM only)
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         if ip_change:
             # remove mask from eth0
             restore_network_command = f"lxc config device remove {machine_name} eth0"
@@ -215,7 +215,7 @@ def restore_network_to_unit(
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(  # nosec: B603
             shlex.split(
-                f"microk8s.kubectl -n {model_name} delete networkchaos network-loss-primary"
+                f"sudo k8s kubectl -n {model_name} delete networkchaos network-loss-primary"
             ),
             env=env,
         )
@@ -385,9 +385,9 @@ def is_unit_reachable(
     """Test network reachability to a unit based on the substrate."""
     assert juju.model, "Juju client must be connected to a model before checking unit reachability"
     match substrate:
-        case "microk8s":
+        case Substrate.k8s:
             return is_unit_reachable_k8s(juju.model, from_host, to_host)
-        case "lxd":
+        case Substrate.lxd:
             return is_unit_reachable_lxd(from_host, to_host, number_of_retries=number_of_retries)
 
 
@@ -581,15 +581,15 @@ def patch_restart_delay(
 ) -> None:
     """Update the restart delay for the database process based on the substrate."""
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             lxd_patch_restart_delay(juju, unit_name, delay)
-        case "microk8s":
+        case Substrate.k8s:
             pebble_patch_restart_delay(juju, unit_name, delay=delay, ensure_replan=True)
 
 
 def reboot_unit(juju: jubilant.Juju, unit_name: str, substrate: Substrate) -> None:
     """Reboot a unit."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         juju.exec(command="sudo reboot", unit=unit_name)
     else:
         delete_pod(unit_name.replace("/", "-"), juju.model)
@@ -662,7 +662,7 @@ def wait_network_restore(
         ip_change: Whether to check for IP change
         unit_count: The expected number of units for the application (optional)
     """
-    if substrate == "lxd" and ip_change:
+    if substrate == Substrate.lxd and ip_change:
         if instance_ip(juju, hostname) == old_ip:
             raise Exception("Network not restored, IP address has not changed yet.")
     else:

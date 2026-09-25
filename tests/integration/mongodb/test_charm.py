@@ -195,7 +195,7 @@ def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) ->
     app_name = existing_app(juju)
     assert app_name
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         dir_path = "/var/snap/charmed-mongodb/common/var/log/pbm/"
     else:
         dir_path = "/var/log/pbm/"
@@ -211,7 +211,7 @@ def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) ->
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_check_max_tasks(juju: jubilant.Juju, substrate: Substrate):
     """Check that we update the TasksMax in the service to infinity on VM."""
     app_name = existing_app(juju)
@@ -504,9 +504,9 @@ def test_audit_log(juju: jubilant.Juju, substrate: Substrate) -> None:
     assert app_name
 
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/audit.log"
-        case "microk8s":
+        case Substrate.k8s:
             audit_log_path = "/var/log/mongodb/audit.log"
 
     audit_log = run_command_on_server(
@@ -536,9 +536,9 @@ def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path:
     logrotate_timeout = 61
 
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/"
-        case "microk8s":
+        case Substrate.k8s:
             audit_log_path = "/var/log/mongodb/"
 
     assert not unit_has_file(
@@ -605,12 +605,12 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
     assert num_units == n_units + 2
 
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-        case "microk8s":
+        case Substrate.k8s:
             model_name = juju.model
             hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
@@ -677,12 +677,12 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
 
     # grab juju hosts
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-        case "microk8s":
+        case Substrate.k8s:
             model_name = juju.model
             hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
@@ -740,12 +740,12 @@ async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Subs
 
     # grab juju hosts
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-        case "microk8s":
+        case Substrate.k8s:
             hosts = [
                 f"mongodb-k8s-{get_unit_id(unit_name)}.mongodb-k8s-endpoints"
                 for unit_name in juju.status().get_units(app_name)

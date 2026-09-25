@@ -336,6 +336,6 @@ async def authorize_charm_and_wait(
 
 
 def vault_base_path(substrate: Substrate) -> str:
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return "/var/snap/charmed-mongodb/current/etc/vault/"
     return "/etc/vault/"
