@@ -159,7 +159,7 @@ def test_vault_agent_metrics(juju: jubilant.Juju, substrate: Substrate):
 
 
 def test_rotate_master_key(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """This test verifies that the master key rotation happens successfully."""
     app_name = existing_app(juju)
@@ -188,7 +188,10 @@ def test_rotate_master_key(
 
 @pytest.mark.abort_on_fail
 def remove_relation_goes_to_blocked(
-    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    vault_charm_name: str,
+    jubilant_continuous_writes_to_db,
 ) -> None:
     """Checks that removing the vault integration goes to blocked, but writes are continuing."""
     app_name = existing_app(juju)
@@ -229,7 +232,10 @@ def remove_relation_goes_to_blocked(
 
 @pytest.mark.abort_on_fail
 def reintegrate_goes_to_regular(
-    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    vault_charm_name: str,
+    jubilant_continuous_writes_to_db,
 ) -> None:
     """Checks that reintegrating goes back to normal state and we haven't missed writes."""
     app_name = existing_app(juju)
@@ -255,7 +261,10 @@ def reintegrate_goes_to_regular(
 
 @pytest.mark.abort_on_fail
 def test_remove_token_then_reintegrate(
-    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    vault_charm_name: str,
+    jubilant_continuous_writes_to_db,
 ) -> None:
     """Checks that reintegrating goes back to normal state and we haven't missed writes."""
     app_name = existing_app(juju)
