@@ -67,6 +67,7 @@ def stop_continuous_writes(
         f"{client_app_name}/0",
         "stop-continuous-writes",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
 
 
@@ -81,6 +82,7 @@ def stop_continuous_reads(
         f"{client_app_name}/0",
         "stop-continuous-reads",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
     logger.warning(f"Failed reads: {result.results['failed-reads']}")
     return int(result.results["reads"]), result.results["failed-reads"]
@@ -97,6 +99,7 @@ def clear_continuous_writes(
         f"{client_app_name}/0",
         "clear-continuous-writes",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
 
 
