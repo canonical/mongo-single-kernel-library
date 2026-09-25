@@ -133,7 +133,7 @@ def deploy_vault(juju: jubilant.Juju, substrate: Substrate, vault_charm_name: st
         vault_charm_name,
         vault_charm_name,
         num_units=1,
-        channel="1.18/stable",  # TODO: keep track of this after newer versions.
+        channel="2.0/stable",  # TODO: keep track of this after newer versions.
         base=BASE,
     )
     with fast_forward(juju, update_interval=FAST_INTERVAL):
