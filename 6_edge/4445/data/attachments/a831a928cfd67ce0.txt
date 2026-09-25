@@ -1,0 +1,85 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backup started/running, backup id: '2026-09-25T02:28:38Z'
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] active: Primary.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups:test_backups.py:441 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-09-25T02:39:41Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  02:39:47Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.121  no       
+mongodb-k8s       6.0.28   active      3  mongodb-k8s                      0  10.152.183.133  no       
+s3-integrator              active      1  s3-integrator     latest/edge  632  10.152.183.90   no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.97.20         
+mongodb-k8s/0*       maintenance  idle       10.1.97.14         Backup started/running, backup id: '2026-09-25T02:39:41Z'
+mongodb-k8s/1        active       idle       10.1.97.19         
+mongodb-k8s/2        active       executing  10.1.97.18         
+s3-integrator/0*     active       idle       10.1.97.16         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 02:00:02 ERROR unit.mongodb-k8s/1.juju-log database-peers:3: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-09-25T02:00:02Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-09-25T02:00:02Z INFO Most recent service output:
+    2026-09-25T02:00:02.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-09-25T02:00:02Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-09-25T02:00:02Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-09-25T02:00:02Z INFO Most recent service output:
+    2026-09-25T02:00:02.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-09-25T02:00:02Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-1: 02:00:02 ERROR unit.mongodb-k8s/1.juju-log database-peers:3: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-new-mongodb-aws-1: 02:26:43 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab5dbe2c8a7d2d568539ea2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.00082462900036262>]>
+unit-new-mongodb-aws-0: 02:26:43 ERROR unit.new-mongodb-aws/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab5dbe2e1702664f0461460, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0005243109999355511>]>
+unit-new-mongodb-gcp-0: 02:32:45 ERROR unit.new-mongodb-gcp/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab5dd4c3d6b1d3a82de3185, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-0.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.0017276030002904008>]>
+unit-new-mongodb-gcp-1: 02:32:47 ERROR unit.new-mongodb-gcp/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab5dd4ec44bafc9e2faa542, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-1.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.000852396000027511>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
