@@ -5,6 +5,7 @@
 import json
 import logging
 import math
+from contextlib import contextmanager
 from datetime import datetime
 from typing import NamedTuple
 
@@ -16,6 +17,7 @@ from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
 
 from tests.integration.helpers.common import (
+    DEPLOYMENT_TIMEOUT,
     CommandResult,
     ProcessError,
     SecretNotFoundError,
@@ -41,6 +43,17 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def fast_forward(juju: jubilant.Juju, update_interval: str = "10s"):
+    """Context manager that temporarily speeds up update-status hooks to fire every 10s."""
+    old = juju.model_config()["update-status-hook-interval"]
+    juju.model_config({"update-status-hook-interval": update_interval})
+    try:
+        yield
+    finally:
+        juju.model_config({"update-status-hook-interval": old})
 
 
 def existing_app(
@@ -140,7 +153,7 @@ def remove_number_units(
 
 
 def ensure_app_number_units(
-    juju: jubilant.Juju, substrate: Substrate, app_name: str, required_units: int
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, required_units: int, wait: bool = True
 ) -> None:
     """A helper function that scales existing cluster if necessary."""
     # check if we need to scale
@@ -158,12 +171,13 @@ def ensure_app_number_units(
         units_to_add = required_units - current_units
         juju.add_unit(app_name, num_units=units_to_add)
 
-    juju.wait(
-        lambda status: are_apps_active_and_agents_idle(
-            status, app_name, idle_period=10, unit_count=required_units
-        ),
-        timeout=TIMEOUT,
-    )
+    if wait:
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status, app_name, idle_period=10, unit_count=required_units
+            ),
+            timeout=DEPLOYMENT_TIMEOUT,
+        )
 
 
 def get_unit_id(unit_name: str) -> int:
