@@ -101,9 +101,10 @@ def deploy_glauth(juju_k8s_model: jubilant.Juju) -> None:
 def consume_glauth_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     """Consumes the two offers from glauth in the testing model."""
     assert juju_k8s_model.model
+    juju_k8s_model_name = juju_k8s_model.model.split(":")[1]
 
-    juju.consume(f"{juju_k8s_model.model}.{LDAP_OFFER}", owner="admin")
-    juju.consume(f"{juju_k8s_model.model}.{LDAP_CERT_OFFER}", owner="admin")
+    juju.consume(f"{juju_k8s_model_name}.{LDAP_OFFER}")
+    juju.consume(f"{juju_k8s_model_name}.{LDAP_CERT_OFFER}")
 
 
 def teardown_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
