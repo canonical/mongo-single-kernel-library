@@ -113,9 +113,9 @@ def deploy_cluster_components(
     juju.wait(
         lambda status: are_agents_idle(
             status,
-            CONFIG_SERVER_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
+            config_server_name,
+            shard_one_name,
+            shard_two_name,
             idle_period=20,
             unit_count={},
         ),
