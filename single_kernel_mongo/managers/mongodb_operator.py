@@ -1706,11 +1706,11 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope=scope, component=self.name
             ).root + self._cluster_mismatch_status(scope)
 
-        if scope == "unit" and not self.workload.workload_present:
-            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
-
-        if scope == "unit" and self.is_waiting_for_rolling_operation():
-            charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
+        try:
+            if scope == "unit" and not self.workload.workload_present:
+                return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+        except WorkloadServiceError:
+            return charm_statuses
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
