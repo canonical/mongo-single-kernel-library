@@ -74,7 +74,7 @@ def test_tls_then_build_cluster(
             status,
             *CLUSTER_COMPONENTS,
             TLS_CERTIFICATES_APP_NAME,
-            idle_period=30,
+            idle_period=20,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -88,11 +88,9 @@ def test_tls_then_build_cluster(
             status,
             *CLUSTER_COMPONENTS,
             TLS_CERTIFICATES_APP_NAME,
-            idle_period=30,
+            idle_period=20,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     integrate_sharding_components(juju)
@@ -101,11 +99,9 @@ def test_tls_then_build_cluster(
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            idle_period=30,
+            idle_period=20,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     check_cluster_tls_enabled(
@@ -133,7 +129,7 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
             are_agents_idle(
                 status,
                 *CLUSTER_COMPONENTS,
-                idle_period=30,
+                idle_period=20,
             )
             and does_status_match(
                 model_status=status,
@@ -142,9 +138,7 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
                 },
             )
         ),
-        timeout=TIMEOUT,
-        delay=5,
-        successes=3,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     # Re-integrate to bring cluster back to steady state
@@ -157,8 +151,6 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
             idle_period=30,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # CASE 2: Config-server does not have TLS enabled - but shard does
@@ -169,7 +161,7 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
             are_agents_idle(
                 status,
                 *CLUSTER_COMPONENTS,
-                idle_period=30,
+                idle_period=20,
             )
             and does_status_match(
                 model_status=status,
@@ -178,9 +170,7 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
                 },
             )
         ),
-        timeout=TIMEOUT,
-        delay=5,
-        successes=3,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     # CASE 3: Cluster components are using different CA's
@@ -195,16 +185,14 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
             are_agents_idle(
                 status,
                 *CLUSTER_COMPONENTS,
-                idle_period=30,
+                idle_period=20,
             )
             and does_status_match(
                 model_status=status,
                 expected_unit_statuses={SHARD_ONE_APP_NAME: [ShardStatuses.PEER_CA_MISMATCH.value]},
             )
         ),
-        timeout=TIMEOUT,
-        delay=5,
-        successes=3,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     leader_name, _ = find_leader(juju, app_name=SHARD_ONE_APP_NAME)
@@ -243,11 +231,9 @@ def test_invalid_relation_not_yet_established(
         lambda status: are_agents_idle(
             status,
             SHARD_THREE_APP_NAME,
-            idle_period=30,
+            idle_period=20,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # Integrate the shard with the config-server
@@ -262,7 +248,7 @@ def test_invalid_relation_not_yet_established(
             are_agents_idle(
                 status,
                 SHARD_THREE_APP_NAME,
-                idle_period=30,
+                idle_period=20,
             )
             and does_status_match(
                 model_status=status,
@@ -272,8 +258,6 @@ def test_invalid_relation_not_yet_established(
             )
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # Remove the not yet added shard
@@ -288,7 +272,7 @@ def test_invalid_relation_not_yet_established(
             are_agents_idle(
                 status,
                 SHARD_THREE_APP_NAME,
-                idle_period=30,
+                idle_period=20,
             )
             and does_status_match(
                 model_status=status,
@@ -298,6 +282,4 @@ def test_invalid_relation_not_yet_established(
             )
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
