@@ -51,3 +51,26 @@ TEST_DOCUMENTS = """[
 
 
 MONGOS_APP_NAME = "mongos"
+
+
+TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+TLS_CERTIFICATES_CHANNEL = "1/stable"
+TLS_CERTIFICATES_BASE = "ubuntu@24.04"
+PEER_TLS_RELATION_NAME = "peer-certificates"
+CLIENT_TLS_RELATION_NAME = "client-certificates"
+
+# Sharding constants
+
+SHARD_ONE_APP_NAME = "shard-one"
+SHARD_TWO_APP_NAME = "shard-two"
+SHARD_THREE_APP_NAME = "shard-three"
+CONFIG_SERVER_APP_NAME = "config-server"
+CLUSTER_APPS = [
+    CONFIG_SERVER_APP_NAME,
+    SHARD_ONE_APP_NAME,
+    SHARD_TWO_APP_NAME,
+    SHARD_THREE_APP_NAME,
+]
+CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
+CONFIG_SERVER_REL_NAME = "config-server"
+SHARD_REL_NAME = "sharding"

@@ -7,8 +7,18 @@ from logging import getLogger
 import jubilant
 from pymongo import MongoClient
 
-from tests.integration.helpers.constants import CHARMED_OPERATOR_USERNAME
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
+from tests.integration.helpers.constants import (
+    CHARMED_OPERATOR_USERNAME,
+    CONFIG_SERVER_APP_NAME,
+    CONFIG_SERVER_REL_NAME,
+    DEPLOYMENT_TIMEOUT,
+    SHARD_ONE_APP_NAME,
+    SHARD_REL_NAME,
+    SHARD_TWO_APP_NAME,
+)
 from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
     find_leader,
     get_ip_from_unit,
     get_ips_for_app,
@@ -16,9 +26,116 @@ from tests.integration.helpers.jubilant_common import (
     mongos_uri,
     verify_cluster_ip_source_allowlist,
 )
+from tests.integration.helpers.status_helpers import are_agents_idle, does_status_match
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
+
+
+def deploy_cluster_components(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    num_units_cluster_config: dict[str, int] | None = None,
+    config_server_name: str = CONFIG_SERVER_APP_NAME,
+    shard_one_name: str = SHARD_ONE_APP_NAME,
+    shard_two_name: str = SHARD_TWO_APP_NAME,
+    channel: str | None = None,
+    base: str | None = None,
+    extra_config_config_server: dict[str, str] | None = None,
+) -> None:
+    if not extra_config_config_server:
+        extra_config_config_server = {}
+    if not num_units_cluster_config:
+        num_units_cluster_config = {
+            config_server_name: 2,
+            shard_one_name: 3,
+            shard_two_name: 1,
+        }
+
+    if channel is None:
+        my_charm = mongodb_charm
+    else:
+        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+
+    deploy_charm(
+        juju,
+        my_charm,
+        substrate,
+        app_name=config_server_name,
+        mongod_resource=mongod_resource,
+        num_units=num_units_cluster_config[config_server_name],
+        channel=channel,
+        config={"role": "config-server"} | extra_config_config_server,
+        base=base,
+    )
+    deploy_charm(
+        juju,
+        my_charm,
+        substrate,
+        app_name=shard_one_name,
+        mongod_resource=mongod_resource,
+        num_units=num_units_cluster_config[shard_one_name],
+        channel=channel,
+        config={"role": "shard"},
+        base=base,
+    )
+    deploy_charm(
+        juju,
+        my_charm,
+        substrate,
+        app_name=shard_two_name,
+        mongod_resource=mongod_resource,
+        num_units=num_units_cluster_config[shard_two_name],
+        channel=channel,
+        config={"role": "shard"},
+        base=base,
+    )
+
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                SHARD_TWO_APP_NAME,
+                idle_period=30,
+                unit_count={},
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
+                    SHARD_ONE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
+                    SHARD_TWO_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
+                },
+                expected_app_statuses={
+                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
+                },
+            )
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+
+def integrate_sharding_components(
+    juju: jubilant.Juju,
+    config_server_name: str = CONFIG_SERVER_APP_NAME,
+    shard_one_name: str = SHARD_ONE_APP_NAME,
+    shard_two_name: str = SHARD_TWO_APP_NAME,
+) -> None:
+    """Integrates the cluster components with each other."""
+    juju.integrate(
+        f"{shard_one_name}:{SHARD_REL_NAME}",
+        f"{config_server_name}:{CONFIG_SERVER_REL_NAME}",
+    )
+    juju.integrate(
+        f"{shard_two_name}:{SHARD_REL_NAME}",
+        f"{config_server_name}:{CONFIG_SERVER_REL_NAME}",
+    )
 
 
 def get_cluster_shards(mongos_client: MongoClient) -> set[str]:
