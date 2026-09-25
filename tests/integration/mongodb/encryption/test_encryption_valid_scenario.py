@@ -2,152 +2,175 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import ssl
-from pathlib import Path
 
 import httpx
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import VaultStatuses
+from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     TIMEOUT,
     UNIT_IDS,
-    check_app_status,
+)
+from tests.integration.helpers.continuous_writes_helpers import verify_writes
+from tests.integration.helpers.jubilant_common import (
     delete_file_on_remote,
     deploy_charm,
     execute_on_mongod,
-    find_unit,
-    get_address_of_unit,
-    get_app_name,
+    existing_app,
+    find_leader,
+    get_ip_from_unit,
     get_password,
-    get_unit_app,
-    has_file,
-    wait_for_mongodb_units_blocked,
+    read_remote_file,
+    unit_has_file,
+    unit_uri,
 )
-from tests.integration.helpers.ha import verify_writes
-from tests.integration.helpers.tls import scp_file_preserve_ctime
+from tests.integration.helpers.jubilant_vault import (
+    VAULT_KV_RELATION,
+    deploy_vault,
+    vault_base_path,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
+)
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.vault import VAULT_KV_RELATION, deploy_vault, vault_base_path
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy_charms(
-    ops_test: OpsTest,
+def test_deploy_charms(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
     base_app_name: str,
     vault_charm_name: str,
 ):
-    await asyncio.gather(
-        deploy_vault(ops_test, substrate, vault_charm_name),
-        deploy_charm(
-            ops_test=ops_test,
-            charm=mongodb_charm,
-            substrate=substrate,
-            mongod_resource=mongod_resource,
-            app_name=base_app_name,
-            num_units=len(UNIT_IDS),
-            config={"enable-encryption-at-rest": True},
+    deploy_vault(juju, substrate, vault_charm_name)
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
+        app_name=base_app_name,
+        num_units=len(UNIT_IDS),
+        config={"enable-encryption-at-rest": True},
+    )
+    juju.wait(lambda status: jubilant.all_blocked(status, base_app_name), timeout=TIMEOUT)
+
+
+@pytest.mark.abort_on_fail
+def test_no_integration_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
+    app_name = existing_app(juju)
+    assert app_name
+
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+                expected_app_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+            )
         ),
-    )
-    await ops_test.model.wait_for_idle(apps=[base_app_name], status="blocked", timeout=TIMEOUT)
-
-
-@pytest.mark.abort_on_fail
-async def test_no_integration_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
-    app_name = await get_app_name(ops_test)
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="Must be integrated with vault to enable encryption at rest.",
-    )
-    await check_app_status(
-        ops_test,
-        app_name,
-        status="blocked",
-        message="Must be integrated with vault to enable encryption at rest.",
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_integration_goes_to_active(
-    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str
+def test_integration_goes_to_active(
+    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str
 ) -> None:
     """If we integrate with vault, we go to active, everything is correctly set up."""
-    app_name = await get_app_name(ops_test)
-    assert ops_test.model
+    app_name = existing_app(juju)
+    assert app_name
 
     # Integrate with vault.
-    await ops_test.model.integrate(
-        f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
-    )
+    juju.integrate(f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}")
 
     # We go to active.
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+    password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
 
     # For each unit, we can find the right files, and we can connect and check that encryption is
     # enabled.
-    for unit in ops_test.model.applications[app_name].units:
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
         for filename in ("role_id", "role_secret_id", "vault_cert.pem", "vaultTokenFile"):
-            assert await has_file(ops_test, substrate, unit, vault_base_path(substrate), filename)
+            assert unit_has_file(juju, substrate, unit_name, vault_base_path(substrate), filename)
 
-        host = await get_address_of_unit(
-            ops_test, substrate, int(unit.name.split("/")[1]), app_name
-        )
+        host = get_ip_from_unit(substrate, unit_status)
 
-        replica_set_uri = f"mongodb://{CHARMED_OPERATOR_USERNAME}:{password}@{host}/admin"
+        uri = unit_uri(username=CHARMED_OPERATOR_USERNAME, password=password, ip_address=host)
         command = "db.serverStatus()"
-        result = await execute_on_mongod(
-            ops_test, app_name, substrate, uri=replica_set_uri, command=command
-        )
+        result = execute_on_mongod(juju, substrate, app_name, uri=uri, command=command)
         assert result.succeeded
         assert result.data.get("encryptionAtRest", {}).get("encryptionEnabled", False)
 
 
-async def test_vault_agent_metrics(ops_test: OpsTest, substrate: Substrate):
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
-    application = ops_test.model.applications[app_name]
+def test_vault_agent_metrics(juju: jubilant.Juju, substrate: Substrate):
+    app_name = existing_app(juju)
+    assert app_name
     if substrate == "lxd":
         ca_file = "/var/snap/charmed-mongodb/current/etc/vault/ca.pem"
     else:
         ca_file = "/etc/vault/ca.pem"
 
-    for unit in application.units:
-        unit_id, app_name = get_unit_app(unit.name)
-        unit_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
+        unit_address = get_ip_from_unit(substrate, unit_status)
         vault_telemetry_url = f"https://{unit_address}:8200/agent/v1/metrics"
-        filename = Path(await scp_file_preserve_ctime(ops_test, substrate, unit.name, ca_file))
+        ca_file = read_remote_file(
+            juju,
+            substrate,
+            unit_name=unit_name,
+            file_path=ca_file,
+        )
 
-        ctx = ssl.create_default_context(cafile=f"{filename}")
+        ctx = ssl.create_default_context(cadata=ca_file)
         mongo_resp = httpx.get(
             vault_telemetry_url, verify=ctx, headers={"Accept": "prometheus/telemetry"}
         )
         assert mongo_resp.status_code == 200
         assert "vault_agent_authenticated 1" in mongo_resp.text
-        filename.unlink()
 
 
-async def test_rotate_master_key(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+def test_rotate_master_key(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """This test verifies that the master key rotation happens successfully."""
-    app_name = await get_app_name(ops_test)
-    assert ops_test.model
+    app_name = existing_app(juju)
+    assert app_name
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_unit, _ = find_leader(juju, app_name)
 
     # We rotate the master key on one unit.
-    action = await leader_unit.run_action("rotate-encryption-master-key")
-    result = await action.wait()
+    action = juju.run(unit=leader_unit, action="rotate-encryption-master-key")
 
-    assert result.results["result"] == "success"
+    assert action.results["result"] == "success"
 
     # Checks that we find the correct string in the logs that proves that the master key
     # has been rotated.
@@ -156,103 +179,138 @@ async def test_rotate_master_key(
     else:
         log_file = "/var/log/mongodb/mongodb.log"
 
-    filename = Path(await scp_file_preserve_ctime(ops_test, substrate, leader_unit.name, log_file))
-
-    data = filename.read_text()
+    data = read_remote_file(juju, substrate, unit_name=leader_unit, file_path=log_file)
     assert "Rotated master encryption key" in data
 
-    filename.unlink()
-
     # verify that no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
-async def remove_relation_goes_to_blocked(
-    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+def remove_relation_goes_to_blocked(
+    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
 ) -> None:
     """Checks that removing the vault integration goes to blocked, but writes are continuing."""
-    app_name = await get_app_name(ops_test)
-    assert ops_test.model
+    app_name = existing_app(juju)
+    assert app_name
 
     # Remove the relation.
-    await ops_test.model.applications[app_name].remove_relation(
+    juju.remove_relation(
         f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
     )
 
-    # MongoDB unit all goes to blocked.
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="Must be integrated with vault to enable encryption at rest.",
-    )
-    # MongoDB app goes to blocked.
-    await check_app_status(
-        ops_test,
-        app_name,
-        status="blocked",
-        message="Must be integrated with vault to enable encryption at rest.",
+    # MongoDB units and app all goes to blocked.
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+                expected_app_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+            )
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # verify that no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
-async def reintegrate_goes_to_regular(
-    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+def reintegrate_goes_to_regular(
+    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
 ) -> None:
     """Checks that reintegrating goes back to normal state and we haven't missed writes."""
-    app_name = await get_app_name(ops_test)
-    assert ops_test.model
+    app_name = existing_app(juju)
+    assert app_name
 
-    await ops_test.model.integrate(
-        f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
+    juju.integrate(f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}")
+    # We go to active.
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
     # verify that no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_token_then_reintegrate(
-    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+def test_remove_token_then_reintegrate(
+    juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
 ) -> None:
     """Checks that reintegrating goes back to normal state and we haven't missed writes."""
-    app_name = await get_app_name(ops_test)
-    assert ops_test.model
+    app_name = existing_app(juju)
+    assert app_name
+
     # Remove the relation.
-    await ops_test.model.applications[app_name].remove_relation(
+    juju.remove_relation(
         f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
     )
-    # MongoDB unit all goes to blocked.
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="Must be integrated with vault to enable encryption at rest.",
+    # MongoDB units and app all goes to blocked.
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+                expected_app_statuses={
+                    app_name: [VaultStatuses.VAULT_NOT_INTEGRATED.value],
+                },
+            )
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    # MongoDB app goes to blocked.
-    await check_app_status(
-        ops_test,
-        app_name,
-        status="blocked",
-        message="Must be integrated with vault to enable encryption at rest.",
-    )
+
     if substrate == "lxd":
         filepath = "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
     else:
         filepath = "/etc/vault/vaultTokenFile"
 
-    for unit in ops_test.model.applications[app_name].units:
-        await delete_file_on_remote(ops_test, substrate, unit.name, filepath)
+    for unit_name in juju.status().get_units(app_name):
+        delete_file_on_remote(juju, substrate, unit_name, filepath)
 
-    await ops_test.model.integrate(
-        f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
+    juju.integrate(f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}")
+
+    # We go to active.
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
     # verify that no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
