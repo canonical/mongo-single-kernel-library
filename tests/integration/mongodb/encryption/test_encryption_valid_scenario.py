@@ -63,7 +63,7 @@ def test_deploy_charms(
 
 
 @pytest.mark.abort_on_fail
-def test_no_integration_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
+def test_no_integration_goes_to_blocked(juju: jubilant.Juju):
     app_name = existing_app(juju)
     assert app_name
 
@@ -143,14 +143,14 @@ def test_vault_agent_metrics(juju: jubilant.Juju, substrate: Substrate):
     for unit_name, unit_status in juju.status().get_units(app_name).items():
         unit_address = get_ip_from_unit(substrate, unit_status)
         vault_telemetry_url = f"https://{unit_address}:8200/agent/v1/metrics"
-        ca_file = read_remote_file(
+        ca_content = read_remote_file(
             juju,
             substrate,
             unit_name=unit_name,
             file_path=ca_file,
         )
 
-        ctx = ssl.create_default_context(cadata=ca_file)
+        ctx = ssl.create_default_context(cadata=ca_content)
         mongo_resp = httpx.get(
             vault_telemetry_url, verify=ctx, headers={"Accept": "prometheus/telemetry"}
         )

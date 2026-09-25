@@ -345,7 +345,7 @@ def delete_file_on_remote(
     container: str = "mongod",
 ) -> None:
     """Deletes a file on a remote unit."""
-    command = f"rm -f{file_path}"
+    command = f"rm -f {file_path}"
     try:
         run_command_on_server(
             juju=juju,

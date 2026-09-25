@@ -20,6 +20,7 @@ from tests.integration.helpers.jubilant_common import (
     get_ip_from_unit,
     get_secret_uri_by_owner,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 VAULT = "vault"
@@ -293,10 +294,8 @@ def authorize_charm_and_wait(juju: jubilant.Juju, app_name: str, root_token: str
     result = authorize_charm(juju, root_token, app_name)
     with fast_forward(juju, update_interval=FAST_INTERVAL):
         juju.wait(
-            lambda status: (
-                jubilant.all_blocked(status, app_name)
-                and jubilant.all_agents_idle(status, app_name)
-            )
+            lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=5),
+            timeout=60,
         )
     logger.info("Charm authorized")
     return result
