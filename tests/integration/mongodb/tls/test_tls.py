@@ -5,31 +5,36 @@
 import re
 import time
 
+import jubilant
 import pytest
 from cryptography import x509
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import TLSStatuses
+from tests.integration.helpers.constants import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
-    UNIT_IDS,
-    check_or_scale_app,
-    clear_continous_writes,
-    deploy_application,
-    deploy_charm,
-    external_cert_path,
-    get_app_name,
-    get_secret_by_label,
-    internal_cert_path,
-    start_continous_writes,
-    stop_continous_writes,
-    wait_for_mongodb_units_blocked,
-)
-from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
+    TIMEOUT,
     TLS_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_BASE,
     TLS_CERTIFICATES_CHANNEL,
+    UNIT_IDS,
+)
+from tests.integration.helpers.continuous_writes_helpers import (
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_application,
+    deploy_charm,
+    ensure_app_number_units,
+    existing_app,
+    external_cert_path,
+    get_secret_by_uri,
+    internal_cert_path,
+)
+from tests.integration.helpers.jubilant_tls import (
     cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
@@ -41,90 +46,133 @@ from tests.integration.helpers.tls import (
     time_file_created,
     time_process_started,
 )
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
+)
 from tests.integration.helpers.types import Substrate
 
 REGEX_TLS = re.compile("(-+(BEGIN|END) [A-Z ]+-+)")
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource,
-    base_app_name,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
     application_path: str,
 ) -> None:
     """Build and deploy one unit of MongoDB and one unit of TLS."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
     else:
         app_name = base_app_name
-        await deploy_charm(
-            ops_test=ops_test,
+        deploy_charm(
+            juju=juju,
             charm=mongodb_charm,
             substrate=substrate,
             mongod_resource=mongod_resource,
             app_name=base_app_name,
             num_units=len(UNIT_IDS),
         )
-        await ops_test.model.wait_for_idle(
-            apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT
-        )
 
     config = {"ca-common-name": "Test CA"}
-    await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME,
+    juju.deploy(
+        charm=TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
-        config=config,
         base=TLS_CERTIFICATES_BASE,
+        config=config,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    await deploy_application(
-        ops_test, application_path=application_path, app_name=CONTINUOUS_WRITE_APPLICATION
+    deploy_application(
+        juju, application_path=application_path, app_name=CONTINUOUS_WRITE_APPLICATION
     )
 
 
-async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+@pytest.mark.abort_on_fail
+def test_enable_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify each unit has TLS enabled after relating to the TLS application."""
     # Relate it to the MongoDB to enable TLS.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    await integrate_apps_with_tls(ops_test, applications=[app_name])
+    integrate_apps_with_tls(juju, app_name)
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name, TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000, idle_period=60
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Wait for all units enabling TLS.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=True, app_name=app_name
-        ), f"TLS not enabled for unit {unit.name}."
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=True,
+            app_name=app_name,
+        ), f"TLS not enabled for unit {unit_name}."
+        assert cannot_connect_without_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            app_name=app_name,
+        ), f"Client can still connect without TLS on unit {unit_name}"
 
-        assert await cannot_connect_without_tls(
-            ops_test, substrate, unit, app_name=app_name
-        ), f"Client can still connect without TLS on unit {unit.name}"
 
-
-async def test_integrate_client_access_tls(ops_test: OpsTest, substrate: Substrate):
+def test_integrate_client_access_tls(juju: jubilant.Juju):
     """Tests that an integration with a client application sends the certificate as expected."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    relation = await ops_test.model.integrate(CONTINUOUS_WRITE_APPLICATION, app_name)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name, CONTINUOUS_WRITE_APPLICATION],
-        status="active",
+    juju.integrate(CONTINUOUS_WRITE_APPLICATION, app_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONTINUOUS_WRITE_APPLICATION,
+            idle_period=30,
+            unit_count=1,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    assert relation
+    secret_tls = None
+    for relation_data in juju.show_unit(f"{CONTINUOUS_WRITE_APPLICATION}/0").relation_info:
+        if relation_data.endpoint == "mongodb" and relation_data.related_endpoint == "database":
+            secret_tls = relation_data.app_data.get("secret-tls")
 
-    secret = await get_secret_by_label(ops_test, f"database.{relation.id}.tls.secret")
+    assert secret_tls, "Missing secret-tls in relation databag."
+
+    secret = get_secret_by_uri(juju, secret_tls)
 
     assert secret.get("tls") == "True"
     tls_certificate = secret.get("tls-ca")
@@ -136,15 +184,15 @@ async def test_integrate_client_access_tls(ops_test: OpsTest, substrate: Substra
 
     assert common_name == "Test CA"
 
-    await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    start_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
     time.sleep(20)
-    n_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
-    await clear_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    n_writes = stop_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
+    clear_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
 
     assert n_writes != -1, "Did not manage to write on database"
 
 
-async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_rotate_tls_key(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify rotating tls private keys restarts mongod with new certificates.
 
     This test rotates tls private keys to randomly generated keys.
@@ -154,112 +202,189 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
     # restarted
     original_tls_times = {}
 
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    for unit in ops_test.model.applications[app_name].units:
-        original_tls_times[unit.name] = {}
-        original_tls_times[unit.name]["external_cert"] = await time_file_created(
-            ops_test, substrate, unit.name, external_cert_path(substrate)
+    for unit_name in juju.status().get_units(app_name).keys():
+        original_tls_times[unit_name] = {}
+        original_tls_times[unit_name]["external_cert"] = time_file_created(
+            juju, substrate, unit_name, external_cert_path(substrate)
         )
-        original_tls_times[unit.name]["internal_cert"] = await time_file_created(
-            ops_test, substrate, unit.name, internal_cert_path(substrate)
+        original_tls_times[unit_name]["internal_cert"] = time_file_created(
+            juju, substrate, unit_name, internal_cert_path(substrate)
         )
-        original_tls_times[unit.name]["mongod_service"] = await time_process_started(
-            ops_test, substrate, unit.name, SNAP_MONGOD_SERVICE
+        original_tls_times[unit_name]["mongod_service"] = time_process_started(
+            juju, substrate, unit_name, SNAP_MONGOD_SERVICE
         )
 
-        await check_certs_correctly_distributed(ops_test, substrate, app_name, unit)
+        check_certs_correctly_distributed(juju, substrate, app_name, unit_name)
 
-    await set_private_keys(ops_test, app_name)
+    set_private_keys(juju, app_name)
 
     # wait for certificate to be available and processed. Can get receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=60
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=60,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # After updating both the external key and the internal key a new certificate request will be
     # made; then the certificates should be available and updated.
-    for unit in ops_test.model.applications[app_name].units:
-        new_external_cert_time = await time_file_created(
-            ops_test, substrate, unit.name, external_cert_path(substrate)
+    for unit_name in juju.status().get_units(app_name).keys():
+        new_external_cert_time = time_file_created(
+            juju, substrate, unit_name, external_cert_path(substrate)
         )
 
-        new_internal_cert_time = await time_file_created(
-            ops_test, substrate, unit.name, internal_cert_path(substrate)
+        new_internal_cert_time = time_file_created(
+            juju, substrate, unit_name, internal_cert_path(substrate)
         )
-        new_mongod_service_time = await time_process_started(
-            ops_test, substrate, unit.name, "snap.charmed-mongodb.mongod.service"
+        new_mongod_service_time = time_process_started(
+            juju, substrate, unit_name, SNAP_MONGOD_SERVICE
         )
-        await check_certs_correctly_distributed(ops_test, substrate, app_name, unit)
+        check_certs_correctly_distributed(juju, substrate, app_name, unit_name)
 
         assert (
-            new_external_cert_time > original_tls_times[unit.name]["external_cert"]
-        ), f"external cert for {unit.name} was not updated."
+            new_external_cert_time > original_tls_times[unit_name]["external_cert"]
+        ), f"external cert for {unit_name} was not updated."
         assert (
-            new_internal_cert_time > original_tls_times[unit.name]["internal_cert"]
-        ), f"internal cert for {unit.name} was not updated."
+            new_internal_cert_time > original_tls_times[unit_name]["internal_cert"]
+        ), f"internal cert for {unit_name} was not updated."
 
         # Once the certificate requests are processed and updated the mongod.service should be
         # restarted
         assert (
-            new_mongod_service_time > original_tls_times[unit.name]["mongod_service"]
-        ), f"mongod service for {unit.name} was not restarted."
+            new_mongod_service_time > original_tls_times[unit_name]["mongod_service"]
+        ), f"mongod service for {unit_name} was not restarted."
 
     # Verify that TLS is functioning on all units.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=True, app_name=app_name
-        ), f"tls is not enabled for {unit.name}."
-        assert await cannot_connect_without_tls(
-            ops_test, substrate, unit, app_name=app_name
-        ), f"Client can still connect without TLS on unit {unit.name}"
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=True,
+            app_name=app_name,
+        ), f"TLS not enabled for unit {unit_name}."
+        assert cannot_connect_without_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            app_name=app_name,
+        ), f"Client can still connect without TLS on unit {unit_name}"
 
-    await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    start_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
     time.sleep(20)
-    n_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
-    await clear_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    n_writes = stop_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
+    clear_continuous_writes(juju, CONTINUOUS_WRITE_APPLICATION)
 
     assert n_writes != -1, "Did not manage to write on database"
 
 
-async def test_invalid_key(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_invalid_key(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that setting an invalid key outputs the correct status."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
     for scope in ("peer", "client"):
-        await set_invalid_private_key(ops_test, app_name, scope=scope)
+        set_invalid_private_key(juju, app_name, scope=scope)
 
-        await wait_for_mongodb_units_blocked(
-            ops_test, substrate, app_name, status=f"Invalid {scope} private key"
+        expected_status = (
+            TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value
+            if scope == "client"
+            else TLSStatuses.INVALID_PEER_PRIVATE_KEY.value
         )
 
-        await set_private_key(ops_test, app_name, scope=scope)
+        juju.wait(
+            lambda status: (
+                are_agents_idle(
+                    status,
+                    app_name,
+                    idle_period=30,
+                    unit_count=3,
+                )
+                and does_status_match(
+                    model_status=status,
+                    expected_unit_statuses={app_name: [expected_status]},
+                    expected_app_statuses={},
+                )
+            ),
+            timeout=TIMEOUT,
+            delay=5,
+            successes=3,
+        )
 
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active")
+        set_private_key(juju, app_name, scope=scope)
+
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status,
+                app_name,
+                TLS_CERTIFICATES_APP_NAME,
+                idle_period=60,
+                unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+            ),
+            timeout=TIMEOUT,
+            delay=5,
+            successes=3,
+        )
 
     # Verify that TLS is functioning on all units.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=True, app_name=app_name
-        ), f"tls is not enabled for {unit.name}."
-        assert await cannot_connect_without_tls(
-            ops_test, substrate, unit, app_name=app_name
-        ), f"Client can still connect without TLS on unit {unit.name}"
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=True,
+            app_name=app_name,
+        ), f"TLS not enabled for unit {unit_name}."
+        assert cannot_connect_without_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            app_name=app_name,
+        ), f"Client can still connect without TLS on unit {unit_name}"
 
 
-async def test_disable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_disable_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify each unit has TLS disabled after removing relation to the TLS application."""
     # Remove the relation.
-    app_name = await get_app_name(ops_test)
-    await remove_tls_integrations(ops_test, applications=[app_name])
+    app_name = existing_app(juju)
+    assert app_name
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=60
+    remove_tls_integrations(juju, app_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=60,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Wait for all units disabling TLS.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=app_name
-        ), f"TLS not disabled for unit {unit.name}."
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=False,
+            app_name=app_name,
+        ), f"TLS still enabled for unit {unit_name}."

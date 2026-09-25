@@ -7,26 +7,43 @@ from logging import getLogger
 import jubilant
 from pymongo import MongoClient
 
-from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
+    CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     DEPLOYMENT_TIMEOUT,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
     SHARD_TWO_APP_NAME,
+    SNAP_MONGOD_SERVICE,
+    SNAP_MONGOS_SERVICE,
+    TLS_CERTIFICATES_APP_NAME,
 )
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
+    external_cert_path,
     find_leader,
+    get_file_content,
     get_ip_from_unit,
     get_ips_for_app,
     get_password,
+    internal_cert_path,
     mongos_uri,
     verify_cluster_ip_source_allowlist,
 )
-from tests.integration.helpers.status_helpers import are_agents_idle, does_status_match
+from tests.integration.helpers.jubilant_tls import (
+    cannot_connect_without_tls,
+    check_certs_correctly_distributed,
+    check_tls,
+    set_private_keys,
+    time_file_created,
+    time_process_started,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
@@ -94,26 +111,13 @@ def deploy_cluster_components(
     )
 
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                CONFIG_SERVER_APP_NAME,
-                SHARD_ONE_APP_NAME,
-                SHARD_TWO_APP_NAME,
-                idle_period=30,
-                unit_count={},
-            )
-            and does_status_match(
-                model_status=status,
-                expected_unit_statuses={
-                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
-                    SHARD_ONE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
-                    SHARD_TWO_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
-                },
-                expected_app_statuses={
-                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
-                },
-            )
+        lambda status: are_agents_idle(
+            status,
+            config_server_name,
+            shard_one_name,
+            shard_two_name,
+            idle_period=20,
+            unit_count={},
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -252,3 +256,174 @@ def shard_has_databases(
     if not databases_on_shard:
         return False
     return set(databases_on_shard) == set(expected_databases_on_shard)
+
+
+### For TLS testing
+
+
+def check_cluster_tls_enabled(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    components: list[str] = CLUSTER_COMPONENTS,
+    config_server: str = CONFIG_SERVER_APP_NAME,
+) -> None:
+    # check each replica set is running with TLS enabled
+    for cluster_component in components:
+        for unit_name, unit_info in juju.status().get_units(cluster_component).items():
+            assert check_tls(
+                juju=juju,
+                substrate=substrate,
+                unit_name=unit_name,
+                unit_info=unit_info,
+                enabled=True,
+                app_name=cluster_component,
+            ), f"TLS not enabled for unit {unit_name}."
+            assert cannot_connect_without_tls(
+                juju=juju,
+                substrate=substrate,
+                unit_name=unit_name,
+                unit_info=unit_info,
+                app_name=cluster_component,
+            ), f"Client can still connect without TLS on unit {unit_name}"
+
+    # check mongos is running with TLS enabled
+    for unit_name, unit_info in juju.status().get_units(config_server).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=True,
+            app_name=config_server,
+            mongos=True,
+        ), f"Mongos TLS not enabled for unit {unit_name}."
+        assert cannot_connect_without_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            app_name=config_server,
+            mongos=True,
+        ), f"Client can still connect to mongos without TLS on unit {unit_name}"
+
+
+def check_cluster_tls_disabled(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    components: list[str] = CLUSTER_COMPONENTS,
+    config_server: str = CONFIG_SERVER_APP_NAME,
+):
+    # check each replica set is running with TLS enabled
+    for cluster_component in components:
+        for unit_name, unit_info in juju.status().get_units(cluster_component).items():
+            assert check_tls(
+                juju=juju,
+                substrate=substrate,
+                unit_name=unit_name,
+                unit_info=unit_info,
+                enabled=False,
+                app_name=cluster_component,
+            ), f"TLS still enabled for unit {unit_name}."
+
+    for unit_name, unit_info in juju.status().get_units(config_server).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=False,
+            app_name=config_server,
+            mongos=True,
+        ), f"Mongos TLS still enabled for unit {unit_name}."
+
+
+def rotate_and_verify_certs(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> None:
+    """Verify provided app can rotate its TLS certs."""
+    original_tls_info = {}
+
+    ext_cert_path = external_cert_path(substrate)
+    int_cert_path = internal_cert_path(substrate)
+
+    for unit_name in juju.status().get_units(app_name).keys():
+        original_tls_info[unit_name] = {}
+        original_tls_info[unit_name]["external_cert_contents"] = get_file_content(
+            juju, substrate, unit_name, ext_cert_path
+        )
+        original_tls_info[unit_name]["internal_cert_contents"] = get_file_content(
+            juju, substrate, unit_name, int_cert_path
+        )
+        original_tls_info[unit_name]["external_cert"] = time_file_created(
+            juju, substrate, unit_name, external_cert_path(substrate)
+        )
+        original_tls_info[unit_name]["internal_cert"] = time_file_created(
+            juju, substrate, unit_name, internal_cert_path(substrate)
+        )
+        original_tls_info[unit_name]["mongod_service"] = time_process_started(
+            juju, substrate, unit_name, SNAP_MONGOD_SERVICE
+        )
+        if app_name == CONFIG_SERVER_APP_NAME:
+            original_tls_info[unit_name]["mongos_service"] = time_process_started(
+                juju, substrate, unit_name, SNAP_MONGOS_SERVICE
+            )
+        check_certs_correctly_distributed(juju, substrate, app_name=app_name, unit_name=unit_name)
+
+    # set external and internal key using auto-generated key for each unit
+    set_private_keys(juju, app_name)
+
+    # wait for certificate to be available and processed. Can get receive two certificate
+    # available events and restart twice so we want to ensure we are idle for at least 0 minute
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=60,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    # After updating both the external key and the internal key a new certificate request will be
+    # made; then the certificates should be available and updated.
+    for unit_name in juju.status().get_units(app_name).keys():
+        new_external_cert = get_file_content(juju, substrate, unit_name, ext_cert_path)
+        new_internal_cert = get_file_content(juju, substrate, unit_name, int_cert_path)
+        new_external_cert_time = time_file_created(juju, substrate, unit_name, ext_cert_path)
+        new_internal_cert_time = time_file_created(juju, substrate, unit_name, int_cert_path)
+        new_mongod_service_time = time_process_started(
+            juju, substrate, unit_name, SNAP_MONGOD_SERVICE
+        )
+        if app_name == CONFIG_SERVER_APP_NAME:
+            new_mongos_service_time = time_process_started(
+                juju, substrate, unit_name, SNAP_MONGOS_SERVICE
+            )
+
+        check_certs_correctly_distributed(juju, substrate, app_name=app_name, unit_name=unit_name)
+        assert (
+            new_external_cert != original_tls_info[unit_name]["external_cert_contents"]
+        ), f"external cert for {unit_name} not rotated."
+
+        assert (
+            new_internal_cert != original_tls_info[unit_name]["external_cert_contents"]
+        ), f"external cert for {unit_name} not rotated."
+        assert (
+            new_external_cert_time > original_tls_info[unit_name]["external_cert"]
+        ), f"external cert for {unit_name} was not updated."
+        assert (
+            new_internal_cert_time > original_tls_info[unit_name]["internal_cert"]
+        ), f"internal cert for {unit_name} was not updated."
+
+        # Once the certificate requests are processed and updated the .service file should be
+        # restarted
+        assert (
+            new_mongod_service_time > original_tls_info[unit_name]["mongod_service"]
+        ), f"mongod service for {unit_name} was not restarted."
+
+        if app_name == CONFIG_SERVER_APP_NAME:
+            assert (
+                new_mongos_service_time > original_tls_info[unit_name]["mongos_service"]
+            ), f"mongos service for {unit_name} was not restarted."
+
+    # Verify that TLS is functioning on all units.
+    check_cluster_tls_enabled(juju, substrate)
