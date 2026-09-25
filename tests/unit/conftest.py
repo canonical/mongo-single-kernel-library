@@ -237,7 +237,7 @@ def mongod_ready(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_snap_cache(mocker):
+def mock_snap_not_installed(mocker):
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.snap.list_one",
         side_effect=NotInstalledError(
