@@ -1,0 +1,45 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  02:00:58Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server             6.0.28   active      1  mongodb-k8s                                0  10.152.183.45   no       
+mongos                    6.0.28   active      1  mongos-k8s                                 0  10.152.183.107  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.215  no       
+shard-one                 6.0.28   active      1  mongodb-k8s                                1  10.152.183.148  no       
+test-routing-application           active      1  continuous-write                           0  10.152.183.144  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+config-server/0*             active    idle   10.1.97.11         Primary.
+mongos/0*                    active    idle   10.1.97.18         
+self-signed-certificates/0*  active    idle   10.1.97.19         
+shard-one/0*                 active    idle   10.1.97.17         Primary.
+test-routing-application/0*  active    idle   10.1.97.14         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongos-0: 01:52:23 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 01:52:23 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:55:10 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:55:10 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:55:11 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:55:11 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-test-routing-application-0: 02:00:56 ERROR unit.test-routing-application/0.juju-log Unable to query the database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/src/charm.py", line 213, in _stop_continuous_writes
+    with open(self.last_written_filename(db_name, collection_name)) as fd:
+FileNotFoundError: [Errno 2] No such file or directory: 'last_written_value-continuous_writes_database-continuous_writes_collection'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/src/charm.py", line 211, in _stop_continuous_writes
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 347, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 326, in iter
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7f5bdd5306d0 state=finished raised FileNotFoundError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

@@ -1,0 +1,216 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  02:28:21Z
+
+App               Version  Status   Scale  Charm             Channel      Rev  Address         Exposed  Message
+config-server     6.0.28   active       2  mongodb-k8s                      0  10.152.183.90   no       
+continuous-write           waiting      1  continuous-write                 0  10.152.183.106  no       
+s3-integrator              active       1  s3-integrator     latest/edge  632  10.152.183.97   no       
+shard-one         6.0.28   active       2  mongodb-k8s                      1  10.152.183.131  no       
+shard-two         6.0.28   active       1  mongodb-k8s                      2  10.152.183.52   no       
+
+Unit                 Workload  Agent      Address     Ports  Message
+config-server/0*     active    executing  10.1.53.13         Primary.
+config-server/1      active    executing  10.1.53.14         
+continuous-write/0*  waiting   idle       10.1.53.25         
+s3-integrator/0*     active    idle       10.1.53.24         
+shard-one/0          error     idle       10.1.53.19         hook failed: "update-status"
+shard-one/1*         error     idle       10.1.53.20         hook failed: "update-status"
+shard-two/0*         active    idle       10.1.53.23         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 02:13:11 ERROR unit.config-server/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-1: 02:13:57 ERROR unit.config-server/1.juju-log database-peers:0: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-09-27T02:13:56Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-09-27T02:13:57Z INFO Most recent service output:
+    2026-09-27T02:13:57.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-09-27T02:13:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-09-27T02:13:56Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-09-27T02:13:57Z INFO Most recent service output:
+    2026-09-27T02:13:57.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-09-27T02:13:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:13:57 ERROR unit.config-server/1.juju-log database-peers:0: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-one-1: 02:14:58 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c21cb5677db17c2329d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0019874299999855793>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008832639999809544>]>
+unit-shard-one-1: 02:15:03 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c26cb5677db17c2329e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab87c2091eae55f0af51e3a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13951}")>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006380569999464569>]>
+unit-shard-one-1: 02:15:07 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c2acb5677db17c2329f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-0.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.005274709999980587>]>
+unit-shard-one-1: 02:15:25 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c3ba8ca57c7f7d5e788, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.002004967000061697>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0017605299999559065>]>
+unit-shard-one-1: 02:15:29 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c40a8ca57c7f7d5e789, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007606509999504851>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016497039999876506>]>
+unit-shard-one-1: 02:15:51 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c563066d5d4f266273e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013753519999681885>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005806310000480153>]>
+unit-shard-one-1: 02:16:07 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab87c66310bbd1474ee7512, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007362940000348317>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006059789999426357>]>
+unit-config-server-0: 02:16:52 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/6ab87c93135364421afd5d4c [config-server/config-server-0.config-server-endpoints:27017]
+, stderr=None
+unit-shard-one-0: 02:28:19 ERROR unit.shard-one/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 403, in command
+    return command(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/network.py", line 198, in command
+    reply = receive_message(conn, request_id)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/network_layer.py", line 759, in receive_message
+    length, _, response_to, op_code = _UNPACK_HEADER(receive_data(conn, 16, deadline))
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/network_layer.py", line 379, in receive_data
+    raise OSError("connection closed")
+OSError: connection closed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 1008, in get_statuses
+    if not self._is_shard_aware():
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 925, in _is_shard_aware
+    return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 705, in is_shard_aware
+    sc_status = self.client.admin.command("listShards")
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 953, in command
+    return self._client._retryable_read(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3043, in _read
+    return self._func(self._session, self._server, conn, read_pref)  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 941, in inner
+    return self._command(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/helpers.py", line 53, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 431, in command
+    self._raise_connection_failure(error)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 633, in _raise_connection_failure
+    _raise_connection_failure(self.address, error, timeout_details=details)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/pymongo/pool_shared.py", line 148, in _raise_connection_failure
+    raise AutoReconnect(msg) from error
+pymongo.errors.AutoReconnect: config-server-1.config-server-endpoints:27018: connection closed (configured timeouts: connectTimeoutMS: 2000.0ms)
+unit-shard-one-1: 02:28:19 ERROR unit.shard-one/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 403, in command
+    return command(
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/network.py", line 198, in command
+    reply = receive_message(conn, request_id)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/network_layer.py", line 759, in receive_message
+    length, _, response_to, op_code = _UNPACK_HEADER(receive_data(conn, 16, deadline))
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/network_layer.py", line 379, in receive_data
+    raise OSError("connection closed")
+OSError: connection closed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 1004, in get_statuses
+    if not self.cluster_password_synced():
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 903, in cluster_password_synced
+    mongos.get_shard_members()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 397, in get_shard_members
+    shard_list = self.client.admin.command("listShards")
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 953, in command
+    return self._client._retryable_read(
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3043, in _read
+    return self._func(self._session, self._server, conn, read_pref)  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 941, in inner
+    return self._command(
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/helpers.py", line 53, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 431, in command
+    self._raise_connection_failure(error)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 633, in _raise_connection_failure
+    _raise_connection_failure(self.address, error, timeout_details=details)
+  File "/var/lib/juju/agents/unit-shard-one-1/charm/venv/lib/python3.10/site-packages/pymongo/pool_shared.py", line 148, in _raise_connection_failure
+    raise AutoReconnect(msg) from error
+pymongo.errors.AutoReconnect: config-server-1.config-server-endpoints:27018: connection closed (configured timeouts: connectTimeoutMS: 2000.0ms)
+unit-shard-one-0: 02:28:20 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-one-1: 02:28:20 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
