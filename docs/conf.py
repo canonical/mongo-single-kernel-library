@@ -31,7 +31,7 @@ copyright = f"{datetime.date.today().year}"
 
 # Sidebar documentation title
 # To disable the title, set it to an empty string.
-html_title = project + "8" + " documentation"
+html_title = project + " 8 " + " documentation"
 version_slug = f"{os.environ.get('READTHEDOCS_VERSION', 'local')}"
 
 # Documentation website URL
