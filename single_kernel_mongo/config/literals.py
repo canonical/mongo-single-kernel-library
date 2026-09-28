@@ -138,4 +138,3 @@ class RollingOpsCallbackId(StrEnum):
 
     RESTART_CHARM_SERVICES = "restart-charm-services"
     SHARD_RESTART_ON_KEYFILE_CHANGED = "shard-restart-on-keyfile-change"
-    UPDATE_MONGOS_AND_RESTART = "update-mongos-and-restart"

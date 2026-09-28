@@ -6,6 +6,7 @@ import logging
 
 import tomllib
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from tests.integration.helpers.common import (
     CHARMED_BACKUP_USERNAME,
@@ -31,9 +32,19 @@ USERNAME_MAPPING = {
 }
 
 
+@retry(
+    retry=retry_if_exception_type(AssertionError),
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(10),
+    reraise=True,
+)
 async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
-    """Get the workload version of the deployed router charm."""
-    return_code, output, _ = await ops_test.juju(
+    """Get the workload version of the deployed router charm.
+
+    Retries 5 times since `juju ssh` can fail transiently (e.g. the exec proxy path isn't
+    ready yet on k8s).
+    """
+    return_code, output, stderr = await ops_test.juju(
         "ssh",
         unit_name,
         "sudo",
@@ -41,7 +52,7 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
         f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/refresh_versions.toml",
     )
 
-    assert return_code == 0
+    assert return_code == 0, f"failed to read refresh_versions.toml on {unit_name}: {stderr}"
     data = tomllib.loads(output)
     return data["workload"]
 

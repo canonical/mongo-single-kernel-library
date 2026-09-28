@@ -15,6 +15,12 @@ import re
 import socket
 from typing import TYPE_CHECKING, TypedDict, final
 
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    PrivateKey,
+    ProviderCertificate,
+)
 from data_platform_helpers.advanced_statuses.models import (
     StatusObject,
 )
@@ -30,11 +36,8 @@ from single_kernel_mongo.config.literals import CharmKind, Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    CertificateRequestAttributes,
-    PrivateKey,
-    ProviderCertificate,
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    PrematureDataAccessError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
@@ -49,6 +52,7 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_KEY_LABEL,
     TlsManagementState,
 )
+from single_kernel_mongo.utils.network_helpers import k8s_fqdn
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -106,13 +110,17 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         """
         unit_id = self.charm.unit.name.split("/")[1]
 
+        dns_list = {
+            f"{self.charm.app.name}-{unit_id}",
+            socket.getfqdn(),
+            "localhost",
+        }
+
+        if self.substrate == Substrates.K8S:
+            dns_list.add(k8s_fqdn(self.state.unit_peer_data.unit_service_name))
+
         sans = Sans(
-            sans_dns=[
-                f"{self.charm.app.name}-{unit_id}",
-                socket.getfqdn(),
-                "localhost",
-                f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
-            ],
+            sans_dns=sorted(dns_list),
             sans_ips=sorted(
                 {
                     *self.state.listen_ips(),
@@ -218,6 +226,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
             True if workload TLS files changed and services need a restart.
         """
         self._propagate_ca_secrets()
+
         need_restart = False
         for internal in (True, False):
             has_secrets = self._has_tls_secrets(internal)
@@ -626,22 +635,36 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return
         for relation in self.state.cluster_relations:
-            if new_ca is None:
-                self.state.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [cluster_databag_key]
-                )
-            else:
-                self.state.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {cluster_databag_key: new_ca}
+            try:
+                if new_ca is None:
+                    self.state.cluster_provider_data_interface.delete_relation_data(
+                        relation.id, [cluster_databag_key]
+                    )
+                else:
+                    self.state.cluster_provider_data_interface.update_relation_data(
+                        relation.id, {cluster_databag_key: new_ca}
+                    )
+            except PrematureDataAccessError:
+                logger.info(
+                    "Relation %s:%s is not initialized. Skipping CA propagation for now.",
+                    relation.name,
+                    relation.id,
                 )
         for relation in self.state.config_server_relation:
-            if new_ca is None:
-                self.state.config_server_data_interface.delete_relation_data(
-                    relation.id, [sharding_databag_key]
-                )
-            else:
-                self.state.config_server_data_interface.update_relation_data(
-                    relation.id, {sharding_databag_key: new_ca}
+            try:
+                if new_ca is None:
+                    self.state.config_server_data_interface.delete_relation_data(
+                        relation.id, [sharding_databag_key]
+                    )
+                else:
+                    self.state.config_server_data_interface.update_relation_data(
+                        relation.id, {sharding_databag_key: new_ca}
+                    )
+            except PrematureDataAccessError:
+                logger.info(
+                    "Relation %s:%s is not initialized. Skipping CA propagation for now.",
+                    relation.name,
+                    relation.id,
                 )
 
     def _propagate_client_ca_as_replicaset(self, new_ca: str | None) -> None:

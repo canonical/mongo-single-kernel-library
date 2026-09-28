@@ -5,6 +5,9 @@ import factory
 from single_kernel_mongo.config.literals import LOCALHOST, InternalUsernames, MongoPorts
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 
+MODEL_NAME = "deadbeef"
+CLUSTER_NAME = "hacked"
+
 
 class MongoConfigurationFactory(factory.Factory):
     class Meta:  # noqa

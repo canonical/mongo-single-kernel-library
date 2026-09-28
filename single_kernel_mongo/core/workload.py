@@ -144,6 +144,11 @@ class MongoPaths:
         """Vault configuration file path."""
         return Path(f"{self.etc_path}/vault/vaultTokenFile")
 
+    @property
+    def pbm_agent_log_dir(self) -> Path:
+        """PBM Agent log dir."""
+        return Path(f"{self.var_path}/log/pbm")
+
 
 class WorkloadBase(ABC):  # pragma: nocover
     """The protocol for workloads.

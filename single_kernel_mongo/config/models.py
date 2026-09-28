@@ -7,8 +7,10 @@ This file should contain the models that are used for the charm configuration.
 The models specify the dataclasses and roles used to configure and fully specify a charm.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum, Flag, auto
 from importlib import resources as impresources
 from importlib.abc import Traversable
 from pathlib import Path
@@ -209,6 +211,57 @@ class VaultConfigurationState(Enum):
     VAULT_UNREACHABLE = "Vault connectivity check failed."
     VAULT_AGENT_FAILED = "Vault agent is not running."
     ACTIVE = "Encryption at rest is working properly."
+
+
+class MongosTLSState(Flag):
+    """State for TLS for mongos."""
+
+    VALID = auto()
+    INTERNAL_MISSING = auto()
+    EXTERNAL_MISSING = auto()
+    INTERNAL_INVALID = auto()
+    EXTERNAL_INVALID = auto()
+    INTERNAL_INCOMPATIBLE = auto()
+    EXTERNAL_INCOMPATIBLE = auto()
+
+    @classmethod
+    def missing(cls, internal: bool) -> MongosTLSState:
+        """Missing state for correct scope."""
+        if internal:
+            return cls.INTERNAL_MISSING
+        return cls.EXTERNAL_MISSING
+
+    @classmethod
+    def invalid(cls, internal: bool) -> MongosTLSState:
+        """Invalid state for correct scope."""
+        if internal:
+            return cls.INTERNAL_INVALID
+        return cls.EXTERNAL_INVALID
+
+    @classmethod
+    def incompatible(cls, internal: bool) -> MongosTLSState:
+        """Incompatible state for correct scope."""
+        if internal:
+            return cls.INTERNAL_INCOMPATIBLE
+        return cls.EXTERNAL_INCOMPATIBLE
+
+    @classmethod
+    def any_missing(cls, flag: MongosTLSState) -> bool:
+        """Check if any TLS is missing."""
+        any_missing = flag & (cls.INTERNAL_MISSING | cls.EXTERNAL_MISSING)
+        return any_missing.value != 0
+
+    @classmethod
+    def any_invalid(cls, flag: MongosTLSState) -> bool:
+        """Check if any TLS is invalid."""
+        any_invalid = flag & (cls.INTERNAL_INVALID | cls.EXTERNAL_INVALID)
+        return any_invalid.value != 0
+
+    @classmethod
+    def any_incompatible(cls, flag: MongosTLSState) -> bool:
+        """Check if any TLS is incompatible."""
+        any_incompatible = flag & (cls.INTERNAL_INCOMPATIBLE | cls.EXTERNAL_INCOMPATIBLE)
+        return any_incompatible.value != 0
 
 
 @dataclass

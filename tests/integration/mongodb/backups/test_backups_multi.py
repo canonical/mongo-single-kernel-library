@@ -133,7 +133,9 @@ async def test_multi_backup(
         f"{db_app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}"
     )
     await ops_test.model.integrate(GCS_APP_NAME, db_app_name)
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[db_app_name], status="active", idle_period=15, timeout=TIMEOUT
+    )
 
     # create a backup as soon as possible. might not be immediately possible since only one backup
     # can happen at a time.
@@ -165,7 +167,9 @@ async def test_multi_backup(
         f"{db_app_name}:{GCS_ENDPOINT}", f"{GCS_APP_NAME}:{GCS_ENDPOINT}"
     )
     await ops_test.model.integrate(S3_APP_NAME, db_app_name)
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[db_app_name], status="active", idle_period=15, timeout=TIMEOUT
+    )
 
     # verify that backups was made on the AWS bucket
     try:

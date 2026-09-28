@@ -3,120 +3,127 @@
 # See LICENSE file for licensing details.
 import time
 
-import httpx
+import jubilant
 import pytest
-from juju.unit import Unit as JujuUnit
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
     CHARMED_STATS_USERNAME,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     UNIT_IDS,
-    check_or_scale_app,
+)
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    get_address_of_unit,
-    get_app_name,
-    get_unit_app,
-    get_unit_id,
+    ensure_app_number_units,
+    existing_app,
+    find_leader,
+    get_ip_from_unit,
     set_password,
     unit_hostname,
+    verify_metrics_endpoints,
 )
-from tests.integration.helpers.ha import (
+from tests.integration.helpers.jubilant_ha import (
     cut_network_from_unit,
-    restore_network_for_unit,
+    restore_network_to_unit,
     wait_network_restore,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
-MONGODB_EXPORTER_PORT = 9216
 MEDIAN_REELECTION_TIME = 12
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource: dict,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
     base_app_name: str,
 ) -> None:
-    """Build and deploy one unit of MongoDB."""
-    app_name = await get_app_name(ops_test)
+    """Build the charm-under-test and deploy it with three units."""
+    app_name = existing_app(juju)
     if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
         return
 
-    await deploy_charm(
-        ops_test=ops_test,
+    app_name = base_app_name
+    deploy_charm(
+        juju=juju,
         charm=mongodb_charm,
         substrate=substrate,
         mongod_resource=mongod_resource,
-        app_name=base_app_name,
+        app_name=app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
 
-async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
+@pytest.mark.abort_on_fail
+def test_endpoints(juju: jubilant.Juju, substrate: Substrate):
     """Sanity check that endpoints are running."""
-    app_name = await get_app_name(ops_test)
-    application = ops_test.model.applications[app_name]
+    app_name = existing_app(juju)
+    assert app_name
 
-    for unit in application.units:
-        await verify_endpoints(ops_test, substrate, unit)
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
+@pytest.mark.abort_on_fail
+def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate):
     """Verify that endpoints still function correctly after the stats user password changes."""
-    app_name = await get_app_name(ops_test)
-    await set_password(
-        ops_test, username=CHARMED_STATS_USERNAME, password="new_password", app_name=app_name
+    app_name = existing_app(juju)
+    assert app_name
+
+    set_password(juju, app_name, username=CHARMED_STATS_USERNAME, password="new_password")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
-    application = ops_test.model.applications[app_name]
-    for unit in application.units:
-        await verify_endpoints(ops_test, substrate, unit)
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate, chaos_mesh):
+@pytest.mark.abort_on_fail
+def test_endpoints_network_cut(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh: None
+):
     """Verify that endpoint still function correctly after a network cut."""
-    app_name = await get_app_name(ops_test)
-    unit = ops_test.model.applications[app_name].units[0]
-    unit_ip = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(unit.name), unit.name.split("/")[0]
-    )
-    if substrate == "lxd":
-        hostname = await unit_hostname(ops_test, unit.name)
-    else:
-        hostname = unit.name
+    app_name = existing_app(juju)
+    assert app_name
+    assert juju.model
 
-    cut_network_from_unit(ops_test, substrate, hostname)
+    leader_name, leader_unit_info = find_leader(juju=juju, app_name=app_name)
+    unit_ip = get_ip_from_unit(substrate, leader_unit_info)
+
+    hostname = unit_hostname(juju, leader_name)
+
+    cut_network_from_unit(substrate, juju.model, hostname, ip_change=False)
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 
     # wait until network is reestablished for the unit
-    restore_network_for_unit(ops_test, substrate, hostname)
-    await wait_network_restore(
-        ops_test, substrate, ops_test.model.info.name, app_name, hostname, unit_ip
+    restore_network_to_unit(substrate, juju.model, hostname, ip_change=False)
+    wait_network_restore(
+        juju,
+        substrate,
+        app_name,
+        hostname,
+        unit_ip,
+        ip_change=False,
+        unit_count=len(UNIT_IDS),
     )
-    await verify_endpoints(ops_test, substrate, unit)
-
-
-# helpers
-
-
-async def verify_endpoints(ops_test: OpsTest, substrate: Substrate, unit: JujuUnit) -> str:
-    """Verifies mongodb endpoint is functional on a given unit."""
-    unit_id, app_name = get_unit_app(unit.name)
-    unit_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    mongodb_exporter_url = f"http://{unit_address}:{MONGODB_EXPORTER_PORT}/metrics"
-    mongo_resp = httpx.get(mongodb_exporter_url)
-
-    assert mongo_resp.status_code == 200
-
-    # if configured correctly there should be more than one mongodb metric present
-    mongodb_metrics = mongo_resp.text
-    assert mongodb_metrics.count("mongo") > 1
-    assert mongodb_metrics.count(f'rs_nm="{app_name}"') > 1
+    verify_metrics_endpoints(substrate, leader_name, leader_unit_info)

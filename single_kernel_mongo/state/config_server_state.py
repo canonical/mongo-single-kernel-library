@@ -30,6 +30,8 @@ class AppShardingComponentKeys(str, Enum):
     BACKUP_CA_SECRET = "backup-ca-secret"  # nosec: B105
     MONGOS_CIDRS = "mongos-cidrs"
     RS_HOSTS = "rs-hosts"
+    CONFIG_SERVER_REPLICA_SET = "cfgsvr-replset"
+    SHARD_REPLICA_SET = "shard-replset"
     AUTH_UPDATED = "auth-updated"
     SHARD_INTEGRATED = "shard-integrated"
     CLUSTER_ID = "cluster-id"
@@ -178,6 +180,32 @@ class AppShardingComponentState(AbstractRelationState[Data]):
             return None
 
         return self.relation_data.get(AppShardingComponentKeys.CLUSTER_ID.value, None)
+
+    @property
+    def config_server_replset(self) -> str | None:
+        """The name of the replica set."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(
+            AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value, None
+        )
+
+    @config_server_replset.setter
+    def config_server_replset(self, value: str):
+        """Sets the auth-updated field."""
+        self.update({AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: value})
+
+    @property
+    def shard_replset(self) -> str | None:
+        """The name of the replica set."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(AppShardingComponentKeys.SHARD_REPLICA_SET.value, None)
+
+    @shard_replset.setter
+    def shard_replset(self, value: str):
+        """Sets the auth-updated field."""
+        self.update({AppShardingComponentKeys.SHARD_REPLICA_SET.value: value})
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):

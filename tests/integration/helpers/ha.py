@@ -661,53 +661,62 @@ async def kill_unit_process(
         )
 
 
-async def db_step_down(
-    ops_test: OpsTest, substrate: Substrate, primary_name: str, sigterm_time: float, app_name: str
-):
-    # loop through all units that aren't the old primary
-    app_name = await get_app_name(ops_test)
-    log_path = mongodb_log_path(substrate)
+async def db_step_down(  # noqa: C901
+    ops_test: OpsTest,
+    substrate: Substrate,
+    sigterm_time: float,
+    app_name: str,
+) -> bool:
+    """Checks that the DB has stepped down.
 
-    if substrate == "lxd":
-        ls_command_template = "ssh {unit_name} sudo ls {log_path}"
-        cat_command_template = "ssh {unit_name} sudo cat {log_path}"
-    else:
-        ls_command_template = "ssh  --container mongod {unit_name} ls {log_path}"
-        cat_command_template = "ssh  --container mongod {unit_name} cat {log_path}"
+    We check that by checking the reason of the last election in the metrics.
+    It can be stepUpRequest or stepUpRequestSkipDryRun.
+    We then confirm that it happened after the SIGTERM time.
+    """
+    assert ops_test.model
 
-    for unit in ops_test.model.applications[app_name].units:
-        if unit.name == primary_name:
-            continue
-        # verify log file exists on this machine
-        search_file = ls_command_template.format(unit_name=unit.name, log_path=log_path)
-        return_code, _, _ = await ops_test.juju(*search_file.split())
-        if return_code == 2:
-            logger.info(f"Missing file {log_path}")
-            continue
+    password = await get_password(
+        ops_test,
+        username=CHARMED_OPERATOR_USERNAME,
+        app_name=app_name,
+    )
+    replica_set_hosts = [
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
 
-        # these log files can get quite large. According to the Juju team the 'run' command
-        # cannot be used for more than 16MB of data so it is best to use juju ssh or juju scp.
-        cat_file = cat_command_template.format(unit_name=unit.name, log_path=log_path)
-        _, stdout, _ = await ops_test.juju(*cat_file.split())
+    uri = await generate_mongodb_client(
+        ops_test, substrate, app_name, mongos=False, hosts=replica_set_hosts, password=password
+    )
 
-        for line in stdout.splitlines():
-            if not len(line):
-                continue
+    result = await execute_on_mongod(ops_test, app_name, substrate, uri, "rs.status()")
 
-            item = json.loads(line)
+    if result.failed:
+        return False
 
-            step_down_time = convert_time(item["t"]["$date"])
-            if (
-                "Starting an election due to step up request" in line
-                and step_down_time >= sigterm_time
-            ):
-                return True
-            if (
-                "Starting an election due to step up request" in line
-                and step_down_time < sigterm_time
-            ):
-                logger.warning(f"Step down: {step_down_time} < {sigterm_time}")
+    election_metrics = result.data.get("electionCandidateMetrics", {})
 
+    if not election_metrics:
+        return False
+
+    reason = election_metrics.get("lastElectionReason", "")
+    election_date = election_metrics.get("lastElectionDate", {}).get("$date", None)
+    if not reason.startswith("stepUpRequest"):
+        logger.info(
+            "Reason is %s, should be one of 'stepUpRequest' or 'stepUpRequestSkipDryRun'", reason
+        )
+        return False
+
+    if not election_date:
+        logger.info("Missing election date")
+        return False
+
+    election_ts = convert_time(election_date)
+
+    if election_ts >= sigterm_time:
+        return True
+
+    logger.info("Election time is %s, but sigterm time is %s", election_ts, sigterm_time)
     return False
 
 

@@ -54,9 +54,9 @@ Follow the [official Charmed Vault documentation](https://canonical-vault-charms
 until the vault is unsealed, authorised and you have removed the `one-time-token` secret.
 You don't need to create a key-value type secret, and you should not destroy your environment.
 
-## Deploy MongoDB
+## Deploy MongoDB (replica set)
 
-Deploy Charmed MongoDB for your substrate, specifying the `enable-encryption-at-rest` config option
+Deploy Charmed MongoDB replica set for your substrate, specifying the `enable-encryption-at-rest` config option
 
 `````{tab-set}
 ````{tab-item} VM
@@ -125,6 +125,48 @@ juju integrate mongodb-k8s:vault-kv vault:vault-kv
 ```
 ````
 `````
+
+## Enable encryption at rest in a sharded cluster
+
+In a sharded cluster, encryption at rest is configured per component. You don't need to encrypt every shard, and the components that are encrypted don't need to share the same Vault deployment, each can be integrated with its own Vault.
+
+As with a replica set, encryption can only be enabled at deploy time for each component that needs it, so make sure the relevant Vault deployment(s) are ready and unsealed before deploying it.
+
+In a cluster with two shards (named `shard0` and `shard1`) and a config-server, you could, for example, encrypt only `shard0` and the `config-server`, each with its own Vault deployment (`vault-a` and `vault-b`), and leave `shard1` unencrypted:
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+```shell
+juju deploy mongodb --channel=8/edge --config enable-encryption-at-rest=True --config role="config-server" config-server
+juju deploy mongodb --channel=8/edge --config enable-encryption-at-rest=True --config role="shard" shard0
+juju deploy mongodb --channel=8/edge --config role="shard" shard1
+
+juju integrate config-server:vault-kv vault-b:vault-kv
+juju integrate shard0:vault-kv vault-a:vault-kv
+
+juju integrate config-server:config-server shard0:sharding
+juju integrate config-server:config-server shard1:sharding
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+```shell
+juju deploy mongodb-k8s --channel=8/edge --trust --config enable-encryption-at-rest=True --config role="config-server" config-server
+juju deploy mongodb-k8s --channel=8/edge --trust --config enable-encryption-at-rest=True --config role="shard" shard0
+juju deploy mongodb-k8s --channel=8/edge --trust --config role="shard" shard1
+
+juju integrate config-server:vault-kv vault-b:vault-kv
+juju integrate shard0:vault-kv vault-a:vault-kv
+
+juju integrate config-server:config-server shard0:sharding
+juju integrate config-server:config-server shard1:sharding
+```
+````
+`````
+
+Your sharded cluster now has encryption at rest enabled on `config-server` and `shard0`, each backed by its own Vault deployment, while `shard1` remains unencrypted.
 
 ## Rotate the encryption key
 

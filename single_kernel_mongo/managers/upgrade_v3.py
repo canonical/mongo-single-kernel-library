@@ -131,7 +131,10 @@ class MongoDBUpgradesManager:
             # Config-Server has access to all the related shard applications.
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 relation_shards = {
-                    relation.app.name for relation in self.state.config_server_relation
+                    replica_set_name
+                    for relation in self.state.config_server_relation
+                    if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+                    is not None
                 }
                 cluster_shards = mongos.get_shard_members()
                 if len(relation_shards - cluster_shards):

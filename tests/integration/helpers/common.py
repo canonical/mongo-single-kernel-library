@@ -3,12 +3,10 @@
 
 import json
 import logging
-import math
 import re
 import subprocess
 from base64 import b64decode
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from random import choices
 from string import ascii_lowercase, digits
@@ -16,7 +14,6 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import yaml
-from bson.json_util import dumps as bson_dumps
 from dateutil.parser import parse
 from juju.application import Application
 from juju.client.client import FullStatus
@@ -294,11 +291,16 @@ async def mongodb_uri(
     hostnames: bool = False,
 ) -> str:
     """Build the URI for mongodb, to run on a charm unit (not from the host running the test)."""
+    assert ops_test.model
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
     if substrate == "microk8s" and hostnames:
-        addresses = [f"{app_name}-{unit_id}.{app_name}-endpoints" for unit_id in unit_ids]
+        model = ops_test.model.name
+        addresses = [
+            f"{app_name}-{unit_id}.{app_name}-endpoints.{model}.svc.cluster.local"
+            for unit_id in unit_ids
+        ]
     else:
         addresses = [
             await get_address_of_unit(ops_test, substrate, unit_id, app_name)
@@ -768,7 +770,7 @@ def instance_ip(model: str, instance: str) -> str:
     return ""
 
 
-def audit_log_line_sanity_check(entry) -> bool:
+def audit_log_line_sanity_check(entry: dict[str, str | None]) -> bool:
     fields = ["atype", "ts", "local", "remote", "users", "roles", "param", "result"]
     for field in fields:
         if entry.get(field) is None:
@@ -786,7 +788,7 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
 async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
     if substrate == "microk8s":
         return [
-            f"{unit.name.replace('/', '-')}.{app_name}-endpoints"
+            f"{unit.name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
             for unit in ops_test.model.applications[app_name].units
         ]
 
@@ -801,7 +803,7 @@ async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate,
     unit_id, app_name = get_unit_app(unit_name)
     if substrate == "lxd":
         return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints"
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
 
 
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
@@ -972,6 +974,36 @@ async def get_status_detail(unit: JujuUnit) -> dict:
     action = await unit.run_action("status-detail")
     action = await action.wait()
     return action.results["json-output"]
+
+
+async def none_has_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    """Checks that no unit has a specific status in its status-detail output."""
+    for unit in ops_test.model.applications[app_name].units:
+        action = await unit.run_action("status-detail")
+        action = await action.wait()
+        result = action.results["json-output"]
+
+        # juju messes up the string formatting here.
+        unit_statuses = json.loads(result["unit"])
+
+        assert all(
+            unit_status["Status"].lower() != status.lower() for unit_status in unit_statuses
+        ), f"Status {status} still present"
+        assert all(
+            unit_status["Message"] != message for unit_status in unit_statuses
+        ), f"Message {message} still present"
+
+
+async def none_is_restarting(ops_test: OpsTest, app_name: str) -> None:
+    """This checks that no unit is waiting for restart, based on the unit statuses.
+
+    This might be a bit flaky but we don't really have a better solution until jubilant.
+    """
+    for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(5), reraise=True):
+        with attempt:
+            await none_has_status(
+                ops_test, app_name, status="waiting", message="Waiting for MongoDB restart."
+            )
 
 
 async def check_app_status(
@@ -1224,44 +1256,6 @@ def generate_collection_id() -> str:
     return f"collection_{new_id}"
 
 
-async def check_if_test_documents_stored(
-    ops_test: OpsTest, app_name: str, substrate: Substrate, uri: str, collection: str
-) -> None:
-    """Check to see if some documents for the `TEST_DOCUMENT` dict were stored."""
-    # serialize the str test documents into json
-    o_test_docs = json.loads(TEST_DOCUMENTS)
-
-    # query filter
-    formatted_list = bson_dumps([{"uid": test_doc["uid"]} for test_doc in o_test_docs])
-    # Needed to escape the $ properly
-    query_filter = f"{{\\$or: {formatted_list}}}"
-
-    count_documents = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.{collection}.countDocuments({query_filter})",
-    )
-    assert count_documents.data == 2
-
-    # descending order to match insertion order of the test documents
-    find_documents = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.{collection}.find({query_filter}).sort({{uid: 1}}).toArray()",
-    )
-    assert len(find_documents.data) == 2
-
-    for index, test_doc in zip(range(len(o_test_docs)), o_test_docs):
-        db_doc = find_documents.data[index]
-
-        for key, val in test_doc.items():
-            assert db_doc[key] == val
-
-
 def get_unit_id(unit_name: str) -> int:
     """Unit id from unit name."""
     return int(unit_name.split("/")[1])
@@ -1283,51 +1277,6 @@ def get_unit_id_from_host(units: dict[int, str], host: str) -> int:
         if host == _host:
             return unit_id
     raise Exception("no host found", units, host)
-
-
-async def secondary_mongo_uris_with_sync_delay(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, rs_status_data: dict
-):
-    """Returns the list of secondaries and their sync delay with the master.
-
-    Returns the ascending list of Secondaries, the first secondary is the
-    one with the lowest data sync delay.
-    """
-    if substrate == "lxd":
-        hosts = {
-            get_unit_id(unit.name): await get_address_of_unit(
-                ops_test, substrate, get_unit_id(unit.name), app_name
-            )
-            for unit in ops_test.model.applications[app_name].units
-        }
-    else:
-        hosts = {
-            get_unit_id(unit.name): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
-            for unit in ops_test.model.applications[app_name].units
-        }
-
-    primary_optime_date = [
-        datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        for member in rs_status_data["members"]
-        if member["stateStr"].upper() == "PRIMARY"
-    ][0]
-
-    secondaries = []
-    for member in rs_status_data["members"]:
-        if member["stateStr"].upper() != "SECONDARY":
-            continue
-
-        unit_id = get_unit_id_from_host(hosts, member["name"].split(":")[0])
-        member_optime_date = datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-
-        host = await mongodb_uri(ops_test, substrate, app_name, unit_ids=[unit_id])
-        delay_seconds = (primary_optime_date - member_optime_date).total_seconds()
-
-        secondaries.append({"uri": host, "delay": math.fabs(delay_seconds)})
-
-    secondaries.sort(key=lambda o: o["delay"])
-
-    return secondaries
 
 
 async def get_secret_data(ops_test: OpsTest, secret_uri: str):
@@ -1446,12 +1395,11 @@ async def has_file(
     container: str = "mongod",
 ) -> bool:
     """Checks if the file exists or not."""
-    app_name = get_app_name_from_unit(unit.name)
     match substrate:
         case "lxd":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {unit.name} sudo"
         case "microk8s":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {app_name}/leader"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {unit.name}"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
@@ -1472,12 +1420,11 @@ async def execute_on_server(
     container: str = "mongod",
 ) -> str:
     """Executes a command on the server."""
-    app_name = get_app_name_from_unit(unit.name)
     match substrate:
         case "lxd":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {unit.name} sudo"
         case "microk8s":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {app_name}/leader"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {unit.name}"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 

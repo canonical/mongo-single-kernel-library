@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, final
 
 import charm_refresh
 import shortuuid
+from charmlibs import sysctl
 from charmlibs.rollingops import (
     OperationResult,
     RollingOpsManager,
@@ -82,6 +83,7 @@ from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
+    DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
@@ -102,7 +104,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.backups.gcs import GCSBackupManager
 from single_kernel_mongo.managers.backups.s3 import S3BackupManager
 from single_kernel_mongo.managers.cluster import ClusterProvider
@@ -397,14 +398,18 @@ class MongoDBOperator(OperatorProtocol, Object):
                     state,
                 )
                 return
-        except ValueError as e:
+        except (ValueError, WorkloadServiceError, WorkloadExecError) as e:
             logger.warning(
                 f"Encryption at rest may be degraded. Error: {e}. This must be fixed first."
             )
             return
 
-        self._configure_workloads()
-        self.start_charm_services()
+        try:
+            self._configure_workloads()
+            self.start_charm_services()
+        except (WorkloadServiceError, WorkloadExecError) as e:
+            logger.warning(f"Error occurred while configuring workloads. Error: {e}.")
+            return
 
         if self.charm.unit.is_leader():
             # Update the version across all relations so that we can notify other units
@@ -420,6 +425,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             except RetryError as err:
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
+
+        self.config_server_manager.update_mongos_hosts()
+        self.shard_manager.reconcile_shard_after_restart()
 
         if not (backup_relation := self.backup_events.current_relation):
             return
@@ -576,6 +584,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_ips_in_databag()
         if len(self.state.peer_database_addresses) < self.state.planned_units:
             raise NotReadyError("Waiting for peer database addresses")
+
+        # Update the roles and information on mongos and shards
+        self.shard_manager.reconcile_shard_after_restart()
+        self.config_server_manager.update_mongos_hosts()
 
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
@@ -920,6 +932,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
+        self.state.statuses.clear(scope="unit", component=self.mongo_manager.name)
+
         if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
@@ -936,10 +950,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
+            # Remove the units that we don't need anymore
+            self.process_unremoved_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_RECONFIG.value,
+                scope="unit",
+                component=self.mongo_manager.name,
             )
             raise
 
@@ -1079,6 +1097,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Set the permissions for the common and tmp dir.
         """
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
         if self.substrate == Substrates.K8S:
             return
 
@@ -1091,7 +1110,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
-        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
@@ -1179,7 +1197,11 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def upgrade_charm(self) -> None:
-        """Set storage permissions after revision upgrade."""
+        """Set storage permissions after revision upgrade.
+
+        Raises:
+            WorkloadExecError: If the workload is not ready to execute commands.
+        """
         self.prepare_storage()
 
     @override
@@ -1221,6 +1243,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Still draining shard.")
             except NotReadyError:
                 logger.warning("Not ready.")
+            except WorkloadServiceError:
+                logger.warning("Workload service error.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""
@@ -1443,6 +1467,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # After a restart we can always recompute the shard manager statuses.
         self.shard_manager.recompute_statuses_for_scope(scope="unit")
         self.shard_manager.reconcile_shard_after_restart()
+        self.config_server_manager.update_mongos_hosts()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
@@ -1456,7 +1481,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except DeferrableError as e:
+        except (DeferrableError, DeferrableFailedHookChecksError) as e:
             self.charm.state.statuses.add(
                 MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
@@ -1556,11 +1581,16 @@ class MongoDBOperator(OperatorProtocol, Object):
             return MongoDBStatuses.INVALID_MONGOS_REL.value
         return None
 
+    @override
     def _configure_workloads(self) -> None:
         """Handle filesystem interactions for charm configuration."""
         # Configure the workloads
         self.config_manager.set_environment()
         self.mongos_config_manager.set_environment()
+
+        # Write the PBM Agent config file.
+        self.s3_backup_manager.prepare_log_dir()
+        self.s3_backup_manager.write_config_file()
 
         # Instantiate the keyfile
         self.instantiate_keyfile()
@@ -1604,13 +1634,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_charm_admin_users()
         logger.info("Manage client relation users")
-        if self.state.is_role(MongoDBRoles.REPLICATION):
-            for relation in self.state.client_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            for relation in self.state.cluster_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-
+        try:
+            if self.state.is_role(MongoDBRoles.REPLICATION):
+                for relation in self.state.client_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                for relation in self.state.cluster_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info(
+                "Database requested has not run yet. Users and DBs will be reconciled later."
+            )
         self.state.app_peer_data.db_initialised = True
 
     @property
@@ -1663,17 +1697,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Returns whether mongodb has pending rolling operations."""
         return self.rollingops_manager.is_waiting()
 
+    @override
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        # No matter what happens, if we don't have a workload we report it immediately.
+        if scope == "unit" and not self.workload.workload_present:
+            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
             return self.state.statuses.get(
                 scope=scope, component=self.name
             ).root + self._cluster_mismatch_status(scope)
-
-        if scope == "unit" and not self.workload.workload_present:
-            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if scope == "unit" and self.is_waiting_for_rolling_operation():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)

@@ -187,7 +187,7 @@ def test_shard_local_auth_restrictions_include_config_server_hosts(
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
+def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -207,7 +207,7 @@ def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_microk8s(
+def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -274,6 +274,7 @@ def test_is_shard_added_to_cluster_success(
     state.app_peer_data.role = MongoDBRoles.SHARD
     state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
     state.shard_state.shard_integrated = True
+    state.shard_state.config_server_replset = "config-server"
 
     assert state.is_shard_added_to_cluster()
 

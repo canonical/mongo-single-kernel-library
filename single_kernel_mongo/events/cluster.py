@@ -17,8 +17,10 @@ from ops.charm import (
     SecretChangedEvent,
 )
 from ops.framework import Object
+from typing_extensions import final
 
 from single_kernel_mongo.exceptions import (
+    ClusterTLSError,
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
@@ -42,6 +44,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@final
 class ClusterConfigServerEventHandler(Object):
     """Event Handler for managing config server side events."""
 
@@ -80,7 +83,8 @@ class ClusterConfigServerEventHandler(Object):
         try:
             self.manager.share_secret_to_mongos(event.relation, initial_event=True)
         except DeferrableFailedHookChecksError as e:
-            logger.info("Skipping database requested event: hook checks did not pass.")
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except DeferrableError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -93,6 +97,8 @@ class ClusterConfigServerEventHandler(Object):
             self.manager.update_keyfile_and_hosts_on_mongos(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except DeferrableError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except DatabaseRequestedHasNotRunYetError:
@@ -104,12 +110,15 @@ class ClusterConfigServerEventHandler(Object):
             self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except DeferrableError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except DatabaseRequestedHasNotRunYetError:
             logger.info("Not cleaning users, relation was not established yet.")
 
 
+@final
 class ClusterMongosEventHandler(Object):
     """Event Handler for managing mongos side events."""
 
@@ -149,11 +158,6 @@ class ClusterMongosEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
         self.manager.set_relation_created_status()
-        # Edge condition: mongos was integrated with the certificates provider
-        # before being integrated with the config-server. We trigger the refresh
-        # of the certificates to use the config-server as CSR subject.
-        if self.manager.state.peer_tls_relation or self.manager.state.client_tls_relation:
-            self.dependent.tls_events.refresh_certificates()
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Database Created event handler.
@@ -162,8 +166,14 @@ class ClusterMongosEventHandler(Object):
         credentials and share it to the client applications.
         """
         try:
+            # Edge condition: mongos was integrated with the certificates provider
+            # before being integrated with the config-server. We trigger the refresh
+            # of the certificates to use the config-server as CSR subject.
+            # The config-server name is only available upon database created event, not before.
+            if self.manager.state.peer_tls_relation or self.manager.state.client_tls_relation:
+                self.dependent.tls_events.refresh_certificates()
             self.manager.share_credentials_to_clients(event.username, event.password)
-        except (DeferrableFailedHookChecksError,) as e:
+        except (ClusterTLSError, DeferrableFailedHookChecksError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -179,10 +189,20 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
+        except (
+            RollingOpsNoRelationError,
+            DeferrableFailedHookChecksError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+            return
+        except (
+            WaitingForSecretsError,
+            ClusterTLSError,  # We don't defer on the failed hook checks because we know it will solve later.
+            NonDeferrableFailedHookChecksError,
+        ) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
@@ -195,8 +215,10 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.async_update_mongos_and_restart()
-        except RollingOpsNoRelationError as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError, ClusterTLSError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

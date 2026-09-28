@@ -4,57 +4,27 @@
 
 import logging
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
     DEPLOYMENT_TIMEOUT,
-    check_or_scale_app,
-    deploy_charm,
-    get_address_of_unit,
-    get_app_name,
-    get_unit_id,
+    UNIT_IDS,
 )
-from tests.integration.helpers.ha import replica_set_primary, scale_application
+from tests.integration.helpers.jubilant_common import (
+    count_primaries,
+    deploy_charm,
+    ensure_app_number_units,
+    existing_app,
+    fast_forward,
+)
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
-):
-    """Build and deploy one unit of MongoDB."""
-    # it is possible for users to provide their own cluster for testing. Hence check if there
-    # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
-    if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, 1)
-        return
-
-    await deploy_charm(
-        ops_test=ops_test,
-        charm=mongodb_charm,
-        substrate=substrate,
-        mongod_resource=mongod_resource,
-        app_name=base_app_name,
-        num_units=1,
-    )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
-
-    # effectively disable the update status from firing
-    await ops_test.model.set_config({"update-status-hook-interval": "60m"})
-
-
-async def test_long_scale_up_scale_down_units(ops_test: OpsTest, substrate: Substrate):
-    """Scale up and down the application and verify the replica set is healthy."""
-    scales = [2, -1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7]
-    for count in scales:
-        await scale_and_verify(ops_test, substrate, count=count)
-
-
-async def scale_and_verify(ops_test: OpsTest, substrate: Substrate, count: int):
+def scale_and_verify(juju: jubilant.Juju, substrate: Substrate, app_name: str, count: int):
     if count == 0:
         logger.warning("Skipping scale up/down by 0")
         return
@@ -63,20 +33,54 @@ async def scale_and_verify(ops_test: OpsTest, substrate: Substrate, count: int):
     else:
         logger.info(f"Scaling down by {abs(count)} units")
 
-    app_name = await get_app_name(ops_test)
+    current_units = len(juju.status().get_units(app_name))
 
-    await scale_application(ops_test, substrate, app_name, count, wait=False)
+    with fast_forward(juju, update_interval="2m"):
+        ensure_app_number_units(juju, substrate, app_name, current_units + count, wait=True)
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, raise_on_error=False
+    assert count_primaries(juju, substrate, app_name) == 1, "Replica set has no primary."
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.juju_setup
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
+) -> None:
+    """Build the charm-under-test and deploy it with three units."""
+    app_name = existing_app(juju)
+    if app_name:
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
+        return
+
+    app_name = base_app_name
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
+        app_name=app_name,
+        num_units=len(UNIT_IDS),
+    )
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    hosts = [
-        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
 
-    primary = await replica_set_primary(
-        ops_test, substrate, replica_set_hosts=hosts, app_name=app_name
-    )
-    assert primary is not None, "Replica set has no primary"
+def test_long_scale_up_scale_down_units(juju: jubilant.Juju, substrate: Substrate):
+    """Scale up and down the application and verify the replica set is healthy."""
+    scales = [2, -1, -1, 2, -2, 3, -3]
+
+    app_name = existing_app(juju)
+    assert app_name
+
+    for count in scales:
+        scale_and_verify(juju, substrate, app_name=app_name, count=count)

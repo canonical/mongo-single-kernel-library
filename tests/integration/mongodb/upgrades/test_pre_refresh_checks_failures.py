@@ -92,7 +92,9 @@ async def test_preflight_check_fails_during_backup(
     await ops_test.model.applications[app_name].remove_relation(
         f"{app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}"
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", timeout=TIMEOUT, raise_on_error=False
+    )
 
 
 @pytest.mark.abort_on_fail

@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 from logging import getLogger
 
 import pytest
@@ -142,9 +141,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     except RetryError:
         assert backups == prev_backups + 1, "Backup not created."
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # add writes to be cleared after restoring the backup. Note these are written to the same
     # collection that was backed up.
@@ -163,9 +160,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify all writes are present
     try:

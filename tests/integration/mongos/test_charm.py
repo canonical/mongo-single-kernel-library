@@ -2,6 +2,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
+
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -122,6 +124,7 @@ async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
 @pytest.mark.abort_on_fail
 async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate) -> None:
     """Checks that mongos supports scale up and down of config server."""
+    assert ops_test.model
     # completely change the hosts that mongos was connected to
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].add_units(count=1)
     await ops_test.model.wait_for_idle(
@@ -130,13 +133,23 @@ async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate)
         timeout=1000,
     )
 
+    n_units = len(ops_test.model.applications[CONFIG_SERVER_APP_NAME].units)
+
     # destroy the unit we were initially connected to
     config_server_unit = ops_test.model.applications[CONFIG_SERVER_APP_NAME].units[0]
     await remove_units(ops_test, substrate, CONFIG_SERVER_APP_NAME, [config_server_unit])
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME],
-        status="active",
-        timeout=1000,
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(
+            apps=[CONFIG_SERVER_APP_NAME],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=n_units - 1,
+        ),
+        ops_test.model.wait_for_idle(
+            apps=[MONGOS_APP_NAME],
+            status="active",
+            timeout=1000,
+        ),
     )
 
     # prepare sharded cluster

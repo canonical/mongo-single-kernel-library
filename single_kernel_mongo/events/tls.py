@@ -9,6 +9,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.interfaces.tls_certificates import (
+    CertificateAvailableEvent,
+    TLSCertificatesRequiresV4,
+)
 from charmlibs.rollingops import RollingOpsNoRelationError
 from ops import ConfigChangedEvent
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
@@ -22,11 +26,7 @@ from single_kernel_mongo.config.statuses import (
     TLSStatuses,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
-    TLSCertificatesRequiresV4,
-)
+from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError, WorkloadServiceError
 from single_kernel_mongo.state.tls_state import TlsManagementState
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
@@ -102,12 +102,12 @@ class TLSEventsHandler(Object):
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_PEER_TLS_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.dependent.name,
             )
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_CLIENT_TLS_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.dependent.name,
             )
 
@@ -130,7 +130,11 @@ class TLSEventsHandler(Object):
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the relation broken event."""
-        state = self.manager.get_tls_management_state()
+        try:
+            state = self.manager.get_tls_management_state()
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         match state:
             case TlsManagementState.UPGRADE_IN_PROGRESS | TlsManagementState.ENCRYPTION_DEGRADED:
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
@@ -167,7 +171,11 @@ class TLSEventsHandler(Object):
 
         This event is emitted by the TLS charm when a certificates is available.
         """
-        state = self.manager.get_tls_management_state()
+        try:
+            state = self.manager.get_tls_management_state()
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         match state:
             case (
                 TlsManagementState.DB_NOT_INTIALIZED

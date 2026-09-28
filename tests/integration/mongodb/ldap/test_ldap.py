@@ -17,6 +17,7 @@ from tests.integration.helpers.common import (
     execute_on_mongod,
     get_app_name,
     mongodb_config_path,
+    none_is_restarting,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.ldap import (
@@ -212,6 +213,8 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
 async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = await get_app_name(ops_test)
+    assert db_app_name
+    assert ops_test.model
 
     # We remove the first relation integrated, it should go into blocked state
     await ops_test.model.applications[db_app_name].remove_relation(
@@ -231,6 +234,8 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
         status="GLauth TLS is integrated but LDAP is not.",
         timeout=300,
     )
+
+    await none_is_restarting(ops_test, db_app_name)
 
     # John should not be able to log in now.
     uri = await generate_mongodb_ldap_client(
@@ -278,6 +283,7 @@ async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: S
         status="TLS is mandatory for LDAP transport.",
         timeout=300,
     )
+    await none_is_restarting(ops_test, db_app_name)
 
     # John should not be able to log in now.
     uri = await generate_mongodb_ldap_client(

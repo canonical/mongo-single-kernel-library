@@ -13,6 +13,7 @@ Available deployment methods and operations to consider at deploy-time:
 :maxdepth: 2
 
 Deploy <deploy/index>
+Configure Juju spaces <configure-juju-spaces>
 Manage persistent storage <manage-persistent-storage>
 ```
 

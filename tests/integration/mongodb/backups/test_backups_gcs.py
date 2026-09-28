@@ -191,9 +191,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     except RetryError:
         assert backups == prev_backups + 1, "Backup not created."
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # add writes to be cleared after restoring the backup. Note these are written to the same
     # collection that was backed up.
@@ -212,9 +210,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify all writes are present
     try:
@@ -291,8 +287,8 @@ async def test_restore_new_cluster(
     )
 
     # wait for new cluster to sync
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[new_cluster_app_name], status="active", idle_period=15),
+    await ops_test.model.wait_for_idle(
+        apps=[new_cluster_app_name], status="active", idle_period=15, timeout=TIMEOUT
     )
 
     # verify that the listed backups from the old cluster are not listed as failed.
@@ -339,9 +335,7 @@ async def test_update_backup_password(
     db_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
 
     # wait for charm to be idle before setting password
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     await set_password(
         ops_test, username=CHARMED_BACKUP_USERNAME, password="new-password", app_name=db_app_name

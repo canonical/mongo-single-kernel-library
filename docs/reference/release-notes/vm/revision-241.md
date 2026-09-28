@@ -24,7 +24,7 @@ This is the first release of Charmed MongoDB and Mongos 8 for VM, featuring a Ub
 * New [documentation site](https://canonical-charmed-mongodb.readthedocs-hosted.com/8/#)
 * Manual upgrade path from MongoDB 6 to MongoDB 8.
 
-### Bugfixes
+### Bug fixes
 
 * Crash when removing partially integrated shards in some cases
 

@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
 
 import pytest
 from pymongo import MongoClient
@@ -42,6 +43,8 @@ from tests.integration.helpers.types import Substrate
 # collection. More info here:
 # https://stackoverflow.com/questions/77364840/mongodb-slow-chunk-migration-for-collection-config-system-sessions-with-remov
 REMOVAL_TIMEOUT = 30 * 60
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
@@ -327,6 +330,8 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
 async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substrate):
     """Tests safe removal of a shard that is not primary."""
     # add back a shard so we can safely remove a shard.
+
+    logging.info("Adding %s to config server", SHARD_TWO_APP_NAME)
     await ops_test.model.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
@@ -345,6 +350,7 @@ async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substr
         raise_on_error=False,
     )
 
+    logging.info("Removing %s from config server", SHARD_TWO_APP_NAME)
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",

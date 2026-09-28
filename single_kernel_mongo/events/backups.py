@@ -26,7 +26,6 @@ from single_kernel_mongo.exceptions import (
     InvalidStorageRelationError,
     ListBackupError,
     NonDeferrableFailedHookChecksError,
-    PBMBusyError,
     RestoreError,
     ResyncError,
     SetPBMConfigError,
@@ -213,7 +212,13 @@ class BackupEventsHandler(Object):
             )
             return
 
-        if not manager.workload.active():
+        try:
+            is_active = manager.workload.active()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while checking PBM service status.")
+            is_active = False
+
+        if not is_active:
             defer_event_with_info_log(
                 logger,
                 event,
@@ -248,8 +253,6 @@ class BackupEventsHandler(Object):
 
             # Then set the config options on PBM.
             manager.set_config_options(credentials=credentials)
-            # Finally, resync the configuration.
-            manager.resync_config_options()
             backup_state = BackupState.ACTIVE
         except InvalidStorageCredentialsError:
             backup_state = BackupState.INCORRECT_CREDS
@@ -261,7 +264,7 @@ class BackupEventsHandler(Object):
             event.defer()
         except WorkloadServiceError:
             backup_state = BackupState.WAITING_PBM_START
-        except (ResyncError, PBMBusyError):
+        except ResyncError:
             backup_state = BackupState.WAITING_TO_SYNC
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
@@ -280,7 +283,11 @@ class BackupEventsHandler(Object):
             logger.warning("Two relations combined, exiting early.")
             return
 
-        manager.cleanup_certs_and_restart(event.relation)
+        try:
+            manager.cleanup_certs_and_restart(event.relation)
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         manager.state.statuses.clear(scope="unit", component=manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:

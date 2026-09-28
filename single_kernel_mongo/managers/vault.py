@@ -12,6 +12,14 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Literal, final, override
 
 import hvac
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    PrivateKey,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
     AbstractManagerStatus,
@@ -28,14 +36,6 @@ from single_kernel_mongo.exceptions import (
     InvalidConfigError,
     WaitingForLeaderError,
     WorkloadExecError,
-)
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    PrivateKey,
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
 )
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.state.charm_state import CharmState

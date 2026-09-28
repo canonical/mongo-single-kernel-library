@@ -5,8 +5,9 @@
 """PBM service workloads definition."""
 
 from pathlib import Path
+from typing import ClassVar
 
-from ops import Container
+from ops.model import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
@@ -16,27 +17,31 @@ from single_kernel_mongo.exceptions import WorkloadServiceError
 
 
 class PBMPaths(MongoPaths):
-    """PBM Specific paths."""
+    """Vault Agent specific paths."""
 
     @property
-    def pbm_config(self) -> Path:
-        """PBM Configuration file path."""
-        return Path(f"{self.etc_path}/pbm/pbm_config.yaml")
+    def pbm_agent_config_path(self) -> Path:
+        """PBM Agent configuration file path."""
+        return Path(f"{self.etc_path}/pbm/pbm-agent.yaml")
+
+    @property
+    def pbm_agent_log_file(self) -> Path:
+        """PBM Agent log file."""
+        return Path(f"{self.pbm_agent_log_dir}/pbm-agent.json")
 
 
 class PBMWorkload(WorkloadBase):
     """MongoDB Workload definition."""
 
-    service = "pbm-agent"
-    layer_name = "pbm-agent"
-    bin_cmd = "pbm"
-    env_var = "PBM_MONGODB_URI"
-    snap_param = "pbm-uri"
-    paths: PBMPaths
+    service: ClassVar[str] = "pbm-agent"
+    layer_name: ClassVar[str] = "pbm-agent"
+    bin_cmd: ClassVar[str] = "pbm"
+    env_var: ClassVar[str] = "PBM_MONGODB_URI"
+    snap_param: ClassVar[str] = "pbm-uri"
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        self.paths = PBMPaths(self.role)
+        self.paths: PBMPaths = PBMPaths(self.role)
 
     @property
     @override
@@ -53,7 +58,7 @@ class PBMWorkload(WorkloadBase):
                     self.service: {
                         "override": "replace",
                         "summary": "pbm",
-                        "command": "/usr/bin/pbm-agent",
+                        "command": f"/usr/bin/pbm-agent -f {self.paths.pbm_agent_config_path}",
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,

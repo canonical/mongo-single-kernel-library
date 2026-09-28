@@ -46,7 +46,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up environment
         run: |
           sudo snap install go --classic
@@ -59,14 +61,19 @@ jobs:
       - name: Collect spread jobs
         id: collect-jobs
         shell: python
+        env:
+          BACKEND: ${{ inputs.backend }}
+          MONGODB_REVISIONS: ${{ inputs.mongodb-revisions }}
+          MONGOS_REVISIONS: ${{ inputs.mongos-revisions }}
         run: |
           import json
           import pathlib
           import os
           import subprocess
-          backend = "${{ inputs.backend }}"
+          backend = os.environ["BACKEND"]
           pattern = f"github-ci:...:tests/spread/release/{backend}/"
-          mongodb_revisions = json.loads("${{ inputs.mongodb-revisions }}")
+          mongodb_revisions = json.loads(os.environ["MONGODB_REVISIONS"])
+          mongos_revisions = json.loads(os.environ["MONGOS_REVISIONS"])
           spread_jobs = (
               subprocess.run(
                 [pathlib.Path.home() / "go/bin/spread", "-list", pattern],
@@ -109,6 +116,8 @@ jobs:
               file.write(output)
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
+    permissions:
+      contents: read
 
   release-test:
     strategy:
@@ -127,9 +136,11 @@ jobs:
         run: df --human-readable
       - name: Checkout
         timeout-minutes: 3
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Setup python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Set up environment
@@ -186,7 +197,7 @@ jobs:
       - name: Upload logs
         timeout-minutes: 5
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: logs-release-test-${{ matrix.job.name_in_artifact }}
           path: ~/logs/
@@ -195,3 +206,5 @@ jobs:
         timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: df --human-readable
+    permissions:
+      contents: read

@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs import sysctl
 from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
@@ -46,15 +46,19 @@ from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
+    ClusterTLSError,
     ContainerNotReadyError,
     DeferrableError,
+    InvalidLdapStateError,
     MissingConfigServerError,
+    UpgradeInProgressError,
+    WaitingForSecretsError,
+    WorkloadExecError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
@@ -82,7 +86,7 @@ class MongosOperator(OperatorProtocol, Object):
     name = CharmKind.MONGOS.value
     workload: MongosWorkload
 
-    def __init__(self, charm: AbstractMongoCharm):
+    def __init__(self, charm: AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
         super(OperatorProtocol, self).__init__(charm, self.name)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
@@ -100,7 +104,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
         )
-        self.mongos_config_manager = MongosConfigManager(
+        self.config_manager = MongosConfigManager(
             self.config,
             self.workload,
             self.state,
@@ -122,7 +126,6 @@ class MongosOperator(OperatorProtocol, Object):
             cluster_id=self.state.get_cluster_id(),
             callback_targets={
                 RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
-                RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART: self.cluster_manager.update_mongos_and_restart_callback,
             },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
@@ -151,7 +154,9 @@ class MongosOperator(OperatorProtocol, Object):
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
-            sys.exit()
+            # As recommended, let the charm crash so that the user can trust
+            # the application and all events will resume afterwards.
+            raise
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
             self, self.state, self.workload, self.refresh
@@ -194,11 +199,14 @@ class MongosOperator(OperatorProtocol, Object):
 
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
-        self._configure_workloads()
+        try:
+            self._configure_workloads()
 
-        if self.state.mongos_cluster_relation:
-            logger.info("Restarting workloads")
-            self.start_charm_services()
+            if self.state.mongos_cluster_relation:
+                logger.info("Restarting workloads")
+                self.start_charm_services()
+        except (WorkloadServiceError, WorkloadExecError):
+            return
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:
@@ -255,7 +263,7 @@ class MongosOperator(OperatorProtocol, Object):
         # Sets directory permissions
         self.set_permissions()
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
 
         # Instantiate the keyfile
         if self.state.mongos_cluster_relation:
@@ -312,6 +320,12 @@ class MongosOperator(OperatorProtocol, Object):
         share connection information with client. This is because when we
         change our connectivity we update the IP address of mongos.
         """
+        if self.refresh_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
+
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.UNKNOWN:
                 logger.error(
@@ -349,7 +363,8 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info("Failed to update k8s service: %s", e)
 
         # Always update certs on k8s since the IP/external connectivity could change
-        self.tls_events.refresh_certificates()
+        if self.tls_manager.is_waiting_for_a_cert():
+            self.tls_events.refresh_certificates()
 
     @override
     def prepare_storage(self) -> None:
@@ -394,7 +409,8 @@ class MongosOperator(OperatorProtocol, Object):
             # from Juju so we must monitor it and request TLS integration to update
             # our SANS as necessary.
             # The connection info will be updated when we receive the new certificates.
-            if self.substrate == Substrates.K8S:
+            # We first check if we need a refresh to prevent useless restarts.
+            if self.substrate == Substrates.K8S and self.tls_manager.is_waiting_for_a_cert():
                 self.tls_events.refresh_certificates()
 
     @override
@@ -428,7 +444,7 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.refresh or not self.refresh.workload_allowed_to_start:
             raise WorkloadServiceError("Workload not allowed to start")
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
         self.workload.start()
 
     @override
@@ -444,16 +460,13 @@ class MongosOperator(OperatorProtocol, Object):
             raise MissingConfigServerError("Cannot start mongos without a config server db")
 
         if self.ldap_manager.should_not_restart():
-            raise DeferrableError(
+            raise InvalidLdapStateError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
             )
         try:
             should_restart = self.tls_manager.reconcile_tls()
             force = force or should_restart
-            self.charm.status_handler.set_running_status(
-                MongosStatuses.RESTARTING.value, scope="unit"
-            )
-            self.mongos_config_manager.configure_and_restart(force=force)
+            self.cluster_manager.update_mongos_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
@@ -467,6 +480,7 @@ class MongosOperator(OperatorProtocol, Object):
     def finalize_after_restart(self) -> None:
         """Run a series of code that should always run after a restart."""
         self.share_connection_info()
+        self.ldap_manager.update_hash_status()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
@@ -478,11 +492,16 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             self.restart_charm_services(force=force)
             self.recompute_statuses()
-        except MissingConfigServerError as e:
+        except (MissingConfigServerError, InvalidLdapStateError, ClusterTLSError) as e:
+            logger.warning("Invalid state before mongos restart: %s.", e)
+            # No need to retry, it can only be resolved by manual intervention
+            return OperationResult.RELEASE
+        except (WaitingForSecretsError,) as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except (WorkloadServiceError, DeferrableError) as e:
-            logger.info("Deferrable error during mongos restart. %s", e)
+        except WorkloadServiceError as e:
+            # Retry later
+            logger.info("Error during mongos restart: %s.", e)
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
 
@@ -659,7 +678,7 @@ class MongosOperator(OperatorProtocol, Object):
         if self.workload.config_server_db == config_server_db_uri:
             return False
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
         return True
 
     def is_mongos_running(self) -> bool:
@@ -716,9 +735,14 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
+    @override
     def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        # No matter what happens, if we don't have a workload we report it immediately.
+        if scope == "unit" and not self.workload.workload_present:
+            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root

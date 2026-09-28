@@ -60,9 +60,11 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
+    ShardAuthError,
     UpgradeInProgressError,
     WaitingForLeaderError,
     WaitingForVaultError,
+    WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
@@ -142,7 +144,12 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError, NotReadyError) as e:
+        except (
+            ContainerNotReadyError,
+            WorkloadServiceError,
+            WorkloadExecError,
+            NotReadyError,
+        ) as e:
             defer_event_with_info_log(
                 logger, event, "start", f"Not ready to start: {e.__class__.__name__}({e})"
             )
@@ -232,7 +239,11 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        self.dependent.update_status()
+        try:
+            self.dependent.update_status()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while updating status.")
+            return
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
@@ -267,7 +278,13 @@ class LifecycleEventsHandler(Object):
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError, WorkloadServiceError):
+        except (
+            NotReadyError,
+            PyMongoError,
+            ShardAuthError,
+            WorkloadServiceError,
+            DeferrableFailedHookChecksError,
+        ):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
@@ -297,14 +314,22 @@ class LifecycleEventsHandler(Object):
         """Relation departed event."""
         try:
             self.dependent.peer_leaving(departing_unit=event.departing_unit)
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""
-        self.dependent.prepare_storage()
+        try:
+            self.dependent.prepare_storage()
+        except WorkloadExecError as e:
+            defer_event_with_info_log(
+                logger,
+                event,
+                str(type(event)),
+                f"Workload is not ready: {e}",
+            )
 
     def on_storage_detaching(self, event: StorageDetachingEvent):
         """Storage Detaching Event."""
@@ -316,4 +341,12 @@ class LifecycleEventsHandler(Object):
 
     def on_upgrade_charm(self, event: UpgradeCharmEvent):
         """Upgrade Charm Event."""
-        self.dependent.upgrade_charm()
+        try:
+            self.dependent.upgrade_charm()
+        except WorkloadExecError as e:
+            defer_event_with_info_log(
+                logger,
+                event,
+                str(type(event)),
+                f"Workload is not ready: {e}",
+            )

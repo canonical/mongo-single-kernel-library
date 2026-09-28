@@ -14,6 +14,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 )
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
+from single_kernel_mongo.utils.network_helpers import k8s_fqdn
 
 
 class UnitPeerRelationKeys(str, Enum):
@@ -67,6 +68,11 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         return int(self.unit.name.split("/")[1])
 
     @property
+    def unit_service_name(self) -> str:
+        """Unit service name (local)."""
+        return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
+
+    @property
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
         if self.substrate == Substrates.VM:
@@ -79,7 +85,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
                 self.relation.data[self.component].get(UnitPeerRelationKeys.PRIVATE_ADDRESS.value)
             )
         # K8s Case.
-        return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
+        return k8s_fqdn(self.unit_service_name)
 
     @property
     def name(self) -> str:
@@ -170,4 +176,4 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         if self.substrate == Substrates.VM:
             return self.relation_data.get(f"{relation_name}-address", "")
         # K8s Case.
-        return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
+        return k8s_fqdn(self.unit_service_name)

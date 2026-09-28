@@ -155,12 +155,12 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
 
     def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
-        self.initialise_charmed_operator_user()
-        self.initialise_user(CharmedStatsUser)
-        self.initialise_user(CharmedBackupUser)
-        self.initialise_user(CharmedLogRotateUser)
+        self._initialise_charmed_operator_user()
+        self._initialise_user(CharmedStatsUser)
+        self._initialise_user(CharmedBackupUser)
+        self._initialise_user(CharmedLogRotateUser)
 
-    def initialise_charmed_operator_user(self):
+    def _initialise_charmed_operator_user(self):
         """Creates initial admin user for MongoDB.
 
         Initial admin user can be created only through localhost connection.
@@ -188,7 +188,7 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         self.workload.run_bin_command("mongodb://localhost/admin", cmd, input=config.password)
         self.state.app_peer_data.set_user_created(CharmedOperatorUser.username)
 
-    def initialise_user(self, user: MongoDBUser):
+    def _initialise_user(self, user: MongoDBUser):
         """Creates a user and sets its role on the MongoDB database."""
         if self.state.app_peer_data.is_user_created(user.username):
             return
@@ -278,6 +278,15 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             self.model,
             relation.name,
         )
+        # We do nothing if the Database Requested event has not run yet.
+        if not data_interface.fetch_relation_field(relation.id, "database"):
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
+        if not relation.units:
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
         actual_data = data_interface.fetch_relation_data([relation.id]).get(relation.id, {})
         new_data = {key: value for key, value in actual_data.items() if key != "data"}
         data_interface.update_relation_data(relation.id, {"data": json.dumps(new_data)})

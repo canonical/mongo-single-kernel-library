@@ -45,7 +45,7 @@ class GCSBackupManager(CommonBackupManager):
         "client_email": "storage.gcs.credentials.clientEmail",
         "private_key": "storage.gcs.credentials.privateKey",
     }
-    BASIC_CONFIG = {"storage.type": "gcs"}
+    BASIC_CONFIG = {"storage": {"type": "gcs"}}
     backend = "gcs"
 
     def __init__(
