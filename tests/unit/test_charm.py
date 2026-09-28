@@ -5,7 +5,7 @@ import json
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops import BlockedStatus
+from ops import BlockedStatus, WaitingStatus
 from ops.model import ModelError
 from ops.pebble import PathError, ProtocolError
 from ops.testing import ActionFailed, Harness
@@ -148,6 +148,8 @@ def test_pebble_ready_container_cannot_connect(harness, mocker, mock_fs_interact
     # Emit the PebbleReadyEvent carrying the mongod container
     harness.charm.on.mongod_pebble_ready.emit(container)
 
+    harness.evaluate_status()
+    assert harness.charm.unit.status == WaitingStatus("Waiting for MongoDB to be installed...")
     push_keyfile_to_workload.assert_not_called()
     defer.assert_called()
 

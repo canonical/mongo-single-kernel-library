@@ -735,9 +735,14 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
+    @override
     def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        # No matter what happens, if we don't have a workload we report it immediately.
+        if scope == "unit" and not self.workload.workload_present:
+            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root

@@ -15,16 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci-quick-tests:
-    uses: ./.github/workflows/ci-quick.yaml
-    permissions:
-      contents: read
-      pull-requests: write
-
   ci-tests:
     uses: ./.github/workflows/ci.yaml
     permissions:
       contents: write # Needed for Allure Report
+      pull-requests: write
     secrets:
       AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
@@ -34,7 +29,6 @@ jobs:
 
   release-part1:
     needs:
-      - ci-quick-tests
       - ci-tests
     name: Release to PyPI (part 1)
     uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v50.2.1

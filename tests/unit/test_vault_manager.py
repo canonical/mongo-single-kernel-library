@@ -194,7 +194,10 @@ def test_vault_manager_request_nonce(
 
 
 def test_vault_manager_no_encryption_status(
-    mongodb_ctx: Context[MongoTestCharm], mongodb_name: str, mongodb_container: Container | None
+    mongodb_ctx: Context[MongoTestCharm],
+    mongodb_name: str,
+    mongodb_container: Container | None,
+    short_mock_fs_interactions,
 ):
     status_peers_relation = testing.PeerRelation(
         id=1, endpoint=PeerRelationNames.STATUS_PEERS.value
