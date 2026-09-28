@@ -1697,9 +1697,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Returns whether mongodb has pending rolling operations."""
         return self.rollingops_manager.is_waiting()
 
+    @override
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        # No matter what happens, if we don't have a workload we report it immediately.
+        if scope == "unit" and not self.workload.workload_present:
+            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
             return self.state.statuses.get(
@@ -1711,6 +1716,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
         except WorkloadServiceError:
             return charm_statuses
+        if scope == "unit" and self.is_waiting_for_rolling_operation():
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
