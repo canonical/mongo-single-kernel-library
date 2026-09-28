@@ -1703,7 +1703,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         charm_statuses: list[StatusObject] = []
 
         # No matter what happens, if we don't have a workload we report it immediately.
-        if scope == "unit" and not self.workload.workload_present:
+        try:
+            if scope == "unit" and not self.workload.workload_present:
+                return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+        except WorkloadServiceError:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
@@ -1711,11 +1714,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope=scope, component=self.name
             ).root + self._cluster_mismatch_status(scope)
 
-        try:
-            if scope == "unit" and not self.workload.workload_present:
-                return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
-        except WorkloadServiceError:
-            return charm_statuses
         if scope == "unit" and self.is_waiting_for_rolling_operation():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
