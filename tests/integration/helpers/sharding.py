@@ -93,11 +93,6 @@ async def verify_sharding_cluster_ip_source_allowlists(
             for unit in ops_test.model.applications[app_name].units
         }
 
-    if substrate == "microk8s":
-        for app_name in shard_apps | {config_server_app}:
-            await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
-        return
-
     config_server_addresses = await application_addresses(config_server_app)
     related_shard_addresses = set()
     unrelated_shard_addresses = set()

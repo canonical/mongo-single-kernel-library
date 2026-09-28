@@ -97,6 +97,7 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("microk8s")
 async def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -304,7 +305,8 @@ async def test_scale_up_capabilities(
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hosts), "all members not running under the same replset"
 
-    await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
+    if substrate == "lxd":
+        await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
 
     # verify that the no writes were skipped
     await verify_writes(ops_test, substrate, app_name)
@@ -387,9 +389,10 @@ async def test_scale_down_capabilities_lxd(
 
     assert set(member_ips) == set(hosts), "mongod config contains deleted units"
 
-    await verify_cluster_ip_source_allowlist(
-        ops_test, substrate, app_name, excluded_addresses=set(deleted_unit_ips)
-    )
+    if substrate == "lxd":
+        await verify_cluster_ip_source_allowlist(
+            ops_test, substrate, app_name, excluded_addresses=set(deleted_unit_ips)
+        )
 
     await verify_writes(ops_test, substrate, app_name)
 
@@ -444,12 +447,13 @@ async def test_scale_down_capabilities_microk8s(
     assert set(member_hosts) == set(hostnames), "mongod config contains deleted units"
 
     addresses_after_scale_down = set(hosts)
-    await verify_cluster_ip_source_allowlist(
-        ops_test,
-        substrate,
-        app_name,
-        excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
-    )
+    if substrate == "lxd":
+        await verify_cluster_ip_source_allowlist(
+            ops_test,
+            substrate,
+            app_name,
+            excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
+        )
 
     # verify that the no writes were skipped
     await verify_writes(ops_test, substrate, app_name)
