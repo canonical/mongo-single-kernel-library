@@ -86,8 +86,6 @@ class ObservabilityManager(Object):
     def vault_metrics(self) -> dict[str, Any]:
         """The metrics specific to vault."""
         try:
-            if not self.dependent.vault_manager.workload_present:
-                return {}
             if not self.dependent.workload.workload_present:
                 return {}
         except WorkloadServiceError:
