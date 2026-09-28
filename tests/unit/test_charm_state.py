@@ -110,6 +110,7 @@ def test_peer_database_addresses(
     }
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 def test_local_auth_restrictions_use_peer_database_addresses(
     harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
 ):
@@ -187,7 +188,7 @@ def test_shard_local_auth_restrictions_include_config_server_hosts(
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_k8s(
+def test_config_server_local_auth_restrictions_empty_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -200,14 +201,11 @@ def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_k8s(
             {"rs-hosts": '["shard0-0.shard0-endpoints", "shard0-1.shard0-endpoints"]'},
         )
 
-    assert harness.charm.operator.state.local_auth_restrictions == [
-        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
-        {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
-    ]
+    assert harness.charm.operator.state.local_auth_restrictions == []
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_k8s(
+def test_shard_local_auth_restrictions_empty_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -223,10 +221,7 @@ def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_k8s(
             },
         )
 
-    assert harness.charm.operator.state.local_auth_restrictions == [
-        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
-        {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
-    ]
+    assert harness.charm.operator.state.local_auth_restrictions == []
 
 
 def test_mongodb_status_user(harness: Harness[MongoTestCharm]):

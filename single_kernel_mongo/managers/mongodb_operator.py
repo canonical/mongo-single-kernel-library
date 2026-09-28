@@ -1049,6 +1049,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         leader, also update authentication restrictions for internal users. If a
         unit or related component is departing, exclude its addresses from the restrictions.
 
+        Only for VM substrate.
+
         Args:
             excluded_addresses (set[str] | None): Optional set of IP addresses to exclude from
                 the allowlist and authentication restrictions.
@@ -1056,6 +1058,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         Raises:
             PyMongoError: If the cluster IP source allowlist cannot be updated.
         """
+        if self.substrate == Substrates.K8S:
+            return
+
         if not self.state.db_initialised or not self.workload.active():
             return
 

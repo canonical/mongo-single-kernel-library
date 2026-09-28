@@ -1395,7 +1395,8 @@ def test_mongodb_relation_joined_all_replicas_not_ready_are_added(
     mocked_add_replset_member.assert_called()
 
 
-def test_peer_changed_updates_cluster_ip_source_allowlist(
+@pytest.mark.skip_if_substrate("microk8s")
+def test_peer_changed_updates_cluster_ip_source_allowlist_vm(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
@@ -1429,6 +1430,30 @@ def test_peer_changed_updates_cluster_ip_source_allowlist(
     mock_sync.assert_called_once()
 
 
+@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.parametrize("leader", [True, False])
+def test_sync_cluster_network_access_restrictions_skipped_k8s(
+    harness: Harness[MongoTestCharm], mocker, leader
+):
+    operator = harness.charm.operator
+    harness.set_leader(True)
+    operator.state.db_initialised = True
+    mocker.patch.object(operator.workload, "active", return_value=True)
+    mock_users = mocker.patch.object(operator.mongo_manager, "update_users_local_auth_restrictions")
+    mock_update = mocker.patch.object(operator.mongo_manager, "update_cluster_ip_source_allowlist")
+    mock_sync = mocker.patch.object(
+        operator.config_manager, "sync_cluster_ip_source_allowlist_to_file"
+    )
+    harness.set_leader(leader)
+
+    operator.sync_cluster_network_access_restrictions()
+
+    mock_users.assert_not_called()
+    mock_update.assert_not_called()
+    mock_sync.assert_not_called()
+
+
+@pytest.mark.skip_if_substrate("microk8s")
 def test_sync_cluster_network_access_restrictions_excludes_departed_addresses(
     harness: Harness[MongoTestCharm], mocker
 ):
@@ -1469,7 +1494,8 @@ def test_sync_cluster_network_access_restrictions_excludes_departed_addresses(
     )
 
 
-def test_non_leader_peer_changed_update_runtime_cluster_ip_source_allowlist(
+@pytest.mark.skip_if_substrate("microk8s")
+def test_non_leader_peer_changed_update_runtime_cluster_ip_source_allowlist_vm(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
@@ -1700,9 +1726,8 @@ def test_reconfigure_add_member_failure(
         defer.assert_called()
 
 
-def test_on_relation_departed_not_leader(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+@pytest.fixture
+def peer_departure_mocks(harness, mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     spied = mocker.spy(harness.charm.operator, "peer_leaving")
@@ -1733,8 +1758,15 @@ def test_on_relation_departed_not_leader(
     mock_update_allowlist.reset_mock()
     mock_sync_allowlist.reset_mock()
     update_host_mock.reset_mock()
+    return spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_on_relation_departed_not_leader_vm(harness, peer_departure_mocks):
+    spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
     harness.set_leader(False)
-    harness.remove_relation_unit(rel.id, "mongodb/1")
+
+    harness.remove_relation_unit(harness.charm.operator.state.peer_relation.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_not_called()
@@ -1744,45 +1776,45 @@ def test_on_relation_departed_not_leader(
     mock_sync_allowlist.assert_called_once_with(allowlist)
 
 
-def test_on_relation_departed_leader(
-    harness: Harness[MongoTestCharm],
-    mocker,
-    mock_fs_interactions,
-):
-    harness.set_leader(True)
-    harness.charm.operator.state.db_initialised = True
-    spied = mocker.spy(harness.charm.operator, "peer_leaving")
-    mocker.patch(
-        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
-    mocker.patch(
-        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
-    )
-    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
-    update_host_mock = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
-    )
-    mock_update_allowlist = mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
-    )
-    mock_sync_allowlist = mocker.patch(
-        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
-    )
-    rel = harness.charm.operator.state.peer_relation
-    harness.add_relation_unit(rel.id, "mongodb/1")
+@pytest.mark.skip_if_substrate("lxd")
+def test_on_relation_departed_not_leader_k8s(harness, peer_departure_mocks):
+    spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
+    harness.set_leader(False)
 
-    mock_update_allowlist.reset_mock()
-    mock_sync_allowlist.reset_mock()
-    harness.remove_relation_unit(rel.id, "mongodb/1")
+    harness.remove_relation_unit(harness.charm.operator.state.peer_relation.id, "mongodb/1")
+
+    spied.assert_called()
+    update_host_mock.assert_not_called()
+    mock_update_allowlist.assert_not_called()
+    mock_sync_allowlist.assert_not_called()
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_on_relation_departed_leader_vm(harness, peer_departure_mocks):
+    spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
+    harness.set_leader(True)
+
+    harness.remove_relation_unit(harness.charm.operator.state.peer_relation.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_called()
     mock_update_allowlist.assert_called_once()
-    mock_sync_allowlist.assert_called_once()
+    allowlist = mock_update_allowlist.call_args.args[0]
+    assert "10.0.0.2" not in allowlist
+    mock_sync_allowlist.assert_called_once_with(allowlist)
+
+
+@pytest.mark.skip_if_substrate("lxd")
+def test_on_relation_departed_leader_k8s(harness, peer_departure_mocks):
+    spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
+    harness.set_leader(True)
+
+    harness.remove_relation_unit(harness.charm.operator.state.peer_relation.id, "mongodb/1")
+
+    spied.assert_called()
+    update_host_mock.assert_called()
+    mock_update_allowlist.assert_not_called()
+    mock_sync_allowlist.assert_not_called()
 
 
 def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):

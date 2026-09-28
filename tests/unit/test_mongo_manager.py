@@ -62,8 +62,9 @@ def test_initialise_replica_set_operation_failure(harness: Harness[MongoTestChar
         harness.charm.operator.mongo_manager.initialise_replica_set()
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("user"), (CharmedStatsUser, CharmedBackupUser))
-def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
+def test_initialise_user_vm(harness: Harness[MongoTestCharm], mocker, user):
     harness.set_leader(True)
     mock_create_role = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role",
@@ -91,7 +92,35 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
 
 
-def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], mocker):
+@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.parametrize(("user"), (CharmedStatsUser, CharmedBackupUser))
+def test_initialise_user_k8s(harness: Harness[MongoTestCharm], mocker, user):
+    harness.set_leader(True)
+    mock_create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role",
+    )
+    mock_create_user = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
+    )
+
+    getattr(harness.charm.operator.mongo_manager, "_initialise_user")(user)
+    config = getattr(
+        harness.charm.operator.state, f"{user.username.replace('charmed-', '')}_config"
+    )
+
+    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
+    mock_create_user.assert_called_with(
+        config.username,
+        config.password,
+        config.supported_roles,
+        auth_restrictions=[],
+    )
+
+    assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_reconcile_local_auth_restrictions_vm(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     state = harness.charm.operator.state
     for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
@@ -111,6 +140,26 @@ def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], moc
             {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
             {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
         ]
+
+
+@pytest.mark.skip_if_substrate("lxd")
+def test_reconcile_local_auth_restrictions_k8s(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
+        state.app_peer_data.set_user_created(user.username)
+
+    mock_update = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.update_user_auth_restrictions",
+    )
+
+    auth_restrictions = state.local_auth_restrictions
+    harness.charm.operator.mongo_manager.update_users_local_auth_restrictions(auth_restrictions)
+
+    assert mock_update.call_count == 3
+    for call in mock_update.call_args_list:
+        config = call.args[0]
+        assert config.auth_restrictions == []
 
 
 def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mocker):
