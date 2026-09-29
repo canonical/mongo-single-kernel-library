@@ -423,11 +423,14 @@ def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
     juju.remove_application(SHARD_TWO_APP_NAME)
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(
-            status,
-            CONFIG_SERVER_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            idle_period=15,
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                idle_period=15,
+            )
+            and SHARD_TWO_APP_NAME not in status.apps
         ),
         timeout=REMOVAL_TIMEOUT,
     )
