@@ -569,7 +569,9 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def cluster_ip_source_allowlist(self) -> list[str]:
         """Return the computed cluster IP source allowlist."""
-        return self.cluster_ips.get("security", {}).get("clusterIpSourceAllowlist", [])
+        if self.state.substrate == Substrates.K8S:
+            return []
+        return self.cluster_ips["security"]["clusterIpSourceAllowlist"]
 
     def sync_cluster_ip_source_allowlist_to_file(self, new_allowlist: list[str]) -> None:
         """Persist cluster IP source allowlist changes without restarting MongoDB."""
