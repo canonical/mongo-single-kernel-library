@@ -156,11 +156,8 @@ def test_cluster_active(juju: jubilant.Juju, substrate: Substrate) -> None:
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
@@ -211,11 +208,8 @@ def test_set_operator_password(juju: jubilant.Juju):
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     for cluster_app_name in CLUSTER_APPS:
@@ -305,11 +299,8 @@ def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=REMOVAL_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # verify that config server turned back on the balancer
@@ -356,11 +347,8 @@ def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate)
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     logging.info("Removing %s from config server", SHARD_TWO_APP_NAME)
@@ -375,12 +363,9 @@ def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate)
             CONFIG_SERVER_APP_NAME,
             SHARD_ONE_APP_NAME,
             SHARD_TWO_APP_NAME,
-            idle_period=30,
-            unit_count=3,
+            idle_period=20,
         ),
         timeout=REMOVAL_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # build a mongos config-server client
@@ -430,12 +415,9 @@ def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
         lambda status: are_apps_active_and_agents_idle(
             status,
             SHARD_TWO_APP_NAME,
-            idle_period=30,
-            unit_count=2,
+            idle_period=15,
         ),
-        timeout=TIMEOUT,
-        delay=5,
-        successes=3,
+        timeout=REMOVAL_TIMEOUT,
     )
 
     juju.remove_application(SHARD_TWO_APP_NAME)
@@ -445,12 +427,9 @@ def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
             status,
             CONFIG_SERVER_APP_NAME,
             SHARD_ONE_APP_NAME,
-            idle_period=30,
-            unit_count=3,
+            idle_period=15,
         ),
         timeout=REMOVAL_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # build a mongos config-server client
