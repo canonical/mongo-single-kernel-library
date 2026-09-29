@@ -181,7 +181,7 @@ async def check_tls(
             with attempt:
                 ssh_command = (
                     ["ssh", "--container", container, unit.name]
-                    if substrate == "microk8s"
+                    if substrate == Substrate.k8s
                     else ["ssh", unit.name, "sudo"]
                 )
                 mongod_tls_check = await mongo_tls_command(
@@ -233,7 +233,7 @@ async def cannot_connect_without_tls(
     """
     ssh_command = (
         ["ssh", "--container", container, unit.name]
-        if substrate == "microk8s"
+        if substrate == Substrate.k8s
         else ["ssh", unit.name, "sudo"]
     )
     mongo_no_tls_check = await mongo_no_tls_command(ops_test, substrate, app_name, mongos, uri)
@@ -250,7 +250,7 @@ async def time_file_created(
     ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> datetime:
     """Returns the unix timestamp of when a file was created on a specified unit."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         time_cmd = f"ssh {unit_name} sudo ls -l --time-style=full-iso {path} "
     else:
         time_cmd = f"ssh --container {container} {unit_name} ls -l --time-style=full-iso {path} "
@@ -282,7 +282,7 @@ async def time_process_started(
     container: str = "mongod",
 ) -> int:
     """Retrieves the time that a given process started according to systemd."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         time_cmd = f"exec --unit {unit_name} --  systemctl show {process_name} --property=ActiveEnterTimestamp"
         return_code, systemctl_output, _ = await ops_test.juju(*time_cmd.split())
 

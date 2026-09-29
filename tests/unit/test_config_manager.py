@@ -23,6 +23,7 @@ from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.fixture
@@ -180,7 +181,6 @@ def test_mongodb_config_manager_omits_allowlist_k8s(mongodb_config_manager):
     mock_write.assert_called_once_with(manager.file, safe_dump(config))
 
 
-@pytest.mark.skip_if_substrate("microk8s")
 def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
     state = mocker.MagicMock(CharmState)
     state.peer_network.return_value.bind_addresses = []
@@ -200,7 +200,7 @@ def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
     }
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_shard_cluster_ips_include_config_server_hosts(mocker):
     state = mocker.MagicMock(CharmState)
     state.peer_network.return_value.bind_addresses = []

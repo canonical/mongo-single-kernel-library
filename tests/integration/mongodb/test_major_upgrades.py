@@ -48,7 +48,7 @@ async def test_deploy_mongodb_6(
     storage_config: dict[str, str],
 ):
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
     await deploy_charm(
         ops_test,
         mongodb_charm_name,
@@ -120,7 +120,7 @@ async def test_deploy_mongodb_7(
     substrate: Substrate,
 ):
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
     await deploy_charm(
         ops_test,
         mongodb_charm_name,

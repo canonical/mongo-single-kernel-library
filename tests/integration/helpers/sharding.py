@@ -38,6 +38,10 @@ from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
+# K8s storage is limited in self-hosted runners, so we use smaller storage for sharding
+# tests to avoid running out of space. Keep the per-unit total under 2 GiB.
+SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "200M"}
+
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
@@ -134,6 +138,7 @@ async def deploy_cluster_components(
     channel: str | None = None,
     series: str | None = None,
     extra_config_config_server: dict[str, str] = {},
+    storage: dict[str, str] | None = None,
 ) -> None:
     if not num_units_cluster_config:
         num_units_cluster_config = {
@@ -145,7 +150,7 @@ async def deploy_cluster_components(
     if channel is None:
         my_charm = mongodb_charm
     else:
-        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+        my_charm = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,
@@ -157,6 +162,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "config-server"} | extra_config_config_server,
         series=series,
+        storage=storage,
     )
     await deploy_charm(
         ops_test,
@@ -168,6 +174,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "shard"},
         series=series,
+        storage=storage,
     )
     await deploy_charm(
         ops_test,
@@ -179,6 +186,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "shard"},
         series=series,
+        storage=storage,
     )
 
     await ops_test.model.wait_for_idle(
