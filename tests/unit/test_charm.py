@@ -1395,7 +1395,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready_are_added(
     mocked_add_replset_member.assert_called()
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_peer_changed_updates_cluster_ip_source_allowlist_vm(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
@@ -1430,7 +1430,7 @@ def test_peer_changed_updates_cluster_ip_source_allowlist_vm(
     mock_sync.assert_called_once()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 @pytest.mark.parametrize("leader", [True, False])
 def test_sync_cluster_network_access_restrictions_skipped_k8s(
     harness: Harness[MongoTestCharm], mocker, leader
@@ -1453,7 +1453,7 @@ def test_sync_cluster_network_access_restrictions_skipped_k8s(
     mock_sync.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_sync_cluster_network_access_restrictions_excludes_departed_addresses(
     harness: Harness[MongoTestCharm], mocker
 ):
@@ -1494,7 +1494,7 @@ def test_sync_cluster_network_access_restrictions_excludes_departed_addresses(
     )
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_non_leader_peer_changed_update_runtime_cluster_ip_source_allowlist_vm(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
@@ -1761,7 +1761,7 @@ def peer_departure_mocks(harness, mocker, mock_fs_interactions):
     return spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_on_relation_departed_not_leader_vm(harness, peer_departure_mocks):
     spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
     harness.set_leader(False)
@@ -1776,7 +1776,7 @@ def test_on_relation_departed_not_leader_vm(harness, peer_departure_mocks):
     mock_sync_allowlist.assert_called_once_with(allowlist)
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_on_relation_departed_not_leader_k8s(harness, peer_departure_mocks):
     spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
     harness.set_leader(False)
@@ -1789,7 +1789,7 @@ def test_on_relation_departed_not_leader_k8s(harness, peer_departure_mocks):
     mock_sync_allowlist.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_on_relation_departed_leader_vm(harness, peer_departure_mocks):
     spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
     harness.set_leader(True)
@@ -1804,7 +1804,7 @@ def test_on_relation_departed_leader_vm(harness, peer_departure_mocks):
     mock_sync_allowlist.assert_called_once_with(allowlist)
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_on_relation_departed_leader_k8s(harness, peer_departure_mocks):
     spied, update_host_mock, mock_update_allowlist, mock_sync_allowlist = peer_departure_mocks
     harness.set_leader(True)

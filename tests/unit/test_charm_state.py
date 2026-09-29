@@ -110,7 +110,7 @@ def test_peer_database_addresses(
     }
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_local_auth_restrictions_use_peer_database_addresses(
     harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
 ):

@@ -30,7 +30,7 @@ def test_install_blocks_snap_install_failure(mongos_harness: Harness[MongosTestC
     mock_exec.assert_any_call(["systemctl", "is-active", "--quiet", "snapd.service"])
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_pebble_ready_container_cannot_connect(
     mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions
 ):
