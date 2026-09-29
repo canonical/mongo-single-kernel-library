@@ -69,7 +69,7 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
         MONGOS_APP_NAME,
         status="The cluster relation with the config-server is missing.",
         timeout=300,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
 
@@ -175,7 +175,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
         res.succeeded
     ), f"mongos user does not have correct permissions to create new user, error: {res.stderr}"
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{MONGOS_SOCKET}/{TEST_DB_NAME}"
     else:
         hostname = await get_mongodb_hostname_for_unit(ops_test, substrate, mongos_unit.name)
@@ -196,7 +196,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
 @pytest.mark.abort_on_fail
 async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos powers down when no config server is accessible."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         # note mongos scales only when hosting application scales
         await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].add_units(count=1)
     else:
@@ -214,7 +214,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         assert mongos_running, "Mongos is not currently running."
 
     # destroy the unit we were initially connected to
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].destroy_units(
             f"{MONGOS_CLIENT_APPLICATION}/0"
         )

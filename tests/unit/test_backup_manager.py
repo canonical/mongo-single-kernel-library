@@ -431,7 +431,7 @@ def test_restore_backup_success(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mock_call = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command")
     else:
         mock_call = mocker.patch(

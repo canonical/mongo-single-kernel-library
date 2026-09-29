@@ -277,7 +277,7 @@ def test_on_certificate_removed_clean_certs(
     mocker.patch(
         "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.exists", return_value=True
     )
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     else:
         mock_remove_ca_cert = mocker.patch(

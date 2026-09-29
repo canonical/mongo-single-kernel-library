@@ -189,7 +189,7 @@ async def generate_mongodb_ldap_client(
     mongos: bool = False,
 ) -> str:
     """Generates an ldap client for mongodb."""
-    if mongos and substrate == "lxd":
+    if mongos and substrate == Substrate.lxd:
         app_unit = ops_test.model.applications[app_name].units[0]
 
         hosts = [await app_unit.get_public_address()]
