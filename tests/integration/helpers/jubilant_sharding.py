@@ -53,7 +53,7 @@ def deploy_cluster_components(
     if channel is None:
         my_charm = mongodb_charm
     else:
-        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+        my_charm = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     deploy_charm(
         juju,
