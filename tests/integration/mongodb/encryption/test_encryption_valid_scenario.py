@@ -114,7 +114,7 @@ async def test_vault_agent_metrics(ops_test: OpsTest, substrate: Substrate):
     assert ops_test.model
     app_name = await get_app_name(ops_test)
     application = ops_test.model.applications[app_name]
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         ca_file = "/var/snap/charmed-mongodb/current/etc/vault/ca.pem"
     else:
         ca_file = "/etc/vault/ca.pem"
@@ -151,7 +151,7 @@ async def test_rotate_master_key(
 
     # Checks that we find the correct string in the logs that proves that the master key
     # has been rotated.
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         log_file = "/var/snap/charmed-mongodb/common/var/log/mongodb/mongodb.log"
     else:
         log_file = "/var/log/mongodb/mongodb.log"
@@ -241,7 +241,7 @@ async def test_remove_token_then_reintegrate(
         status="blocked",
         message="Must be integrated with vault to enable encryption at rest.",
     )
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         filepath = "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
     else:
         filepath = "/etc/vault/vaultTokenFile"

@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,
@@ -92,9 +92,7 @@ async def test_preflight_check_fails_during_backup(
     await ops_test.model.applications[app_name].remove_relation(
         f"{app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=TIMEOUT, raise_on_error=False
-    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
 
 @pytest.mark.abort_on_fail
