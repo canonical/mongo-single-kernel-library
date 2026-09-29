@@ -405,8 +405,8 @@ def rotate_and_verify_certs(juju: jubilant.Juju, substrate: Substrate, app_name:
         ), f"external cert for {unit_name} not rotated."
 
         assert (
-            new_internal_cert != original_tls_info[unit_name]["external_cert_contents"]
-        ), f"external cert for {unit_name} not rotated."
+            new_internal_cert != original_tls_info[unit_name]["internal_cert_contents"]
+        ), f"internal cert for {unit_name} not rotated."
         assert (
             new_external_cert_time > original_tls_info[unit_name]["external_cert"]
         ), f"external cert for {unit_name} was not updated."
