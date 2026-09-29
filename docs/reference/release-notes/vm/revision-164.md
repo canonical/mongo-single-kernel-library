@@ -43,7 +43,7 @@ For a more detailed list of features and commits throughout all revisions, check
 ([#379](https://github.com/canonical/mongodb-operator/issues/379))
   * This might be an issue with the `self-signed-certificates` charm.
 
-For known issues of official MongoDB, check [MongoDB | 6.0 Release Notes > Known Issues](https://www.mongodb.com/docs/v6.0/release-notes/6.0#known-issues) and [MongoDB | Open Issues](https://jira.mongodb.org/browse/SERVER-52164?filter=-5)
+For known issues of official MongoDB, check the "Known Issues" section at the bottom of the [official MongoDB 6.0 Release Notes](https://www.mongodb.com/docs/v6.0/release-notes/6.0) and [MongoDB | Open Issues](https://jira.mongodb.org/browse/SERVER-52164?filter=-5)
 
 ## Useful links
 
