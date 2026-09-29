@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 ISOLATED_APP_NAME = "isolated"
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
     ops_test: OpsTest,
@@ -72,7 +72,7 @@ async def test_build_and_deploy(
     )
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.abort_on_fail
 async def test_integrate_with_spaces(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
@@ -107,7 +107,7 @@ async def test_integrate_with_spaces(ops_test: OpsTest, substrate: Substrate):
     await clear_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.abort_on_fail
 async def test_integrate_with_isolated_space(ops_test: OpsTest, application_path: str):
     app_name = await get_app_name(ops_test)

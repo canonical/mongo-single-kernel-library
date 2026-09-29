@@ -112,7 +112,7 @@ async def test_build_and_deploy_mongos(
             mongod_resource=mongos_resource,
             app_name=base_app_name,
             num_units=1,
-            subordinate=(substrate == "lxd"),
+            subordinate=(substrate == Substrate.lxd),
         )
         app_name = base_app_name
 
@@ -135,7 +135,7 @@ async def test_build_and_deploy_mongos(
         app_name,
         status="The cluster relation with the config-server is missing",
         timeout=300,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
 
@@ -169,7 +169,7 @@ async def test_config_server_only_integrated_with_mongos(ops_test: OpsTest, subs
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
         timeout=300,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
     # Go back to normal state
@@ -203,7 +203,7 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         app_name,
         status="TLS is mandatory for LDAP transport.",
         timeout=300,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
@@ -215,7 +215,7 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
         timeout=600,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
 
