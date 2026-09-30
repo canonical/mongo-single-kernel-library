@@ -10,7 +10,6 @@ from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
 from tests.integration.helpers.constants import CLUSTER_COMPONENTS, CONFIG_SERVER_APP_NAME
-from tests.integration.helpers.constants import CONFIG_SERVER_APP_NAME, DEPLOYMENT_TIMEOUT
 from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
     mongodb_config_path,
