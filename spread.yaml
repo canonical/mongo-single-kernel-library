@@ -169,7 +169,7 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
-  if [[ $SPREAD_SUITE == *"k8s"* ]] || [[ $SPREAD_TASK == *"ldap"* ]]
+  if [[ $SPREAD_SUITE == *"k8s"* ]]
   then
     # Canonical K8s defaults its pod CIDR to 10.1.0.0/16 — the same range the GitHub-hosted
     # Azure runners use for their host network, so a pod handed the subnet gateway address
@@ -247,10 +247,6 @@ prepare-each: |
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
     concierge prepare --trace -c concierge-lxd.yaml
-    if [[ $SPREAD_TASK == *"ldap"* ]]
-    then
-      concierge prepare --trace -c concierge-k8s.yaml
-    fi
   else
     concierge prepare --trace -c concierge-k8s.yaml
   fi
@@ -262,7 +258,7 @@ prepare-each: |
     juju switch concierge-k8s
   fi
 
-  if [[ $SPREAD_SUITE == *"k8s"* ]] || [[ $SPREAD_TASK == *"ldap"* ]]
+  if [[ $SPREAD_SUITE == *"k8s"* ]]
   then
     mkdir -p ~/.kube
     k8s config > ~/.kube/config
