@@ -37,11 +37,11 @@ Charmed MongoDB can be deployed on top of several Kubernetes distributions.
 The following table provides references for the security documentation for the 
 main supported cloud platforms.
 
-| Cloud              | Security guides                                                                                          |
-|--------------------|----------------------------------------------------------------------------------------------------------|
-| Charmed Kubernetes | [Security in Charmed Kubernetes]                                                                         |
-| AWS EKS            | [Best Practices for Security, Identity and Compliance], [AWS security credentials], [Security in EKS]    |
-| Azure              | [Azure security best practices and patterns], [Managed identities for Azure resource], [Security in AKS] |
+| Cloud                | Security guides                                                                                          |
+|----------------------|----------------------------------------------------------------------------------------------------------|
+| Canonical Kubernetes | [Security in Canonical Kubernetes]                                                                     |
+| AWS EKS              | [Best Practices for Security, Identity and Compliance], [AWS security credentials], [Security in EKS]    |
+| Azure                | [Azure security best practices and patterns], [Managed identities for Azure resource], [Security in AKS] |
 
 ```
 ````
@@ -187,6 +187,6 @@ For details on cryptography used by Charmed MongoDB, see {ref}`cryptography`.
 [Juju Azure Permission]: https://juju.is/docs/juju/microsoft-azure
 [How to use Juju with Microsoft Azure]: https://discourse.charmhub.io/t/how-to-use-juju-with-microsoft-azure/15219
 
-[Security in Charmed Kubernetes]: https://ubuntu.com/kubernetes/docs/security
+[Security in Canonical Kubernetes]: https://documentation.ubuntu.com/canonical-kubernetes/latest/snap/explanation/security/
 [Security in EKS]: https://docs.aws.amazon.com/eks/latest/userguide/security.html
 [Security in AKS]: https://learn.microsoft.com/en-us/azure/aks/concepts-security
