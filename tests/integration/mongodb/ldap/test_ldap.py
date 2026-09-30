@@ -66,6 +66,7 @@ def test_build_and_deploy(
             },
         )
     else:
+        app_name = base_app_name
         deploy_charm(
             juju=juju,
             charm=mongodb_charm,
@@ -87,10 +88,19 @@ def test_build_and_deploy(
     # Apply the LDIF file on glauth-utils to create users and groups
     apply_ldif(juju_k8s_model, "ldap_entries.ldif")
 
-    # Create the roles on MongoDB
-    create_mongodb_user_roles(
-        juju, substrate, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
+    # Create the roles on MongoDB
+    create_mongodb_user_roles(juju, substrate, app_name, "ou=superheroes,ou=users,dc=glauth,dc=com")
 
 
 @pytest.mark.abort_on_fail

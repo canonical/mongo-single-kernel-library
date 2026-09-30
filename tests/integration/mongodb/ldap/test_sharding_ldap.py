@@ -9,7 +9,7 @@ import pytest
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
-from tests.integration.helpers.constants import CONFIG_SERVER_APP_NAME, DEPLOYMENT_TIMEOUT
+from tests.integration.helpers.constants import CONFIG_SERVER_APP_NAME
 from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
     mongodb_config_path,
@@ -65,17 +65,9 @@ async def test_build_and_deploy(
             "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
     )
-    juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            *CLUSTER_COMPONENTS,
-            idle_period=30,
-        ),
-        timeout=DEPLOYMENT_TIMEOUT,
-        delay=5,
-        successes=3,
-    )
+
     integrate_sharding_components(juju)
+
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
             status,

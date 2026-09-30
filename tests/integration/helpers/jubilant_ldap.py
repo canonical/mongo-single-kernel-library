@@ -24,7 +24,10 @@ from tests.integration.helpers.jubilant_common import (
     get_password,
     unit_uri,
 )
-from tests.integration.helpers.status_helpers import are_agents_idle
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 POSTGRESQL_K8S = "postgresql-k8s"
@@ -43,6 +46,18 @@ def apply_ldif(juju_k8s_model: jubilant.Juju, ldif_file: str):
     target_path = f"/var/tmp/{ldif_file}"
     utils_unit = next(iter(juju_k8s_model.status().get_units(LDAP_UTILS_APP_NAME)))
     juju_k8s_model.scp(source_path, f"{utils_unit}:{target_path}")
+
+    # Wait to be all active before running the command.
+    juju_k8s_model.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            LDAP_UTILS_APP_NAME,
+            LDAP_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
+    )
+
     ldif_action = juju_k8s_model.run(utils_unit, "apply-ldif", params={"path": target_path})
     assert ldif_action.status == "completed", "apply-ldif should succeed"
 
