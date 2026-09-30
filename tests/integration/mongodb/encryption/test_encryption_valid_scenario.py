@@ -107,12 +107,10 @@ def test_integration_goes_to_active(
         lambda status: are_apps_active_and_agents_idle(
             status,
             app_name,
-            idle_period=30,
+            idle_period=20,
             unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
@@ -222,8 +220,6 @@ def remove_relation_goes_to_blocked(
             )
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # verify that no writes were skipped
@@ -294,8 +290,6 @@ def test_remove_token_then_reintegrate(
             )
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     if substrate == Substrate.lxd:
@@ -317,8 +311,6 @@ def test_remove_token_then_reintegrate(
             unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # verify that no writes were skipped
