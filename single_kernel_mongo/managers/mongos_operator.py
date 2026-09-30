@@ -11,11 +11,11 @@ import logging
 from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
+from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
 from ops.model import Relation, Unit
-from pymongo.errors import PyMongoError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -39,7 +39,6 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
-    DeferrableError,
     MissingConfigServerError,
     WorkloadServiceError,
 )
@@ -135,7 +134,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.ldap_events = LDAPEventHandler(self)
 
     @property
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (self, self.ldap_manager, self.upgrade_manager)
 
@@ -161,6 +160,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         # Setup systemd overrides to prevent mongos/mongodb from cutting connections
         self.setup_systemd_overrides()
+
+        if content := self.state.get_keyfile():
+            self.update_keyfile(content)
 
         # Update licenses
         self.handle_licenses()
@@ -229,10 +231,20 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
-            self.update_k8s_external_services()
+            self.update_config_on_k8s()
 
-            self.tls_manager.update_tls_sans()
-            self.share_connection_info()
+        if self.state.db_initialised:
+            self.restart_charm_services()
+        self.share_connection_info()
+
+    def update_config_on_k8s(self):
+        """Run the specific updates we might have to do on k8s."""
+        try:
+            self.update_k8s_external_services()
+        except ApiError as e:
+            logger.info("Failed to update k8s service: %s", e)
+
+        self.tls_manager.update_tls_sans()
 
     @override
     def prepare_storage(self) -> None:
@@ -330,14 +342,18 @@ class MongosOperator(OperatorProtocol, Object):
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
                 raise MissingConfigServerError()
+            keyfile = self.state.cluster.keyfile
+            if not keyfile:
+                logger.error("Cannot start mongos without a keyfile")
+                raise MissingConfigServerError()
+            self.update_keyfile(keyfile)
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
-            self.charm.status_handler.set_running_status(
+            self.state.statuses.set(
                 MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+                component=self.name,
             )
             raise
 
@@ -357,16 +373,8 @@ class MongosOperator(OperatorProtocol, Object):
             return
         if not self.charm.unit.is_leader():
             return
-        try:
-            self._share_configuration()
-        except PyMongoError as e:
-            raise DeferrableError(f"updating app relation data because of {e}")
-        except ApiError as e:  # Raised for k8s
-            if e.status.code == 404:
-                raise DeferrableError(
-                    "updating app relation data since service not found for more or one units"
-                )
-            raise
+
+        self._share_configuration()
 
     def remove_connection_info(self) -> None:
         """Deletes the information from the client databag."""
@@ -532,7 +540,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 

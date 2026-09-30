@@ -7,21 +7,21 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     deploy_charm,
     find_unit,
     get_app_name,
     unit_hostname,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     cut_network_from_unit,
     restore_network_for_unit,
     verify_writes,
     wait_until_unit_in_status,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import refresh_charm
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 

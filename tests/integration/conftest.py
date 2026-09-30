@@ -13,8 +13,8 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from .helpers.architecture import architecture as _architecture
-from .helpers.common import (
+from tests.integration.helpers.architecture import architecture as _architecture
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
     clear_continous_writes,
@@ -26,7 +26,7 @@ from .helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
-from .helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_COLL_NAME,
@@ -37,7 +37,7 @@ from .helpers.sharding import (
     remove_db_writes,
     write_data_to_mongodb,
 )
-from .helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 

@@ -10,14 +10,14 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     find_unit,
     get_app_name,
     get_juju_status,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import get_workload_version
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import get_workload_version, refresh_with_juju
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,9 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 async def test_rollback(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongod_base_path: Path,
-    mongodb_charm: str,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     faulty_mongodb_upgrade_charm: Path,
 ) -> None:
     app_name = await get_app_name(ops_test)
@@ -60,8 +60,9 @@ async def test_rollback(
 
     mongodb_application = ops_test.model.applications[app_name]
 
-    initial_version_path = mongod_base_path / Path("workload_version")
-    initial_version = initial_version_path.read_text().strip()
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+
+    initial_version = await get_workload_version(ops_test, leader_unit.name)
 
     await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm, resources=resources)
     logger.info("Wait for refresh to fail")
@@ -77,15 +78,11 @@ async def test_rollback(
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
-    await mongodb_application.refresh(path=mongodb_charm)
+    await refresh_with_juju(ops_test, app_name, "8-transition/edge", base_app_name)
     # sleep to ensure that active status from before re-refresh does not affect below check
 
     time.sleep(15)
-    await ops_test.model.block_until(
-        lambda: all(unit.workload_status == "active" for unit in mongodb_application.units)
-        and all(unit.agent_status == "idle" for unit in mongodb_application.units),
-        wait_period=15,
-    )
+    await ops_test.model.wait_for_idle(apps=[app_name], idle_period=30)
 
     logger.info("Running resume-refresh on the leader unit")
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)

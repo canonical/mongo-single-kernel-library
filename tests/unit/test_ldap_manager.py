@@ -85,18 +85,23 @@ def test_ldap_hook_checks_fail(
     assert err.value.args == expected_error.args
 
 
-def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactions):
+def test_ldap_ready_success(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.db_initialised = True
     relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
     harness.add_relation_unit(relation_id, "glauth-k8s/0")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
+
     harness.update_relation_data(
         relation_id,
         "glauth-k8s",
         {
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
-            "bind_password": "password",
+            "bind_password_secret": secret_id,
             "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
@@ -119,7 +124,9 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
     assert harness.charm.operator.config_manager.ldap_parameters == {}  # type: ignore
 
 
-def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_ldap_get_status(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
+):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.db_initialised = True
     # Case 1: No integration
@@ -151,13 +158,15 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     ) == WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
 
     # Case 5: We received data from LDAP integration but not from cert integration
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
     harness.update_relation_data(
         ldap_relation_id,
         "glauth-k8s",
         {
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
-            "bind_password": "password",
+            "bind_password_secret": secret_id,
             "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
@@ -212,7 +221,9 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     ) == WaitingStatus("Missing LDAP data from Glauth.")
 
 
-def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_ldap_on_remove_clean_data(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
+):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
@@ -221,13 +232,15 @@ def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, moc
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
     harness.update_relation_data(
         ldap_relation_id,
         "glauth-k8s",
         {
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
-            "bind_password": "password",
+            "bind_password_secret": secret_id,
             "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
@@ -299,7 +312,7 @@ def test_on_certificate_removed_clean_certs(
 
 
 def test_ldap_full_integration_cycle(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
 ):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
@@ -313,13 +326,15 @@ def test_ldap_full_integration_cycle(
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
     harness.update_relation_data(
         ldap_relation_id,
         "glauth-k8s",
         {
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
-            "bind_password": "password",
+            "bind_password_secret": secret_id,
             "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
@@ -327,7 +342,6 @@ def test_ldap_full_integration_cycle(
             "urls": '["ldap://ldap.glauth.com"]',
         },
     )
-
     harness.evaluate_status()
 
     assert harness.model.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
@@ -448,7 +462,9 @@ def test_ldap_unable_to_bind_defers(
     assert harness.model.unit.status == ActiveStatus("")
 
 
-def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_ldaps_not_enabled(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
+):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
@@ -457,6 +473,8 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
     harness.update_relation_data(
         ldap_relation_id,
         "glauth-k8s",
@@ -465,6 +483,7 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
             "bind_password": "password",
             "bind_password_id": "secret-id",
+            "bind_password_secret": secret_id,
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": "[]",
@@ -479,11 +498,13 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
 
 
 def test_ldaps_mongos_invalid_hash(
-    mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions
+    mongos_harness: Harness[MongosTestCharm], mongos_name: str, mocker, mock_fs_interactions
 ):
     mongos_harness.set_leader(True)
     mongos_harness.charm.operator.state.db_initialised = True
     rel_id_ldap = mongos_harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = mongos_harness.add_model_secret("glauth-k8s", {"password": "password"})
+    mongos_harness.grant_secret(secret_id, mongos_name)
     mongos_harness.update_relation_data(
         rel_id_ldap,
         "glauth-k8s",
@@ -492,6 +513,7 @@ def test_ldaps_mongos_invalid_hash(
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
             "bind_password": "password",
             "bind_password_id": "secret-id",
+            "bind_password_secret": secret_id,
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": '["ldaps://ldap.glauth.com"]',

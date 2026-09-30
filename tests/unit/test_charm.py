@@ -26,6 +26,7 @@ from single_kernel_mongo.config.statuses import (
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
+    DatabaseRequestedHasNotRunYetError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     ShardingMigrationError,
@@ -43,10 +44,13 @@ from single_kernel_mongo.utils.mongodb_users import (
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 PEER_ADDR = {
     "lxd": {"private-address": "127.4.5.6"},
-    "microk8s": {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+    "microk8s": {
+        "private-address": f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+    },
 }
 PYMONGO_EXCEPTIONS = [
     (ConnectionFailure("error message"), ConnectionFailure),
@@ -67,11 +71,15 @@ INVALID_SYSTEM_USERS = {"invalid-user": "123"}
 
 @pytest.mark.skip_if_substrate("microk8s")
 def test_install_blocks_snap_install_failure(harness, mocker):
+    mock_exec = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch.object(harness.charm.status_handler, "set_running_status")
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.install", side_effect=WorkloadNotReadyError
     )
     with pytest.raises(WorkloadNotReadyError):
         harness.charm.on.install.emit()
+    mock_exec.assert_any_call(["systemctl", "restart", "snapd.service"])
+    mock_exec.assert_any_call(["systemctl", "is-active", "--quiet", "snapd.service"])
 
 
 @pytest.mark.skip_if_substrate("lxd")
@@ -342,6 +350,27 @@ def test_start_success(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
+def test_initialise_config_server_before_reconciling_cluster_users(harness, mocker):
+    """Config-server initialisation is not blocked by an unready cluster relation."""
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.db_initialised = False
+    harness.add_relation("cluster", "mongos")
+
+    mocker.patch.object(harness.charm.operator.mongo_manager, "initialise_replica_set")
+    mocker.patch.object(harness.charm.operator.mongo_manager, "initialise_charm_admin_users")
+    reconcile_users = mocker.patch.object(
+        harness.charm.operator.mongo_manager,
+        "reconcile_mongo_users_and_dbs",
+        side_effect=DatabaseRequestedHasNotRunYetError,
+    )
+
+    harness.charm.operator._initialise_replica_set()
+
+    reconcile_users.assert_called_once()
+    assert harness.charm.operator.state.db_initialised
+
+
 def test_start_already_initialised(harness, mocker, mock_fs_interactions):
     """Tests that if the replica set has already been set up that we return.
 
@@ -423,7 +452,10 @@ def test_start_mongod_error_overseeing_users(
     # presets
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
-    harness.add_relation("database", "client-app")
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation("database", "client-app")
+        harness.add_relation_unit(relation_id, "client-app/0")
+        harness.update_relation_data(relation_id, "client-app", {"database": "client-db"})
 
     for exception, _ in PYMONGO_EXCEPTIONS:
         user_exists.side_effect = exception
@@ -1280,7 +1312,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(
     harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR[substrate])
 
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.UNIT, component=harness.charm.operator.mongo_manager.name
     )
 
     assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
@@ -1504,6 +1536,7 @@ def test_on_relation_departed_not_leader(
     rel = harness.charm.operator.state.peer_relation
     harness.add_relation_unit(rel.id, "mongodb/1")
 
+    update_host_mock.reset_mock()
     harness.set_leader(False)
     harness.remove_relation_unit(rel.id, "mongodb/1")
 

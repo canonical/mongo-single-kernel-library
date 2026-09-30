@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     TIMEOUT,
@@ -21,7 +21,7 @@ from ..helpers.common import (
     get_address_of_unit,
     get_unit_id,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 S3_APP_NAME = "s3-integrator"
 S3_ENDPOINT = "s3-credentials"

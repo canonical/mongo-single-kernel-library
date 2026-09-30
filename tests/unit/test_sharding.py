@@ -24,6 +24,7 @@ from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import BackupUser, OperatorUser
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 ############################
 # Config Server Side tests #
@@ -196,7 +197,9 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
     relation: Relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, rel_id)  # type: ignore[assignment]
 
     harness.update_relation_data(
-        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+        rel_id,
+        "shard0",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard0"},
     )
     harness.update_relation_data(rel_id, "shard0/0", {"private-address": "2.2.2.2"})
 
@@ -205,7 +208,9 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
     if substrate == "lxd":
         mocked_add_shard.assert_called_with("shard0", ["2.2.2.2"])
     else:
-        mocked_add_shard.assert_called_with("shard0", ["shard0-0.shard0-endpoints"])
+        mocked_add_shard.assert_called_with(
+            "shard0", [f"shard0-0.shard0-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"]
+        )
 
 
 def test_config_server_cluster_password_synced_success(harness: Harness[MongoTestCharm], mocker):
@@ -317,10 +322,14 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
     harness.add_relation_unit(rel_id_bis, "shard1/0")
 
     harness.update_relation_data(
-        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+        rel_id,
+        "shard0",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard0"},
     )
     harness.update_relation_data(
-        rel_id_bis, "shard1", {"requested-secrets": '["unused"]', "database": "unused"}
+        rel_id_bis,
+        "shard1",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard1"},
     )
 
     assert set(manager.get_unreachable_shards()) == {"shard0", "shard1"}

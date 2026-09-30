@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from charmlibs.interfaces.ldap import LdapProviderData
 from ldapurl import LDAPUrl
 from ops import Relation
 from ops.model import Application
@@ -18,7 +19,6 @@ from ops.model import Application
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import DataPeerData
-from single_kernel_mongo.lib.charms.glauth_k8s.v0.ldap import LdapProviderData
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 if TYPE_CHECKING:

@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
@@ -35,10 +35,11 @@ from ...helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     all_db_processes_down,
     db_step_down,
     fetch_replica_set_members,
+    host_to_unit,
     insert_release_to_cluster,
     kill_unit_process,
     kubectl_delete,
@@ -53,7 +54,7 @@ from ...helpers.ha import (
     verify_replica_set_configuration,
     verify_writes,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
 RESTART_DELAY = 60 * 3
@@ -411,9 +412,9 @@ async def test_scale_down_capabilities_microk8s(
     assert primary is not None, "replica set has no primary"
 
     # check that the primary is one of the remaining units
-    assert (
-        f"{primary.name.replace('/', '-')}.mongodb-k8s-endpoints" in hostnames
-    ), "replica set primary is not one of the available units"
+    assert primary.name in [
+        host_to_unit(hostname) for hostname in hostnames
+    ], "replica set primary is not one of the available units"
 
     # verify that the configuration of mongodb no longer has the deleted ip
     member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)

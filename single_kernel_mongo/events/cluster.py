@@ -18,6 +18,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
     WaitingForSecretsError,
     WorkloadServiceError,
 )
@@ -73,8 +74,7 @@ class ClusterConfigServerEventHandler(Object):
         """
         try:
             self.manager.share_secret_to_mongos(event.relation)
-        except DeferrableFailedHookChecksError as e:
-            logger.info("Skipping database requested event: hook checks did not pass.")
+        except (DeferrableFailedHookChecksError, DeferrableError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -85,7 +85,7 @@ class ClusterConfigServerEventHandler(Object):
         """Handle relation changed events."""
         try:
             self.manager.update_keyfile_and_hosts_on_mongos(event.relation)
-        except DeferrableFailedHookChecksError as e:
+        except (DeferrableFailedHookChecksError, DeferrableError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -96,7 +96,7 @@ class ClusterConfigServerEventHandler(Object):
         """During a relation broken event, the manager will cleanup the users."""
         try:
             self.manager.cleanup_users(event.relation)
-        except DeferrableFailedHookChecksError as e:
+        except (DeferrableFailedHookChecksError, DeferrableError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -161,13 +161,12 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.update_mongos_and_restart()
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
+        except (DeferrableError, DeferrableFailedHookChecksError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except (NonDeferrableFailedHookChecksError, WaitingForSecretsError) as e:
+            return
+        except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             self.dependent.state.statuses.add(
@@ -175,16 +174,12 @@ class ClusterMongosEventHandler(Object):
                 scope="unit",
                 component=self.charm.name,
             )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""
         try:
             self.manager.remove_users_and_cleanup_mongo(event.relation)
-        except (DeferrableFailedHookChecksError, DeferrableError) as e:
+        except (DeferrableFailedHookChecksError, DeferrableError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+        except RelationBrokenDuringScaleDownError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")

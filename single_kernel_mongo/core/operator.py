@@ -17,13 +17,17 @@ from __future__ import annotations
 
 import shutil
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
+from data_platform_helpers.advanced_statuses.types import (
+    Scope,
+)
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
@@ -32,7 +36,6 @@ from single_kernel_mongo.config.literals import (
     SYSTEMD_MONGODB_OVERRIDE,
     SYSTEMD_MONGOS_OVERRIDE,
     TRUST_STORE_PATH,
-    Scope,
     Substrates,
     TrustStoreFiles,
 )
@@ -45,7 +48,7 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
 )
 from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
@@ -67,7 +70,7 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
+class OperatorProtocol(AbstractManagerStatus[CharmState], ABC, Object):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -81,7 +84,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[str]
+    name: str
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager
@@ -108,7 +111,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
 
     @property
     @abstractmethod
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components reporting statuses."""
         ...
 
@@ -197,7 +200,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> Sequence[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Recomputes the statuses for the given scope."""
         ...
 
@@ -209,7 +212,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             )
 
         if self.state.is_scaling_down(relation.id):
-            raise NonDeferrableFailedHookChecksError(
+            raise RelationBrokenDuringScaleDownError(
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
 
@@ -301,6 +304,13 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             self.workload.paths.mongos_config_file,
         ):
             self.workload.exec(["chmod", "600", f"{path}"])
+
+    def get_ca_cert_from_trust_store(self, file: TrustStoreFiles) -> str:
+        """Reads the certificate from the file system."""
+        full_path = TRUST_STORE_PATH / file.value
+        if not self.workload.exists(full_path):
+            return ""
+        return "\n".join(self.workload.read(full_path))
 
     def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: list[str]) -> None:
         """Saves the certificate in the trust store.

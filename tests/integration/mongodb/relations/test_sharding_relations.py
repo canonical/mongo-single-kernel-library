@@ -6,8 +6,8 @@ import pytest
 from juju.errors import JujuAPIError
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.backups import S3_APP_NAME
-from ...helpers.common import (
+from tests.integration.helpers.backups import S3_APP_NAME
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
@@ -16,20 +16,20 @@ from ...helpers.common import (
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.relations import (
+from tests.integration.helpers.relations import (
     APPLICATION_APP_NAME,
     FIRST_DATABASE_RELATION_NAME,
     REPLICATION_APP_NAME,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     CONFIG_SERVER_TWO_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
 )
-from ...helpers.tls import TLS_CERTIFICATES_APP_NAME, TLS_RELATION_NAME
-from ...helpers.types import Substrate
+from tests.integration.helpers.tls import TLS_CERTIFICATES_APP_NAME, TLS_RELATION_NAME
+from tests.integration.helpers.types import Substrate
 
 SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
 

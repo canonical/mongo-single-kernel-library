@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING
 
 import jinja2
 import ldap
+from charmlibs.interfaces.ldap import LdapRequirer
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 from ops.model import Relation
@@ -37,7 +38,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
     CertificateTransferRequires,
 )
-from single_kernel_mongo.lib.charms.glauth_k8s.v0.ldap import LdapRequirer
 from single_kernel_mongo.state.charm_state import CharmState
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class LDAPManager(Object, ManagerStatusProtocol):
+class LDAPManager(Object, AbstractManagerStatus[CharmState]):
     """Manages the relation between glauth-k8s and replica set, config-sever or mongos router."""
 
     def __init__(
