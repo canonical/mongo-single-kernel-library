@@ -141,7 +141,8 @@ def test_rotation_fails_if_not_okay(juju: jubilant.Juju):
     leader_unit, _ = find_leader(juju, app_name)
 
     # Trying to rotate the key fails with an error if encryption at rest is disabled.
-    action = juju.run(leader_unit, "rotate-encryption-master-key")
-
-    assert action.status == "failed"
-    assert action.results["message"] == "Encryption at rest not enabled on this application."
+    try:
+        juju.run(leader_unit, "rotate-encryption-master-key")
+    except jubilant.TaskError as e:
+        assert e.task.status == "failed"
+        assert e.task.message == "Encryption at rest not enabled on this application."
