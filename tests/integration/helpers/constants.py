@@ -76,4 +76,18 @@ CLUSTER_APPS = [
 ]
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
 CONFIG_SERVER_REL_NAME = "config-server"
+SHARD_APPS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
+
+SHARD_DEFAULT_COLL_NAME = "test_collection"
+SHARD_ONE_DB_NAME = "continuous_writes_database"
+SHARD_ONE_COLL_NAME = "test_collection"
+SHARD_TWO_DB_NAME = "new-db-2"
+SHARD_TWO_COLL_NAME = "test_collection"
+
 SHARD_REL_NAME = "sharding"
+S3_APP_NAME = "s3-integrator"
+S3_ENDPOINT = "s3-credentials"
+GCS_APP_NAME = "gcs-integrator"
+GCS_ENDPOINT = "gcs-credentials"
+
+NEW_CLUSTER = "new-mongodb"
