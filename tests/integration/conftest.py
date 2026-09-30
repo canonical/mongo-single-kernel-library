@@ -23,6 +23,7 @@ import jubilant
 import pytest
 import tomli
 import tomli_w
+from mypy_boto3_s3.service_resource import Bucket
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 from yaml import safe_load
@@ -41,14 +42,24 @@ from tests.integration.helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
+from tests.integration.helpers.constants import CHARMED_OPERATOR_USERNAME
 from tests.integration.helpers.continuous_writes_helpers import (
     clear_continuous_writes,
     start_continuous_writes,
     stop_continuous_writes,
 )
-from tests.integration.helpers.jubilant_common import deploy_application as jubilant_deploy_app
-from tests.integration.helpers.jubilant_common import existing_app
+from tests.integration.helpers.jubilant_common import (
+    deploy_application as jubilant_deploy_app,
+)
+from tests.integration.helpers.jubilant_common import (
+    existing_app,
+    find_leader,
+    get_ip_from_unit,
+    get_password,
+    mongos_uri,
+)
 from tests.integration.helpers.jubilant_common import relate_application as jubilant_relate_app
+from tests.integration.helpers.jubilant_sharding import build_mongos_client
 from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -519,7 +530,9 @@ def storage_credentials(microceph: ConnectionInformation) -> dict[str, str]:
 
 
 @pytest.fixture(scope="function")
-def s3_bucket(storage_credentials, storage_config) -> None:
+def s3_bucket(
+    storage_credentials: dict[str, str], storage_config: dict[str, str]
+) -> Generator[Bucket]:
     """Provide a storage bucket on the deployed microceph instance."""
     session = boto3.Session(
         aws_access_key_id=storage_credentials["access-key"],
@@ -527,7 +540,7 @@ def s3_bucket(storage_credentials, storage_config) -> None:
         region_name=storage_config["region"] if storage_config["region"] else None,
     )
     s3 = session.resource("s3", endpoint_url=storage_config["endpoint"], verify="cert.pem")
-    bucket = s3.Bucket(storage_config["bucket"])
+    bucket: Bucket = s3.Bucket(storage_config["bucket"])
     yield bucket
 
 
@@ -711,3 +724,69 @@ def juju_k8s_model(
         juju_k8s.wait_timeout = 1000
         juju_k8s.cli("set-model-constraints", f"arch={architecture}")
         yield juju_k8s
+
+
+@pytest.fixture
+def jubilant_add_writes_to_db(juju: jubilant.Juju, application_path: str):
+    """Adds writes to DB before test starts and clears writes at the end of the test."""
+    db_app_name = existing_app(juju)
+    assert db_app_name
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+        jubilant_relate_app(juju, db_app_name, app_name)
+
+    start_continuous_writes(juju, app_name)
+    time.sleep(20)
+    stop_continuous_writes(juju, app_name)
+    yield
+    clear_continuous_writes(juju, app_name)
+
+
+@pytest.fixture
+def jubilant_add_writes_to_shard(juju: jubilant.Juju, substrate: Substrate, application_path: str):
+    """Adds writes to DB before test starts and clears writes at the end of the test."""
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+
+    # configure write app to use mongos uri
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+
+    password = get_password(juju=juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
+    juju.config(app_name, {"mongos-uri": _mongos_uri})
+
+    start_continuous_writes(
+        juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    time.sleep(20)
+    stop_continuous_writes(juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
+
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
+
+    mongos_client.admin.command("movePrimary", SHARD_ONE_DB_NAME, to=SHARD_ONE_APP_NAME)
+
+    write_data_to_mongodb(
+        mongos_client,
+        db_name=SHARD_TWO_DB_NAME,
+        coll_name=SHARD_TWO_COLL_NAME,
+        content={"horse-breed": "unicorn", "real": True},
+    )
+
+    mongos_client.admin.command("movePrimary", SHARD_TWO_DB_NAME, to=SHARD_TWO_APP_NAME)
+
+    mongos_client.close()
+
+    yield
+
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
+    remove_db_writes(mongos_client, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
+    remove_db_writes(mongos_client, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
+    mongos_client.close()
