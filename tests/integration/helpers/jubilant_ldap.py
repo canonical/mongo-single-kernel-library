@@ -124,14 +124,28 @@ def consume_glauth_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
 
 def teardown_offers(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     """Teardown the offers, removing both saas, and offers."""
+    assert juju_k8s_model.model
+    juju_k8s_model_name = juju_k8s_model.model.split(":")[-1]
     logger.info("Removing ldap SAAS")
     juju.cli("remove-saas", LDAP_OFFER)
     logger.info("Removing ldap certs SAAS")
     juju.cli("remove-saas", LDAP_CERT_OFFER)
     logger.info("Removing ldap offer")
-    juju_k8s_model.cli("remove-offer", LDAP_OFFER, include_model=False)
+    juju_k8s_model.cli(
+        "remove-offer",
+        f"admin/{juju_k8s_model_name}.{LDAP_OFFER}",
+        "--force",
+        "--yes",
+        include_model=False,
+    )
     logger.info("Removing ldap cert offer")
-    juju_k8s_model.cli("remove-offer", LDAP_CERT_OFFER, include_model=False)
+    juju_k8s_model.cli(
+        "remove-offer",
+        f"admin/{juju_k8s_model_name}.{LDAP_CERT_OFFER}",
+        "--force",
+        "--yes",
+        include_model=False,
+    )
 
 
 def create_mongodb_user_roles(
