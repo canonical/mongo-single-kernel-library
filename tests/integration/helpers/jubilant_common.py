@@ -229,7 +229,7 @@ def get_secret_uri_by_owner(
     owner = ""
 
     if app_or_unit:
-        prefix = "unit" if app_or_unit[-1].isdigit() else "application"
+        prefix = "unit" if "/" in app_or_unit else "application"
         owner = f"{prefix}-{app_or_unit}"
         if prefix == "unit":
             owner = owner.replace("/", "-")
