@@ -780,9 +780,9 @@ def verify_replica_set_configuration(
     assert set(member_hosts) == set(hosts), "all members not running under the same replset"
 
     # verify there is only one primary
-    assert (
-        count_primaries(juju, substrate, app_name=app_name) == 1
-    ), "there are more than one primary in the replica set."
+    assert count_primaries(juju, substrate, app_name=app_name) == 1, (
+        "there are more than one primary in the replica set."
+    )
 
 
 def convert_time(time_as_str: str) -> float:
