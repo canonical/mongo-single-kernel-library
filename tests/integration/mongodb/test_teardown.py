@@ -7,10 +7,12 @@ import logging
 import jubilant
 import pytest
 
+from tests.integration.helpers.common import CONTINUOUS_WRITE_APPLICATION
 from tests.integration.helpers.constants import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
 )
+from tests.integration.helpers.continuous_writes_helpers import verify_writes
 from tests.integration.helpers.jubilant_common import (
     count_primaries,
     deploy_charm,
@@ -75,12 +77,16 @@ def test_build_and_deploy(
     )
 
 
-def test_long_scale_up_scale_down_units(juju: jubilant.Juju, substrate: Substrate):
+def test_long_scale_up_scale_down_units(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+):
     """Scale up and down the application and verify the replica set is healthy."""
-    scales = [2, -1, -1, 2, -2, 3, -3]
+    scales = [2, -1, -1, 2, -2, 3, -4]
 
     app_name = existing_app(juju)
     assert app_name
 
     for count in scales:
         scale_and_verify(juju, substrate, app_name=app_name, count=count)
+
+    verify_writes(juju, substrate, app_name, CONTINUOUS_WRITE_APPLICATION)

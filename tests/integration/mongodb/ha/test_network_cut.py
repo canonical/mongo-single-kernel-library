@@ -5,123 +5,144 @@
 import time
 from logging import getLogger
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.common import CHARMED_OPERATOR_USERNAME
+from tests.integration.helpers.constants import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
+    TIMEOUT,
     UNIT_IDS,
-    check_or_scale_app,
+)
+from tests.integration.helpers.continuous_writes_helpers import (
     count_writes,
+    replica_set_primary,
+    replica_set_secondary,
+    verify_writes,
+)
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    get_address_of_unit,
-    get_app_name,
-    get_unit_id,
-    instance_ip,
+    ensure_app_number_units,
+    existing_app,
+    fast_forward,
+    get_ip_from_unit,
+    get_mongodb_hostname_for_unit,
+    get_password,
     mongod_ready,
     unit_hostname,
 )
-from tests.integration.helpers.ha import (
+from tests.integration.helpers.jubilant_ha import (
     cut_network_from_unit,
-    get_controller_machine,
-    is_machine_reachable_from,
-    replica_set_primary,
-    replica_set_secondary,
-    restore_network_for_unit,
+    instance_ip,
+    is_unit_reachable_lxd,
+    lxd_get_controller_hostname,
+    mongodb_unit_in_status,
+    restore_network_to_unit,
     verify_replica_set_configuration,
-    verify_writes,
     wait_network_restore,
-    wait_until_unit_in_status,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource: dict,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
     base_app_name: str,
 ):
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
         return
 
-    await deploy_charm(
-        ops_test=ops_test,
+    app_name = base_app_name
+    deploy_charm(
+        juju=juju,
         charm=mongodb_charm,
         substrate=substrate,
         mongod_resource=mongod_resource,
-        app_name=base_app_name,
+        app_name=app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_network_cut(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db, chaos_mesh
+def test_network_cut(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db, jubilant_chaos_mesh
 ):
     # locate primary unit
-    app_name = await get_app_name(ops_test)
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-    primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
+    app_name = existing_app(juju)
+    assert app_name
 
-    assert primary, "No primary unit found"
+    primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
 
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
+    password = get_password(juju, app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    assert primary_name, "No primary unit found"
+
+    other_unit, other_unit_status = replica_set_secondary(juju, substrate, app_name=app_name)
     assert other_unit, "No secondary unit found"
 
-    all_units = ops_test.model.applications[app_name].units
+    all_units = juju.status().get_units(app_name).keys()
 
-    model_name = ops_test.model.info.name
+    model_name = juju.model
+    assert model_name
 
-    if substrate == Substrate.lxd:
-        primary_hostname = await unit_hostname(ops_test, primary.name)
-    else:
-        primary_hostname = primary.name
-    primary_unit_ip = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(primary.name), app_name
+    primary_hostname = unit_hostname(juju, primary_name)
+    mongodb_primary_hostname = get_mongodb_hostname_for_unit(
+        juju, substrate, primary_name, primary_status
     )
+    primary_unit_ip = get_ip_from_unit(substrate, primary_status)
 
     # before cutting network verify that connection is possible
-    assert await mongod_ready(
-        ops_test, primary_unit_ip, app_name=app_name
+    assert mongod_ready(
+        juju, primary_unit_ip, app_name=app_name
     ), f"Connection to host {primary_unit_ip} is not possible"
 
-    cut_network_from_unit(ops_test, substrate, primary_hostname)
+    cut_network_from_unit(substrate, model_name, primary_hostname, ip_change=True)
 
     logger.info(f"Cut network for {primary_hostname}")
 
-    units_to_check = {unit for unit in all_units if unit.name != primary.name}
+    units_to_check = {unit_name for unit_name in all_units if unit_name != primary_name}
+
     logger.info(f"Checking: {units_to_check}")
+
     # verify machine is not reachable from peer units
-    for unit in units_to_check:
-        logger.info(f"Waiting for unit {unit}")
-        await wait_until_unit_in_status(
-            ops_test, substrate, primary, unit, "(not reachable/healthy)", app_name
-        )
+    juju.wait(
+        lambda status: mongodb_unit_in_status(
+            status,
+            substrate,
+            unit_to_check=primary_name,
+            unit_to_check_hostname=mongodb_primary_hostname,
+            expected_status="(not reachable/healthy)",
+            username=CHARMED_OPERATOR_USERNAME,
+            password=password,
+        ),
+        timeout=TIMEOUT,
+    )
 
     if substrate == Substrate.lxd:
         logger.info("Checking reachability from controller")
-        controller: str = await get_controller_machine(ops_test)
-        assert not is_machine_reachable_from(
-            controller, primary_hostname
+        controller: str = lxd_get_controller_hostname(juju)
+        assert not is_unit_reachable_lxd(
+            controller, primary_hostname, number_of_retries=3
         ), "unit is reachable from controller"
 
     # sleep for twice the median election time
@@ -130,51 +151,75 @@ async def test_network_cut(
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit, unit_info=other_unit_status
+    )
     time.sleep(5)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit, unit_info=other_unit_status
+    )
     assert more_writes > writes, "writes not continuing to DB"
 
     # verify that a new primary gets elected
-    new_primary = await replica_set_primary(
-        ops_test,
+    new_primary_name, _ = replica_set_primary(
+        juju,
         substrate,
         app_name=app_name,
-        replica_set_hosts=ip_addresses,
     )
-    assert new_primary.name != primary.name
+    assert new_primary_name != primary_name
 
     # verify that no writes to the db were missed
-    total_expected_writes = await verify_writes(
-        ops_test,
+    total_expected_writes = verify_writes(
+        juju,
         substrate,
         app_name,
     )
 
+    assert juju.model
     # restore network connectivity to old primary
-    restore_network_for_unit(ops_test, substrate, primary_hostname)
+    restore_network_to_unit(substrate, juju.model, primary_hostname, ip_change=True)
 
     # wait until network is reestablished for the unit
-    await wait_network_restore(
-        ops_test, substrate, model_name, app_name, primary_hostname, primary_unit_ip
+    wait_network_restore(
+        juju,
+        substrate,
+        app_name,
+        primary_hostname,
+        primary_unit_ip,
+        ip_change=True,
+        unit_count=len(UNIT_IDS),
     )
 
     # self healing is performed with update status hook
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+    with fast_forward(juju, update_interval="1m"):
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status, app_name, idle_period=20, unit_count=len(UNIT_IDS)
+            ),
+            timeout=TIMEOUT,
+        )
 
     # verify we have connection to the old primary
     if substrate == Substrate.lxd:
-        new_ip = instance_ip(model_name, primary_hostname)
-        assert await mongod_ready(
-            ops_test, new_ip, app_name=app_name
+        new_ip = instance_ip(juju, primary_hostname)
+        assert mongod_ready(
+            juju, new_ip, app_name=app_name
         ), f"Connection to host {new_ip} is not possible"
 
     # verify presence of primary, replica set member configuration, and number of primaries
-    await verify_replica_set_configuration(ops_test, substrate, app_name=app_name)
+    verify_replica_set_configuration(juju, substrate, app_name=app_name)
+
+    new_unit_info = None
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        if unit_name == primary_name:
+            new_unit_info = unit_info
+
+    assert new_unit_info, f"No information in juju status for {primary_name}"
 
     # verify that no writes were missed.
-    secondary_writes = await count_writes(ops_test, substrate, app_name, unit=primary)
+    secondary_writes = count_writes(
+        juju, substrate, app_name, unit_name=primary_name, unit_info=new_unit_info
+    )
     assert (
         total_expected_writes == secondary_writes
     ), "secondary not up to date with the cluster after restarting."
