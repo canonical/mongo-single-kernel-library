@@ -2,34 +2,36 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import time
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
+    APPLICATION_APP_NAME,
     DEPLOYMENT_TIMEOUT,
+    FIRST_DATABASE_RELATION_NAME,
     MEDIAN_REELECTION_TIME,
-    check_or_scale_app,
+    SECOND_DATABASE_RELATION_NAME,
+    TIMEOUT,
+)
+from tests.integration.helpers.continuous_writes_helpers import replica_set_primary
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
+    ensure_app_number_units,
     execute_on_mongod,
-    get_app_name,
+    existing_app,
     get_application_relation_data,
     get_connection_string,
     get_mongodb_hostname_for_unit,
-    is_relation_joined,
-    run_action,
+    get_relation_id_for,
 )
-from tests.integration.helpers.ha import replica_set_primary
-from tests.integration.helpers.relations import (
-    APPLICATION_APP_NAME,
-    FIRST_DATABASE_RELATION_NAME,
-    SECOND_DATABASE_RELATION_NAME,
+from tests.integration.helpers.jubilant_relations import (
     assert_created_user_can_connect,
     verify_application_data,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 DATABASE_RELATION_NAME = "database"
@@ -44,10 +46,10 @@ ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "aliased-multiple-database-cl
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy_charms(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_deploy_charms(
+    juju: jubilant.Juju,
     substrate: Substrate,
+    mongodb_charm: str,
     mongod_resource: dict[str, str],
     base_app_name: str,
     client_relation_charm_path: str,
@@ -56,156 +58,106 @@ async def test_deploy_charms(
     # Deploy both charms (2 units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     required_units = 2
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     if app_name == ANOTHER_DATABASE_APP_NAME:
         assert False, f"provided MongoDB application, cannot be named {ANOTHER_DATABASE_APP_NAME}, this name is reserved for this test."
 
     if app_name:
-        await asyncio.gather(
-            ops_test.model.deploy(
-                client_relation_charm_path,
-                application_name=APPLICATION_APP_NAME,
-                num_units=required_units,
-            ),
-            check_or_scale_app(ops_test, substrate, app_name, required_units),
-            deploy_charm(
-                ops_test=ops_test,
-                charm=mongodb_charm,
-                substrate=substrate,
-                mongod_resource=mongod_resource,
-                app_name=ANOTHER_DATABASE_APP_NAME,
-                num_units=1,
-            ),
-        )
+        ensure_app_number_units(juju, substrate, app_name, required_units)
     else:
-        await asyncio.gather(
-            ops_test.model.deploy(
-                client_relation_charm_path,
-                application_name=APPLICATION_APP_NAME,
-                num_units=required_units,
-            ),
-            deploy_charm(
-                ops_test=ops_test,
-                charm=mongodb_charm,
-                substrate=substrate,
-                mongod_resource=mongod_resource,
-                app_name=base_app_name,
-                num_units=required_units,
-            ),
-            deploy_charm(
-                ops_test=ops_test,
-                charm=mongodb_charm,
-                substrate=substrate,
-                mongod_resource=mongod_resource,
-                app_name=ANOTHER_DATABASE_APP_NAME,
-                num_units=1,
-            ),
+        app_name = base_app_name
+        deploy_charm(
+            juju=juju,
+            charm=mongodb_charm,
+            substrate=substrate,
+            mongod_resource=mongod_resource,
+            app_name=app_name,
+            num_units=required_units,
         )
-    await ops_test.model.wait_for_idle(
-        apps=[app_name or base_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME],
-        status="active",
+    juju.deploy(
+        charm=client_relation_charm_path, app=APPLICATION_APP_NAME, num_units=required_units
+    )
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
+        app_name=ANOTHER_DATABASE_APP_NAME,
+        num_units=1,
+    )
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            APPLICATION_APP_NAME,
+            ANOTHER_DATABASE_APP_NAME,
+            idle_period=30,
+            unit_count={
+                app_name: 2,
+                APPLICATION_APP_NAME: 2,
+                ANOTHER_DATABASE_APP_NAME: 1,
+            },
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
+def test_database_relation_with_charm_libraries(juju: jubilant.Juju):
     """Test basic functionality of database relation interface."""
     # Relate the charms and wait for them exchanging some connection data.
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
-    await ops_test.model.integrate(
-        f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", db_app_name
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME], status="active"
-    )
-
-    await ops_test.model.block_until(
-        lambda: (
-            is_relation_joined(
-                ops_test,
-                FIRST_DATABASE_RELATION_NAME,
-                DATABASE_RELATION_NAME,
-            )
-            is True
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
+    juju.integrate(f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", app_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            APPLICATION_APP_NAME,
+            ANOTHER_DATABASE_APP_NAME,
+            idle_period=20,
         ),
-        timeout=600,
+        timeout=TIMEOUT,
     )
 
-    database = await get_application_relation_data(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
+    database = get_application_relation_data(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
     )
 
-    await run_action(ops_test.model, APPLICATION_APP_NAME, "write-releases", database=database)  # type: ignore
+    app_unit = next(iter(juju.status().get_units(APPLICATION_APP_NAME)))
+    juju.run(app_unit, "write-releases", {"database": database})
 
 
-@pytest.mark.abort_on_fail
-async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_app_relation_metadata_change(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies that the app metadata changes with db relation joined and departed events."""
     # verify application metadata is correct before adding/removing units.
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
 
-    app_names = [db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
     try:
-        await verify_application_data(
-            ops_test, APPLICATION_APP_NAME, db_app_name, FIRST_DATABASE_RELATION_NAME
+        verify_application_data(
+            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
         )
     except RetryError:
         assert False, "Hosts are not correct in application data."
 
     # verify application metadata is correct after adding units.
-    if substrate == Substrate.lxd:
-        await ops_test.model.applications[db_app_name].add_units(count=2)
-    else:
-        await ops_test.model.applications[db_app_name].scale(scale_change=2)
-    await ops_test.model.wait_for_idle(
-        apps=app_names,
-        status="active",
-        timeout=1000,
-    )
+    ensure_app_number_units(juju, substrate, app_name, required_units=4)
 
     try:
-        await verify_application_data(
-            ops_test, APPLICATION_APP_NAME, db_app_name, FIRST_DATABASE_RELATION_NAME
+        verify_application_data(
+            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
         )
     except RetryError:
         assert False, "Hosts not updated in application data after adding units."
 
-    if substrate == Substrate.lxd:
-        # verify application metadata is correct after removing the pre-existing units. This is
-        # this is important since we want to test that the application related will work with
-        # only the newly added units from above.
-        await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/0")
-        await ops_test.model.wait_for_idle(
-            apps=app_names,
-            status="active",
-            timeout=1000,
-        )
-
-        await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/1")
-        await ops_test.model.wait_for_idle(
-            apps=app_names,
-            status="active",
-            timeout=1000,
-        )
-    else:
-        await ops_test.model.applications[db_app_name].scale(scale_change=-1)
-        await ops_test.model.wait_for_idle(
-            apps=app_names,
-            status="active",
-            timeout=1000,
-        )
-
-        await ops_test.model.applications[db_app_name].scale(scale_change=-1)
-        await ops_test.model.wait_for_idle(
-            apps=app_names,
-            status="active",
-            timeout=1000,
-        )
+    # verify application metadata is correct after adding units.
+    ensure_app_number_units(juju, substrate, app_name, required_units=2)
 
     try:
-        await verify_application_data(
-            ops_test, APPLICATION_APP_NAME, db_app_name, FIRST_DATABASE_RELATION_NAME
+        verify_application_data(
+            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
         )
     except RetryError:
         assert False, "Hosts not updated in application data after removing units."
@@ -213,62 +165,67 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
     # verify primary is present in hosts provided to application
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
-    endpoints_str = await get_application_relation_data(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "endpoints"
+    endpoints_str = get_application_relation_data(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "endpoints"
     )
-    ip_addresses = endpoints_str.split(",")
+    assert endpoints_str, "No endpoints provided in databag."
+
+    databag_hosts = endpoints_str.split(",")
+
     try:
-        primary = await replica_set_primary(
-            ops_test, substrate, app_name=db_app_name, replica_set_hosts=ip_addresses
-        )
+        primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
     except RetryError:
         assert False, "replica set has no primary"
 
-    mongodb_hostname = await get_mongodb_hostname_for_unit(ops_test, substrate, primary.name)
-    assert mongodb_hostname in endpoints_str.split(","), "Primary is not present in DB endpoints."
+    mongodb_hostname = get_mongodb_hostname_for_unit(juju, substrate, primary_name, primary_status)
+    assert mongodb_hostname in databag_hosts, "Primary is not present in DB endpoints."
 
-    database = await get_application_relation_data(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
+    database = get_application_relation_data(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
     )
 
-    await run_action(ops_test.model, APPLICATION_APP_NAME, "write-releases", database=database)  # type: ignore
+    app_unit = next(iter(juju.status().get_units(APPLICATION_APP_NAME)))
+    juju.run(app_unit, "write-releases", {"database": database})
 
 
-@pytest.mark.abort_on_fail
-async def test_user_with_extra_roles(ops_test: OpsTest, substrate):
+def test_user_with_extra_roles(juju: jubilant.Juju, substrate: Substrate):
     """Test superuser actions (ie creating a new user and creating a new database)."""
-    database = await get_application_relation_data(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
+
+    database = get_application_relation_data(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"
     )
 
-    await run_action(
-        ops_test.model,  # type: ignore
-        APPLICATION_APP_NAME,
+    app_unit = next(iter(juju.status().get_units(APPLICATION_APP_NAME)))
+    juju.run(
+        app_unit,
         "create-user",
-        database=database,
-        username=USER_CREATED_FROM_APP1,
-        password=PW_CREATED_FROM_APP1,
+        {
+            "database": database,
+            "username": USER_CREATED_FROM_APP1,
+            "password": PW_CREATED_FROM_APP1,
+        },
     )
 
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
-    await assert_created_user_can_connect(
-        ops_test,
+    assert_created_user_can_connect(
+        juju,
         substrate,
-        db_app_name,
+        app_name,
         username=USER_CREATED_FROM_APP1,
         password=PW_CREATED_FROM_APP1,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_two_applications_doesnt_share_the_same_relation_data(
-    ops_test: OpsTest, client_relation_charm_path: str
+def test_two_applications_doesnt_share_the_same_relation_data(
+    juju: jubilant.Juju, client_relation_charm_path: str
 ):
     """Test that two different application connect to the database with different credentials."""
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
 
     app_names = [
-        db_app_name,
+        app_name,
         APPLICATION_APP_NAME,
         ANOTHER_APPLICATION_NAME,
         ANOTHER_DATABASE_APP_NAME,
@@ -276,103 +233,147 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
     # Set some variables to use in this test.
 
     # Deploy another application.
-    await ops_test.model.deploy(
-        client_relation_charm_path,
-        application_name=ANOTHER_APPLICATION_NAME,
+    juju.deploy(
+        charm=client_relation_charm_path,
+        app=ANOTHER_APPLICATION_NAME,
     )
-    await ops_test.model.wait_for_idle(apps=app_names, status="active", timeout=DEPLOYMENT_TIMEOUT)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
     # Relate the new application with the database
     # and wait for them exchanging some connection data.
-    await ops_test.model.integrate(
-        f"{ANOTHER_APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}", db_app_name
+    juju.integrate(f"{ANOTHER_APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}", app_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=app_names, status="active")
 
     # Assert the two application have different relation (connection) data.
-    application_connection_string = await get_connection_string(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    application_connection_string = get_connection_string(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
     )
 
-    another_application_connection_string = await get_connection_string(
-        ops_test, ANOTHER_APPLICATION_NAME, FIRST_DATABASE_RELATION_NAME
+    another_application_connection_string = get_connection_string(
+        juju, ANOTHER_APPLICATION_NAME, FIRST_DATABASE_RELATION_NAME
     )
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.abort_on_fail
-async def test_an_application_can_connect_to_multiple_database_clusters(
-    ops_test: OpsTest,
-):
+def test_an_application_can_connect_to_multiple_database_clusters(juju: jubilant.Juju):
     """Test that an application can connect to different clusters of the same database."""
     # Relate the application with both database clusters
     # and wait for them exchanging some connection data.
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
 
-    app_names = [db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
+    app_names = [app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 
-    first_cluster_relation = await ops_test.model.integrate(
+    juju.integrate(
         f"{APPLICATION_APP_NAME}:{MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
-        db_app_name,
+        app_name,
     )
-    second_cluster_relation = await ops_test.model.integrate(
+    juju.integrate(
         f"{APPLICATION_APP_NAME}:{MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
         ANOTHER_DATABASE_APP_NAME,
     )
-    await ops_test.model.wait_for_idle(apps=app_names, status="active")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    # Gather relation ids
+    first_cluster_relation_id = get_relation_id_for(
+        juju,
+        app_name,
+        local_endpoint="database",
+        remote_endpoint=MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+    )
+    second_cluster_relation_id = get_relation_id_for(
+        juju,
+        ANOTHER_DATABASE_APP_NAME,
+        local_endpoint="database",
+        remote_endpoint=MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+    )
 
     # Retrieve the connection string to both database clusters using the relation aliases
     # and assert they are different.
-    application_connection_string = await get_connection_string(
-        ops_test,
+    application_connection_string = get_connection_string(
+        juju,
         APPLICATION_APP_NAME,
         MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-        relation_id=first_cluster_relation.id,
+        relation_id=first_cluster_relation_id,
     )
 
-    another_application_connection_string = await get_connection_string(
-        ops_test,
+    another_application_connection_string = get_connection_string(
+        juju,
         APPLICATION_APP_NAME,
         MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-        relation_id=second_cluster_relation.id,
+        relation_id=second_cluster_relation_id,
     )
 
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.abort_on_fail
-async def test_an_application_can_connect_to_multiple_aliased_database_clusters(ops_test: OpsTest):
-    #     """Test that an application can connect to different clusters of the same database."""
-    # Relate the application with both database clusters
-    # and wait for them exchanging some connection data.
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+def test_an_application_can_connect_to_multiple_aliased_database_clusters(juju: jubilant.Juju):
+    """Test that an application can connect to different clusters of the same database.
+
+    Relate the application with both database clusters
+    and wait for them exchanging some connection data.
+    """
+    db_app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert db_app_name
 
     app_names = [db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 
-    await asyncio.gather(
-        ops_test.model.integrate(
-            f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
-            db_app_name,
-        ),
-        ops_test.model.integrate(
-            f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
-            ANOTHER_DATABASE_APP_NAME,
-        ),
+    juju.integrate(
+        f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
+        db_app_name,
+    )
+    juju.integrate(
+        f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
+        ANOTHER_DATABASE_APP_NAME,
     )
 
-    await ops_test.model.wait_for_idle(apps=app_names, status="active", idle_period=20)
-
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+    )
     # Retrieve the connection string to both database clusters using the relation aliases
     # and assert they are different.
-    application_connection_string = await get_connection_string(
-        ops_test,
+    application_connection_string = get_connection_string(
+        juju,
         APPLICATION_APP_NAME,
         ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
         relation_alias="cluster1",
     )
 
-    another_application_connection_string = await get_connection_string(
-        ops_test,
+    another_application_connection_string = get_connection_string(
+        juju,
         APPLICATION_APP_NAME,
         ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
         relation_alias="cluster2",
@@ -381,53 +382,65 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.abort_on_fail
-async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
+def test_an_application_can_request_multiple_databases(juju: jubilant.Juju):
     """Test that an application can request additional databases using the same interface."""
     # Relate the charms using another relation and wait for them exchanging some connection data.
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
 
-    app_names = [db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
+    app_names = [app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 
-    await ops_test.model.integrate(
-        f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", db_app_name
+    juju.integrate(f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", app_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )
-    await ops_test.model.wait_for_idle(apps=app_names, status="active")
 
     # Get the connection strings to connect to both databases.
-    first_database_connection_string = await get_connection_string(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    first_database_connection_string = get_connection_string(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
     )
-    second_database_connection_string = await get_connection_string(
-        ops_test, APPLICATION_APP_NAME, SECOND_DATABASE_RELATION_NAME
+    second_database_connection_string = get_connection_string(
+        juju, APPLICATION_APP_NAME, SECOND_DATABASE_RELATION_NAME
     )
 
     # Assert the two application have different relation (connection) data.
     assert first_database_connection_string != second_database_connection_string
 
 
-@pytest.mark.abort_on_fail
-async def test_removed_relation_no_longer_has_access(ops_test: OpsTest, substrate: Substrate):
+def test_removed_relation_no_longer_has_access(juju: jubilant.Juju, substrate: Substrate):
     """Verify removed applications no longer have access to the database."""
-    db_app_name = await get_app_name(ops_test, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
+    assert app_name
 
-    app_names = [db_app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
+    app_names = [app_name, APPLICATION_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 
     # before removing relation we need its authorisation via connection string
-    connection_string = await get_connection_string(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    connection_string = get_connection_string(
+        juju, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
     )
 
-    await ops_test.model.applications[db_app_name].remove_relation(
+    juju.remove_relation(
         f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
-        f"{db_app_name}:database",
+        f"{app_name}:database",
     )
-    await ops_test.model.wait_for_idle(apps=app_names, status="active")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *app_names,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    result = await execute_on_mongod(
-        ops_test,
-        db_app_name,
+    result = execute_on_mongod(
+        juju,
         substrate,
+        app_name,
         connection_string,
         "rs.status()",
         expecting_output=False,
@@ -438,10 +451,10 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest, substrat
     ), f"application: {APPLICATION_APP_NAME} still has access to mongodb after relation removal."
 
     # mongodb should not clean up users it does not manage.
-    await assert_created_user_can_connect(
-        ops_test,
+    assert_created_user_can_connect(
+        juju,
         substrate,
-        db_app_name,
+        app_name,
         username=USER_CREATED_FROM_APP1,
         password=PW_CREATED_FROM_APP1,
     )
