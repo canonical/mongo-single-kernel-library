@@ -353,7 +353,9 @@ def test_restore_new_cluster(
     list_result = task.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
     backup_id = most_recent_backup.split()[0]
-    restore_task = juju.run(leader_unit, action="restore", params={"backup-id": backup_id})
+    restore_task = juju.run(
+        new_cluster_leader_unit, action="restore", params={"backup-id": backup_id}
+    )
     logger.info(f"Restore backup result {restore_task.results=}")
     assert restore_task.results["restore-status"] == "restore started", "restore not successful"
 

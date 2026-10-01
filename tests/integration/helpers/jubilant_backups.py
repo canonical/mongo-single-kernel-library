@@ -33,7 +33,9 @@ from tests.integration.helpers.jubilant_common import (
     unit_uri,
 )
 from tests.integration.helpers.jubilant_sharding import build_mongos_client, write_data_to_mongodb
-from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -142,10 +144,10 @@ def configure_s3(
     full_cfg = deepcopy(config)
     full_cfg.update({"credentials": credentials_secret_uri})
 
-    logger.info("Setting up configuration for gcs-integrator charm...")
+    logger.info("Setting up configuration for s3-integrator charm...")
     juju.config(app=app_name, values=full_cfg)
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=30),
+        lambda status: are_agents_idle(status, app_name, idle_period=30),
         timeout=TIMEOUT,
         delay=5,
         successes=3,
@@ -175,7 +177,7 @@ def configure_gcs(
     logger.info("Setting up configuration for gcs-integrator charm...")
     juju.config(app=app_name, values=full_cfg)
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=30),
+        lambda status: are_agents_idle(status, app_name, idle_period=30),
         timeout=TIMEOUT,
         delay=5,
         successes=3,
