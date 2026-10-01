@@ -729,6 +729,25 @@ def relate_application(
     )
 
 
+def get_relation_id_for(
+    juju: jubilant.Juju,
+    app_name: str,
+    local_endpoint: str,
+    remote_endpoint: str,
+) -> int:
+    leader_name, _ = find_leader(juju, app_name)
+    unit_info = juju.show_unit(leader_name)
+
+    for relation_info in unit_info.relation_info:
+        if (
+            relation_info.endpoint == local_endpoint
+            and relation_info.related_endpoint == remote_endpoint
+        ):
+            return relation_info.relation_id
+
+    raise Exception("No relation found.")
+
+
 def get_application_relation_data(
     juju: jubilant.Juju,
     app_name: str,
@@ -779,6 +798,37 @@ def get_application_relation_data(
         )
 
     return relation_data[0].app_data.get(key)
+
+
+def get_connection_string(
+    juju: jubilant.Juju,
+    app_name: str,
+    relation_name: str,
+    relation_id: int | None = None,
+    relation_alias: str | None = None,
+) -> str:
+    secret_uri = get_application_relation_data(
+        juju, app_name, relation_name, "secret-user", relation_id, relation_alias
+    )
+    assert secret_uri, "No secret URI found"
+
+    first_relation_user_data = get_secret_by_uri(juju, secret_uri)
+    return first_relation_user_data.get("uris", "")
+
+
+def get_relation_username_password(
+    juju: jubilant.Juju, app_name: str, relation_name: str
+) -> tuple[str, str]:
+    """Gets both usename and password stored in a relation."""
+    secret_uri = get_application_relation_data(juju, app_name, relation_name, "secret-user")
+    assert secret_uri, "No secret URI found"
+
+    relation_user_data = get_secret_by_uri(juju, secret_uri)
+    username = relation_user_data.get("username")
+    password = relation_user_data.get("password")
+    if not username or not password:
+        raise Exception(f"Missing username or password for {app_name=} and {relation_name=}.")
+    return (username, password)
 
 
 def scp_file_preserve_ctime(
