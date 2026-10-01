@@ -97,4 +97,4 @@ RELEASES = {
     "focal": {"release_name": "Focal Fossa", "version": 20.04, "LTS": True},
     "jammy": {"release_name": "Jammy Jelly", "version": 22.04, "LTS": False},
 }
-DB_PROCESS = "/usr/bin/mongod"
+DB_PROCESS = "mongod"

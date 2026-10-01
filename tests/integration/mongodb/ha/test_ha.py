@@ -521,7 +521,7 @@ async def test_unique_cluster_dbs(
     substrate: Substrate,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
-    continuous_writes_to_db,
+    jubilant_continuous_writes_to_db,
 ) -> None:
     """Verify unique clusters do not share DBs."""
     # first find primary, write to primary,
@@ -575,7 +575,7 @@ async def test_unique_cluster_dbs(
 
 
 async def test_replication_member_scaling(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Verify newly added and newly removed members properly replica data.
 
@@ -625,7 +625,9 @@ async def test_replication_member_scaling(
 
 
 @pytest.mark.abort_on_fail
-def test_kill_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_kill_db_process(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     # locate primary unit
     app_name = existing_app(juju)
     assert app_name
@@ -678,7 +680,9 @@ def test_kill_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_w
     ), "secondary not up to date with the cluster after restarting."
 
 
-def test_freeze_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_freeze_db_process(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     # locate primary unit
     app_name = existing_app(juju)
     assert app_name
@@ -757,7 +761,9 @@ def test_freeze_db_process(juju: jubilant.Juju, substrate: Substrate, continuous
     ), "secondary not up to date with the cluster after restarting."
 
 
-def test_restart_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_restart_db_process(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     # locate primary unit
     app_name = existing_app(juju)
     assert app_name
@@ -828,7 +834,7 @@ def test_restart_db_process(juju: jubilant.Juju, substrate: Substrate, continuou
 def test_full_cluster_crash(
     juju: jubilant.Juju,
     substrate: Substrate,
-    continuous_writes_to_db,
+    jubilant_continuous_writes_to_db,
 ):
     app_name = existing_app(juju)
     assert app_name
@@ -886,7 +892,9 @@ def test_full_cluster_crash(
 
 
 @pytest.mark.abort_on_fail
-def test_full_cluster_restart(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_full_cluster_restart(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     app_name = existing_app(juju)
     assert app_name
 
