@@ -319,6 +319,27 @@ def get_mongodb_hostnames_for_app(
     }
 
 
+def get_mongodb_hostname_for_unit(
+    juju: jubilant.Juju, substrate: Substrate, unit_name: str, unit_status: UnitStatus
+):
+    """Get the hostname for a unit in mongodb."""
+    app_name = get_app_name_from_unit(unit_name)
+    if substrate == Substrate.lxd:
+        return get_ip_from_unit(substrate, unit_status)
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+
+
+def get_mongodb_hostnames_for_app(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str
+) -> set[str]:
+    if substrate == Substrate.lxd:
+        return get_ips_for_app(juju, substrate, app_name)
+    return {
+        f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+        for unit_name in juju.status().get_units(app_name)
+    }
+
+
 def unit_hostname(juju: jubilant.Juju, unit_name: str) -> str:
     """Get hostname for a unit.
 
