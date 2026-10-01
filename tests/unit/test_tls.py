@@ -572,7 +572,7 @@ def test_tls_config_changed_client_private_key(harness: Harness[MongoTestCharm],
 
 
 def test_tls_config_changed_invalid_peer_private_key(
-    harness: Harness[MongoTestCharm], mongodb_name
+    harness: Harness[MongoTestCharm], mongodb_name, mock_fs_interactions
 ):
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
@@ -606,7 +606,7 @@ def test_tls_config_changed_invalid_peer_private_key(
 
 
 def test_tls_config_changed_invalid_client_private_key(
-    harness: Harness[MongoTestCharm], mongodb_name
+    harness: Harness[MongoTestCharm], mongodb_name, mock_fs_interactions
 ):
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
@@ -647,7 +647,11 @@ def test_tls_config_changed_invalid_client_private_key(
     ),
 )
 def test_tls_status_on_invalid_private_key_no_tls_relation(
-    harness: Harness[MongoTestCharm], mongodb_name, config_param, expected_status
+    harness: Harness[MongoTestCharm],
+    mongodb_name,
+    mock_fs_interactions,
+    config_param,
+    expected_status,
 ):
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
