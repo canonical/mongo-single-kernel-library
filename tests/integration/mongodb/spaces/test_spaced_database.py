@@ -52,7 +52,6 @@ def test_build_and_deploy(
     if app_name:
         ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
         return
-
     app_name = base_app_name
     deploy_charm(
         juju=juju,
