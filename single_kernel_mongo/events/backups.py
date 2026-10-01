@@ -36,9 +36,11 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.gcs_storage import (
     GcsStorageRequires,
     StorageConnectionInfoChangedEvent,
 )
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.s3 import (
-    CredentialsChangedEvent,
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.object_storage import (
     S3Requirer,
+)
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.object_storage import (
+    StorageConnectionInfoChangedEvent as CredentialsChangedEvent,
 )
 from single_kernel_mongo.utils.event_helpers import (
     defer_event_with_info_log,
@@ -89,7 +91,9 @@ class BackupEventsHandler(Object):
             )
 
         # S3 Handler
-        self.framework.observe(self.s3_client.on.credentials_changed, self._on_credentials_changed)
+        self.framework.observe(
+            self.s3_client.on.storage_connection_info_changed, self._on_credentials_changed
+        )
 
         # GCS Handler
         self.framework.observe(
@@ -120,7 +124,7 @@ class BackupEventsHandler(Object):
     def credentials_for(self, relation: Relation) -> dict[str, str]:
         """This is the credentials."""
         if relation == self.state.s3_relation:
-            return self.s3_client.get_s3_connection_info()
+            return self.s3_client.get_storage_connection_info(relation)
         if relation == self.state.gcs_relation:
             initial_creds = self.gcs_client.get_storage_connection_info(relation)
             secret_dict = json_or_b64_to_dict(initial_creds.get("secret-key", "{}"))
