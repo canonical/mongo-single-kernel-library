@@ -105,7 +105,6 @@ def test_integrate_ldap_only(juju: jubilant.Juju):
                 status,
                 app_name,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -116,8 +115,6 @@ def test_integrate_ldap_only(juju: jubilant.Juju):
             )
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
 
@@ -131,11 +128,8 @@ def test_integrate_also_ldap_cert(juju: jubilant.Juju):
             status,
             app_name,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
 
@@ -178,11 +172,8 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
             status,
             app_name,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     path = mongodb_config_path(substrate)
@@ -234,7 +225,6 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
                 status,
                 app_name,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -246,8 +236,6 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
             and none_is_restarting(status, juju, app_name)
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
 
@@ -261,11 +249,8 @@ def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
             status,
             app_name,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     # Remove the offers and tear down deployment
