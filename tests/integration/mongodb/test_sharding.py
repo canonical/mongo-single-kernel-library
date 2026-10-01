@@ -11,7 +11,14 @@ from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatu
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_PASSWORD,
     CHARMED_OPERATOR_USERNAME,
+    CLUSTER_APPS,
+    CONFIG_SERVER_APP_NAME,
+    CONFIG_SERVER_REL_NAME,
     DEPLOYMENT_TIMEOUT,
+    SHARD_ONE_APP_NAME,
+    SHARD_REL_NAME,
+    SHARD_THREE_APP_NAME,
+    SHARD_TWO_APP_NAME,
     TIMEOUT,
 )
 from tests.integration.helpers.jubilant_common import (
@@ -29,13 +36,6 @@ from tests.integration.helpers.jubilant_sharding import (
     write_data_to_mongodb,
 )
 from tests.integration.helpers.sharding import (
-    CLUSTER_APPS,
-    CONFIG_SERVER_APP_NAME,
-    CONFIG_SERVER_REL_NAME,
-    SHARD_ONE_APP_NAME,
-    SHARD_REL_NAME,
-    SHARD_THREE_APP_NAME,
-    SHARD_TWO_APP_NAME,
     SMALL_K8S_STORAGE,
 )
 from tests.integration.helpers.status_helpers import (
