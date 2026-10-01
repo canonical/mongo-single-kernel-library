@@ -92,10 +92,19 @@ async def test_local_config_server_reports_remote_shard(ops_test: OpsTest) -> No
     )
 
     config_server_unit = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME].units[0]
+    expected = "Waiting for shards to upgrade/downgrade to revision"
+
+    # Installation also reports waiting, so wait for the revision mismatch message.
+    await ops_test.model.block_until(
+        lambda: (
+            config_server_unit.workload_status == "waiting"
+            and expected in config_server_unit.workload_status_message
+        ),
+        timeout=TIMEOUT,
+    )
 
     assert (
-        "Waiting for shards to upgrade/downgrade to revision"
-        in config_server_unit.workload_status_message
+        expected in config_server_unit.workload_status_message
     ), "Config server does not correctly report mismatch in revision"
 
 
