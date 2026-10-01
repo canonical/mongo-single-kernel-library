@@ -8,6 +8,7 @@ import pytest
 from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     DEPLOYMENT_TIMEOUT,
+    SMALL_K8S_STORAGE,
     TIMEOUT,
     TLS_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_BASE,
@@ -23,9 +24,6 @@ from tests.integration.helpers.jubilant_sharding import (
 from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
     remove_tls_integrations,
-)
-from tests.integration.helpers.sharding import (
-    SMALL_K8S_STORAGE,
 )
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,

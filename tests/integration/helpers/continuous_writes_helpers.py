@@ -7,6 +7,7 @@ from pathlib import Path
 
 import jubilant
 from jubilant.statustypes import UnitStatus
+from pymongo.errors import ServerSelectionTimeoutError
 from pymongo.synchronous.mongo_client import MongoClient
 from tenacity import retry
 from tenacity.stop import stop_after_attempt
@@ -176,12 +177,59 @@ def replica_set_primary(
             ip_address=ip_address,
             replica_set=app_name,
         )
-        with MongoClient(uri, directConnection=True) as client:
+
+        try:
             # check primary status
-            if client.is_primary:
-                return unit_name, unit_status
+            with MongoClient(uri, directConnection=True) as client:
+                # check primary status
+                if client.is_primary:
+                    return unit_name, unit_status
+        except ServerSelectionTimeoutError:
+            logger.info("Failed to connect to unit %s", unit_name)
 
     raise ValueError("No Primary")
+
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+)
+def replica_set_secondary(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+) -> tuple[str, UnitStatus]:
+    """Returns a secondary member of the replica set.
+
+    Retrying 5 times to give the replica set time to elect a new primary.
+    """
+    password = get_password(
+        juju=juju,
+        app_name=app_name,
+        username=CHARMED_OPERATOR_USERNAME,
+    )
+
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
+        # get unit
+        ip_address = get_ip_from_unit(substrate=substrate, unit_info=unit_status)
+
+        # connect to mongod
+        uri = unit_uri(
+            username=CHARMED_OPERATOR_USERNAME,
+            password=password,
+            ip_address=ip_address,
+            replica_set=app_name,
+        )
+        try:
+            # check primary status
+            with MongoClient(uri, directConnection=True) as client:
+                # check primary status
+                if not client.is_primary:
+                    return unit_name, unit_status
+        except ServerSelectionTimeoutError:
+            logger.info("Failed to connect to unit %s", unit_name)
+
+    raise ValueError("No Secondary")
 
 
 def verify_writes(

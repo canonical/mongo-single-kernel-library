@@ -1,60 +1,66 @@
 #!/usr/bin/env python3
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-import asyncio
 import time
 from datetime import datetime, timezone
 from logging import getLogger
 
+import jubilant
 import pytest
-from juju import tag
+from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
-from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
+    DB_PROCESS,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
+    TIMEOUT,
     UNIT_IDS,
-    check_or_scale_app,
-    count_primaries,
+)
+from tests.integration.helpers.continuous_writes_helpers import (
     count_writes,
+    replica_set_primary,
+    replica_set_secondary,
+    stop_continuous_writes,
+    verify_writes,
+)
+from tests.integration.helpers.jubilant_common import (
+    count_primaries,
     deploy_charm,
-    find_unit,
-    get_address_of_unit,
-    get_app_name,
+    ensure_app_number_units,
+    existing_app,
+    find_leader,
     get_highest_unit,
+    get_ip_from_unit,
+    get_ips_for_app,
+    get_mongodb_hostnames_for_app,
     get_password,
-    get_unit_hostnames,
-    get_unit_id,
     mongod_ready,
-    stop_continous_writes,
+    remove_number_units,
     unit_uri,
     verify_cluster_ip_source_allowlist,
 )
-from tests.integration.helpers.ha import (
+from tests.integration.helpers.jubilant_ha import (
     all_db_processes_down,
     db_step_down,
+    delete_pod,
     fetch_replica_set_members,
     host_to_unit,
     insert_release_to_cluster,
-    kill_unit_process,
-    kubectl_delete,
-    replica_set_primary,
-    replica_set_secondary,
+    patch_restart_delay,
     retrieve_entries,
     reused_storage,
-    scale_application,
+    send_process_control_signal,
     storage_id,
     storage_type,
-    update_restart_delay,
     verify_replica_set_configuration,
-    verify_writes,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
@@ -63,29 +69,23 @@ RESTART_DELAY = 60 * 3
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     base_app_name: str,
 ):
     """Build and deploy one unit of MongoDB."""
-    # it is possible for users to provide their own cluster for testing. Hence check if there
-    # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
-    if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
-        return
-
     if substrate == Substrate.lxd:
-        storage = {"data": {"pool": "lxd", "size": 2048}}
+        logger.info("Create storage pool on VM")
+        juju.cli("create-storage-pool", "mongodb-storage", "lxd")
+        storage = {"data": "mongodb-storage,2G"}
     else:
         storage = None
 
-    await deploy_charm(
-        ops_test=ops_test,
+    deploy_charm(
+        juju=juju,
         charm=mongodb_charm,
         substrate=substrate,
         mongod_resource=mongod_resource,
@@ -93,131 +93,144 @@ async def test_build_and_deploy(
         num_units=len(UNIT_IDS),
         storage=storage,
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, base_app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-async def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
-    ops_test: OpsTest,
+def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
+    juju: jubilant.Juju,
     substrate: Substrate,
 ):
     """Verify every unit allows all replica-set member IPs for internal authentication."""
-    app_name = await get_app_name(ops_test)
-    await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
+    app_name = existing_app(juju)
+    assert app_name
+    verify_cluster_ip_source_allowlist(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_writes_to_db):
+def test_storage_re_use_lxd(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
     properly uses the storage that was provided. (ie. doesn't just re-sync everything from
     primary, but instead computes a diff between current storage and primary storage.)
     """
-    app_name = await get_app_name(ops_test)
-    if storage_type(ops_test, app_name) == "rootfs":
+    app_name = existing_app(juju)
+    assert app_name
+    if storage_type(juju, app_name) == "rootfs":
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
-        return
-
-    # removing the only replica can be disastrous
-    if len(ops_test.model.applications[app_name].units) < 2:
-        await ops_test.model.applications[app_name].add_unit(count=1)
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
     # remove a unit and attach it's storage to a new unit
-    unit = ops_test.model.applications[app_name].units[0]
-    data_storage_id = storage_id(ops_test, unit.name, "data")
+    unit_name = next(iter(juju.status().get_units(app_name)))
+    data_storage_id = storage_id(juju, unit_name, "data")
 
     assert data_storage_id, "Did not find a data storage for unit."
 
-    expected_units = len(ops_test.model.applications[app_name].units) - 1
+    expected_units = len(juju.status().get_units(app_name)) - 1
     removal_time = time.time()
 
-    await ops_test.model.destroy_unit(unit.name)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, wait_for_exact_units=expected_units
+    juju.remove_unit(unit_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=expected_units
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    new_unit = (
-        await ops_test.model.applications[app_name].add_unit(
-            count=1, attach_storage=[tag.storage(data_storage_id)]
-        )
-    )[0]
+    current_units = set(juju.status().get_units(app_name).keys())
+    juju.add_unit(app_name, attach_storage=data_storage_id, num_units=1)
 
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=expected_units + 1
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+    new_units = set(juju.status().get_units(app_name).keys())
 
-    assert await reused_storage(
-        ops_test, substrate, new_unit.name, removal_time
-    ), "attached storage not properly reused by MongoDB."
+    added_units = new_units - current_units
 
-    await verify_writes(ops_test, substrate, app_name)
+    assert len(added_units) == 1
+
+    new_unit = next(iter(added_units))
+
+    assert reused_storage(juju, substrate, new_unit, removal_time), (
+        "attached storage not properly reused by MongoDB."
+    )
+
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.lxd)
-async def test_storage_re_use_k8s(ops_test, substrate: Substrate, continuous_writes_to_db):
+def test_storage_re_use_k8s(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
     properly uses the storage that was provided. (ie. doesn't just re-sync everything from
     primary, but instead computes a diff between current storage and primary storage.)
     """
-    app_name = await get_app_name(ops_test)
-
-    # removing the only replica can be disastrous
-    if len(ops_test.model.applications[app_name].units) < 2:
-        await ops_test.model.applications[app_name].add_unit(count=1)
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+    app_name = existing_app(juju)
+    assert app_name
 
     # remove a unit and attach it's storage to a new unit
-    current_number_units = len(ops_test.model.applications[app_name].units)
-    await scale_application(ops_test, substrate, app_name, -1)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=(current_number_units - 1),
+    current_number_units = len(juju.status().get_units(app_name))
+
+    remove_number_units(juju, substrate, app_name, num_units=1)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=10, unit_count=current_number_units - 1
+        ),
+        timeout=TIMEOUT,
     )
+
     # k8s will automatically use the old storage from the storage pool
     removal_time = datetime.now(timezone.utc).timestamp()
-    await scale_application(ops_test, substrate, app_name, 1)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=(current_number_units),
+
+    juju.add_unit(app_name, num_units=1)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=10, unit_count=current_number_units
+        ),
+        timeout=TIMEOUT,
     )
+
     # for this test, we only scaled up the application by one unit. So it the highest unit will be
     # the newest unit.
-    new_unit = get_highest_unit(ops_test, app_name)
+    new_unit = get_highest_unit(juju, app_name)
     assert new_unit, "No highest unit found"
-    assert await reused_storage(
-        ops_test, substrate, new_unit.name, removal_time
-    ), "attached storage not properly reused by MongoDB."
+
+    assert reused_storage(juju, substrate, new_unit, removal_time), (
+        "attached storage not properly reused by MongoDB."
+    )
 
     # verify presence of primary, replica set member configuration, and number of primaries
-    hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
-    member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
-    assert set(member_hosts) == set(hostnames)
-
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
-    assert (
-        await count_primaries(ops_test, substrate, password, app_name=app_name) == 1
-    ), "there is more than one primary in the replica set."
+    assert count_primaries(juju, substrate, app_name) == 1, (
+        "there is more than one primary in the replica set."
+    )
 
     # verify all units are up to date.
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.skip("This is currently unsupported on MongoDB charm.")
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-@pytest.mark.abort_on_fail
-async def test_storage_re_use_different_cluster(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+def test_storage_re_use_different_cluster(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ):
     """Tests that we can reuse storage from a different cluster.
 
@@ -225,67 +238,67 @@ async def test_storage_re_use_different_cluster(
     and then we deploy a new application with storage reuse and check that the
     storage has been reused.
     """
-    app_name = await get_app_name(ops_test)
-    if storage_type(ops_test, app_name) == "rootfs":
+    app_name = existing_app(juju)
+    assert app_name
+    if storage_type(juju, app_name) == "rootfs":
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
-        return
 
-    writes_results = await stop_continous_writes(
-        ops_test, client_app_name=CONTINUOUS_WRITE_APPLICATION
-    )
-    unit_ids = [unit.name for unit in ops_test.model.applications[app_name].units]
+    writes_results = stop_continuous_writes(juju, client_app_name=CONTINUOUS_WRITE_APPLICATION)
+    unit_ids = list(juju.status().get_units(app_name).keys())
     storage_ids = {}
 
     remaining_units = len(unit_ids)
     for unit_id in unit_ids:
-        storage_ids[unit_id] = storage_id(ops_test, unit_id)
-        await ops_test.model.applications[app_name].destroy_unit(unit_id)
+        storage_ids[unit_id] = storage_id(juju, unit_id, "data")
+        juju.remove_unit(unit_id)
         # Give some time to remove the unit. We don't use asyncio.sleep here to
         # leave time for each unit to be removed before removing the next one.
         # time.sleep(60)
         remaining_units -= 1
-        await ops_test.model.wait_for_idle(
-            apps=[app_name],
-            status="active",
-            timeout=1000,
-            idle_period=20,
-            wait_for_exact_units=remaining_units,
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status, app_name, idle_period=10, unit_count=remaining_units
+            ),
+            timeout=TIMEOUT,
         )
 
     # Wait until all apps are cleaned up
-    await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, wait_for_exact_units=0)
-
-    for unit_id in unit_ids:
-        n_units = len(ops_test.model.applications[app_name].units)
-        await ops_test.model.applications[app_name].add_unit(
-            count=1, attach_storage=[tag.storage(storage_ids[unit_id])]
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[app_name],
-            status="active",
-            timeout=1000,
-            idle_period=20,
-            wait_for_exact_units=n_units + 1,
-        )
-
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        idle_period=20,
-        wait_for_exact_units=len(unit_ids),
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=10, unit_count=0
+        ),
+        timeout=TIMEOUT,
     )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    for unit_id in unit_ids:
+        n_units = len(juju.status().get_units(app_name))
+        juju.add_unit(app_name, num_units=1, attach_storage=storage_ids[unit_id])
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status, app_name, idle_period=10, unit_count=n_units + 1
+            ),
+            timeout=TIMEOUT,
+        )
 
-    actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=leader_unit)
-    assert writes_results["number"] == actual_writes
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=10, unit_count=len(unit_ids)
+        ),
+        timeout=TIMEOUT,
+    )
+
+    leader_unit_name, leader_unit_status = find_leader(juju, app_name)
+
+    actual_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=leader_unit_name, unit_info=leader_unit_status
+    )
+    assert writes_results == actual_writes
 
 
-async def test_scale_up_capabilities(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+def test_scale_up_capabilities(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests juju add-unit functionality.
 
@@ -293,29 +306,37 @@ async def test_scale_up_capabilities(
     MongoDB replica set configuration.
     """
     # add units and wait for idle
-    app_name = await get_app_name(ops_test)
-    await scale_application(ops_test, substrate, app_name, 2)
+    app_name = existing_app(juju)
+    assert app_name
+
+    current_units = len(juju.status().get_units(app_name))
+
+    ensure_app_number_units(
+        juju,
+        substrate,
+        app_name,
+        required_units=current_units + 2,
+        wait=True,
+    )
 
     # grab unit hosts
-    hosts = await get_unit_hostnames(ops_test, substrate, app_name)
+    hosts = get_mongodb_hostnames_for_app(juju, substrate, app_name)
 
     # connect to replica set uri and get replica set members
-    member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
+    member_hosts = fetch_replica_set_members(juju, substrate, app_name)
 
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hosts), "all members not running under the same replset"
 
-    if substrate == Substrate.lxd:
-        await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
+    verify_cluster_ip_source_allowlist(juju, substrate, app_name)
 
     # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-async def test_scale_down_capabilities_lxd(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+def test_scale_down_capabilities_lxd(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica.
 
@@ -330,157 +351,160 @@ async def test_scale_down_capabilities_lxd(
     4. race conditions due to removing multiple units is handled.
     5. deleting a non-leader unit is properly handled.
     """
+    app_name = existing_app(juju)
+    assert app_name
+
     deleted_unit_ips = []
-    app_name = await get_app_name(ops_test)
     units_to_remove = []
-    minority_count = int(len(ops_test.model.applications[app_name].units) / 2)
+    current_units = len(juju.status().get_units(app_name))
+    minority_count = current_units // 2
 
     # find leader unit
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    minority_count -= 1
+    leader_unit_name, leader_unit_status = find_leader(juju, app_name)
 
     # verify that we have a leader
-    assert leader_unit is not None, "No unit is leader"
-    deleted_unit_ips.append(leader_unit.public_address)
-    units_to_remove.append(leader_unit.name)
+    assert leader_unit_name is not None, "No unit is leader"
+    deleted_unit_ips.append(leader_unit_status.public_address)
+    units_to_remove.append(leader_unit_name)
 
     # find non-leader units to remove such that the largest minority possible is removed.
-    avail_units = []
-    for unit in ops_test.model.applications[app_name].units:
-        if not unit.name == leader_unit.name:
-            avail_units.append(unit)
+    avail_units: list[tuple[str, UnitStatus]] = []
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
+        if not unit_name == leader_unit_name:
+            avail_units.append((unit_name, unit_status))
 
     for _ in range(minority_count):
-        unit_to_remove = avail_units.pop()
-        deleted_unit_ips.append(unit_to_remove.public_address)
-        units_to_remove.append(unit_to_remove.name)
+        unit_name, unit_status = avail_units.pop()
+        deleted_unit_ips.append(unit_status.public_address)
+        units_to_remove.append(unit_name)
 
     # destroy units simultaneously
-    expected_units = len(ops_test.model.applications[app_name].units) - len(units_to_remove)
-    await ops_test.model.destroy_units(*units_to_remove)
+    expected_units = current_units - len(units_to_remove)
+    juju.remove_unit(*units_to_remove)
 
     # wait for app to be active after removal of units
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, wait_for_exact_units=expected_units
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=10, unit_count=expected_units
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    # grab unit ips
-    hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-
+    hosts = get_ips_for_app(juju, substrate, app_name)
     # check that the replica set with the remaining units has a primary
     try:
-        primary = await replica_set_primary(
-            ops_test, substrate, app_name=app_name, replica_set_hosts=hosts
-        )
+        primary_name, primary_status = replica_set_primary(juju, substrate, app_name)
     except RetryError:
-        primary = None
+        primary_name, primary_status = None, None
 
     # verify that the primary is not None
-    assert primary is not None, "replica set has no primary"
+    assert primary_name, "replica set has no primary"
+    assert primary_status, "replica set has no primary status information"
 
     # check that the primary is one of the remaining units
-    assert primary.public_address in hosts, "replica set primary is not one of the available units"
+    assert primary_status.public_address in hosts, (
+        "replica set primary is not one of the available units"
+    )
 
     # verify that the configuration of mongodb no longer has the deleted ip
-    member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
+    member_ips = fetch_replica_set_members(juju, substrate, app_name=app_name)
 
     assert set(member_ips) == set(hosts), "mongod config contains deleted units"
 
-    if substrate == Substrate.lxd:
-        await verify_cluster_ip_source_allowlist(
-            ops_test, substrate, app_name, excluded_addresses=set(deleted_unit_ips)
-        )
+    verify_cluster_ip_source_allowlist(
+        juju, substrate, app_name, excluded_addresses=set(deleted_unit_ips)
+    )
 
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_scale_down_capabilities_k8s(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
-    app_name = await get_app_name(ops_test)
-    addresses_before_scale_down = {
-        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    }
+    app_name = existing_app(juju)
+    assert app_name
+    assert juju.model
 
-    minority_count = int(len(ops_test.model.applications[app_name].units) // 2)
-    expected_units = len(ops_test.model.applications[app_name].units) - minority_count
+    addresses_before_scale_down = get_ips_for_app(juju, substrate, app_name)
+
+    current_units = len(juju.status().get_units(app_name))
+    minority_count = current_units // 2
+    expected_units = current_units - minority_count
 
     # find leader unit
-    leader_unit = await find_unit(ops_test, leader=True)
+    leader_unit_name, _ = find_leader(juju, app_name)
 
     # verify that we have a leader
-    assert leader_unit is not None, "No unit is leader"
+    assert leader_unit_name is not None, "No unit is leader"
 
     # Force delete the leader and scale down
-    await kubectl_delete(ops_test, leader_unit, False)
-    await scale_application(ops_test, substrate, app_name, expected_units, raise_on_blocked=False)
+    delete_pod(leader_unit_name.replace("/", "-"), namespace=juju.model)
+    ensure_app_number_units(
+        juju,
+        substrate,
+        app_name,
+        expected_units,
+        wait=True,
+    )
 
+    hosts = get_ips_for_app(juju, substrate, app_name)
     # grab unit hosts
-    hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
+    hostnames = get_mongodb_hostnames_for_app(juju, substrate, app_name)
 
-    hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
     # check that the replica set with the remaining units has a primary
-    primary = await replica_set_primary(ops_test, substrate, app_name, hosts)
+    primary, primary_status = replica_set_primary(juju, substrate, app_name)
 
     # verify that the primary is not None
     assert primary is not None, "replica set has no primary"
 
     # check that the primary is one of the remaining units
-    assert primary.name in [
-        host_to_unit(hostname) for hostname in hostnames
-    ], "replica set primary is not one of the available units"
+    assert primary in [host_to_unit(hostname) for hostname in hostnames], (
+        "replica set primary is not one of the available units"
+    )
 
     # verify that the configuration of mongodb no longer has the deleted ip
-    member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
+    member_hosts = fetch_replica_set_members(juju, substrate, app_name)
 
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hostnames), "mongod config contains deleted units"
 
     addresses_after_scale_down = set(hosts)
-    if substrate == Substrate.lxd:
-        await verify_cluster_ip_source_allowlist(
-            ops_test,
-            substrate,
-            app_name,
-            excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
-        )
-
-    # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
-
-
-@pytest.mark.abort_on_fail
-async def test_replication_across_members(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
-) -> None:
-    """Check consistency, ie write to primary, read data from secondaries."""
-    app_name = await get_app_name(ops_test)
-    # first find primary, write to primary, then read from each unit
-    await insert_release_to_cluster(ops_test, substrate, app_name)
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-
-    primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
+    verify_cluster_ip_source_allowlist(
+        juju,
+        substrate,
+        app_name,
+        excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
     )
 
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+    # verify that the no writes were skipped
+    verify_writes(juju, substrate, app_name)
 
-    secondaries = set(ip_addresses) - {primary.public_address}
+
+def test_replication_across_members(
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+) -> None:
+    """Check consistency, ie write to primary, read data from secondaries."""
+    app_name = existing_app(juju)
+    assert app_name
+
+    # first find primary, write to primary, then read from each unit
+    insert_release_to_cluster(juju, substrate, app_name)
+
+    ip_addresses = get_ips_for_app(juju, substrate, app_name)
+    _, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
+
+    password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+
+    secondaries = set(ip_addresses) - {primary_status.public_address}
     for secondary in secondaries:
-        client = MongoClient(unit_uri(secondary, password, app_name), directConnection=True)
+        client = MongoClient(
+            unit_uri(
+                CHARMED_OPERATOR_USERNAME, password, ip_address=secondary, replica_set=app_name
+            ),
+            directConnection=True,
+        )
 
         db = client[DEFAULT_DATABASE_NAME]
         test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
@@ -490,26 +514,26 @@ async def test_replication_across_members(
         client.close()
 
     # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 async def test_unique_cluster_dbs(
-    ops_test: OpsTest,
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
-    mongod_resource,
+    mongod_resource: dict[str, str],
     continuous_writes_to_db,
 ) -> None:
     """Verify unique clusters do not share DBs."""
     # first find primary, write to primary,
-    app_name = await get_app_name(ops_test)
-    await insert_release_to_cluster(ops_test, substrate, app_name=app_name)
+    app_name = existing_app(juju)
+    assert app_name
+    insert_release_to_cluster(juju, substrate, app_name=app_name)
 
     # deploy new cluster
-    if ANOTHER_DATABASE_APP_NAME not in ops_test.model.applications:
-        await deploy_charm(
-            ops_test=ops_test,
+    if ANOTHER_DATABASE_APP_NAME not in juju.status().apps:
+        deploy_charm(
+            juju=juju,
             charm=mongodb_charm,
             substrate=substrate,
             mongod_resource=mongod_resource,
@@ -517,14 +541,17 @@ async def test_unique_cluster_dbs(
             num_units=1,
         )
 
-    await ops_test.model.wait_for_idle(
-        apps=[ANOTHER_DATABASE_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, ANOTHER_DATABASE_APP_NAME, idle_period=10
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    await insert_release_to_cluster(ops_test, substrate, app_name, release="jammy")
+    insert_release_to_cluster(juju, substrate, app_name, release="jammy")
 
-    cluster_1_entries = await retrieve_entries(
-        ops_test,
+    cluster_1_entries = retrieve_entries(
+        juju,
         substrate,
         app_name=ANOTHER_DATABASE_APP_NAME,
         db_name=DEFAULT_DATABASE_NAME,
@@ -532,8 +559,8 @@ async def test_unique_cluster_dbs(
         query_field="release_name",
     )
 
-    cluster_2_entries = await retrieve_entries(
-        ops_test,
+    cluster_2_entries = retrieve_entries(
+        juju,
         substrate,
         app_name=app_name,
         db_name=DEFAULT_DATABASE_NAME,
@@ -541,42 +568,44 @@ async def test_unique_cluster_dbs(
         query_field="release_name",
     )
 
-    common_entries = cluster_2_entries.intersection(cluster_1_entries)
+    common_entries = cluster_2_entries & cluster_1_entries
     assert len(common_entries) == 0, "Writes from one cluster are replicated to another cluster."
 
     # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 async def test_replication_member_scaling(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Verify newly added and newly removed members properly replica data.
 
     Verify newly members have replicated data and newly removed members are gone without data.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
     # first find primary, write to primary,
-    await insert_release_to_cluster(ops_test, substrate, app_name=app_name)
-    original_ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    insert_release_to_cluster(juju, substrate, app_name=app_name)
+    original_ip_addresses = get_ips_for_app(juju, substrate, app_name)
 
-    await scale_application(ops_test, substrate, app_name, 1, wait=True, raise_on_blocked=False)
+    current_units = len(juju.status().get_units(app_name))
 
-    new_ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    ensure_app_number_units(juju, substrate, app_name, current_units + 1, wait=True)
+
+    new_ip_addresses = get_ips_for_app(juju, substrate, app_name)
 
     new_member_ip = list(set(new_ip_addresses) - set(original_ip_addresses))[0]
 
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+    password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
 
-    client = MongoClient(unit_uri(new_member_ip, password, app_name), directConnection=True)
+    uri = unit_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
+        ip_address=new_member_ip,
+        replica_set=app_name,
+    )
+    client = MongoClient(uri, directConnection=True)
 
     # check for replicated data while retrying to give time for replica to copy over data.
     try:
@@ -593,113 +622,103 @@ async def test_replication_member_scaling(
     client.close()
 
     # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
-async def test_kill_db_process(ops_test, substrate: Substrate, continuous_writes_to_db):
+def test_kill_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
     # locate primary unit
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
 
-    primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
+    assert primary_name, "No primary found"
 
-    assert primary, "No primary found"
+    other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
+    assert other_unit_name, "No secondary unit found"
 
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert other_unit, "No secondary unit found"
-
-    await kill_unit_process(
-        ops_test, substrate, primary.name, kill_code="SIGKILL", app_name=app_name
+    send_process_control_signal(
+        juju, substrate, primary_name, signal="SIGKILL", db_process=DB_PROCESS
     )
 
     # verify new writes are continuing by counting the number of writes before
     # and after a 10 second wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     time.sleep(10)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     assert more_writes > writes, "writes not continuing to DB"
 
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 
     # verify that db service got restarted and is ready
-    primary_address = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(primary.name), app_name
-    )
-    assert await mongod_ready(ops_test, primary_address, app_name)
+    primary_address = get_ip_from_unit(substrate, primary_status)
+    assert mongod_ready(juju, primary_address, app_name)
 
     # verify that a new primary gets elected (ie old primary is secondary)
-    new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert new_primary, "No new primary found"
+    new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
+    assert new_primary_name, "No new primary found"
 
-    assert (
-        new_primary.name != primary.name
-    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
+    assert new_primary_name != primary_name, (
+        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
+    )
 
     # verify that no writes were missed
-    total_expected_writes = await verify_writes(ops_test, substrate, app_name)
+    total_expected_writes = verify_writes(juju, substrate, app_name)
 
-    secondary_writes = await count_writes(ops_test, substrate, app_name, unit=primary)
-    assert (
-        total_expected_writes == secondary_writes
-    ), "secondary not up to date with the cluster after restarting."
+    secondary_writes = count_writes(
+        juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
+    )
+    assert total_expected_writes == secondary_writes, (
+        "secondary not up to date with the cluster after restarting."
+    )
 
 
-async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
+def test_freeze_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
     # locate primary unit
-    app_name = await get_app_name(ops_test)
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    app_name = existing_app(juju)
+    assert app_name
 
-    primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
+    primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
 
-    assert primary, "No primary found"
+    assert primary_name, "No primary found"
 
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert other_unit, "No secondary unit found"
+    other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
+    assert other_unit_name, "No secondary unit found"
 
-    await kill_unit_process(
-        ops_test, substrate, primary.name, kill_code="SIGSTOP", app_name=app_name
+    send_process_control_signal(
+        juju, substrate, primary_name, signal="SIGKILL", db_process=DB_PROCESS
     )
 
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 
     # verify that a new primary gets elected
-    new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert new_primary, "No new primary found"
+    # verify that a new primary gets elected (ie old primary is secondary)
+    new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
+    assert new_primary_name, "No new primary found"
 
-    assert (
-        new_primary.name != primary.name
-    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
-    # verify new writes are continuing by counting the number of writes before and after a 5 second
-    # wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    assert new_primary_name != primary_name, (
+        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
+    )
+    # verify new writes are continuing by counting the number of writes before
+    # and after a 5 second wait
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     time.sleep(5)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
 
     # un-freeze the old primary
-    await kill_unit_process(
-        ops_test, substrate, primary.name, kill_code="SIGCONT", app_name=app_name
+    send_process_control_signal(
+        juju, substrate, primary_name, signal="SIGCONT", db_process=DB_PROCESS
     )
 
     # check this after un-freezing the old primary so that if this check fails we still "turned
@@ -707,235 +726,219 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     assert more_writes > writes, "writes not continuing to DB"
 
     # verify that db service got restarted and is ready
-    primary_address = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(primary.name), app_name
-    )
-    assert await mongod_ready(ops_test, primary_address, app_name)
+    primary_address = get_ip_from_unit(substrate, primary_status)
+    assert mongod_ready(juju, primary_address, app_name)
 
     # verify all units are running under the same replset
-    unit_hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
-    member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
+    unit_hostnames = get_mongodb_hostnames_for_app(juju, substrate, app_name)
+    member_ips = fetch_replica_set_members(juju, substrate, app_name=app_name)
     assert set(member_ips) == set(unit_hostnames), "all members not running under the same replset"
 
     # verify there is only one primary after un-freezing old primary
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
-    assert (
-        await count_primaries(ops_test, substrate, password=password, app_name=app_name) == 1
-    ), "there are more than one primary in the replica set."
+    assert count_primaries(juju, substrate, app_name=app_name) == 1, (
+        "there are more than one primary in the replica set."
+    )
 
     # verify that the old primary does not "reclaim" primary status after un-freezing old primary
-    new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert new_primary, "No new primary found"
+    new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
+    assert new_primary_name, "No new primary found"
 
-    assert (
-        new_primary.name != primary.name
-    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
+    assert new_primary_name != primary_name, (
+        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
+    )
 
     # verify that no writes were missed
-    total_expected_writes = await verify_writes(ops_test, substrate, app_name)
+    total_expected_writes = verify_writes(juju, substrate, app_name)
 
-    secondary_writes = await count_writes(ops_test, substrate, app_name, unit=primary)
-    assert (
-        total_expected_writes == secondary_writes
-    ), "secondary not up to date with the cluster after restarting."
+    secondary_writes = count_writes(
+        juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
+    )
+    assert total_expected_writes == secondary_writes, (
+        "secondary not up to date with the cluster after restarting."
+    )
 
 
-@pytest.mark.abort_on_fail
-async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
+def test_restart_db_process(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
     # locate primary unit
-    app_name = await get_app_name(ops_test)
-    assert app_name, "No app name found."
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    app_name = existing_app(juju)
+    assert app_name
 
-    primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
+    primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
 
-    assert primary, "No primary found"
+    assert primary_name, "No primary found"
 
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert other_unit, "No secondary unit found"
+    other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
+    assert other_unit_name, "No secondary unit found"
 
     # send SIGTERM, we expect `systemd` to restart the process
     sig_term_dt = datetime.now(timezone.utc)
-    logger.info("SIGTERM TIME is %s", sig_term_dt)
     sig_term_time = sig_term_dt.timestamp()
-    await kill_unit_process(
-        ops_test, substrate, primary.name, kill_code="SIGTERM", app_name=app_name
+    logger.info("SIGTERM TIME is %s", sig_term_dt)
+    send_process_control_signal(
+        juju, substrate, primary_name, signal="SIGTERM", db_process=DB_PROCESS
     )
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
-    time.sleep(10)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
-    assert more_writes > writes, "writes not continuing to DB"
+    # verify new writes are continuing by counting the number of writes before
+    # and after a 5 second wait
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
+    time.sleep(5)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
+    assert more_writes > writes
 
     # verify that db service got restarted and is ready
-    primary_address = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(primary.name), app_name
-    )
-    assert await mongod_ready(ops_test, primary_address, app_name), "Mongod is not ready"
+    primary_address = get_ip_from_unit(substrate, primary_status)
+    assert mongod_ready(juju, primary_address, app_name)
 
     # verify that a new primary gets elected
-    new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert new_primary, "No new primary found"
+    new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
+    assert new_primary_name, "No new primary found"
 
-    assert (
-        new_primary.name != primary.name
-    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
+    assert new_primary_name != primary_name, (
+        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
+    )
 
     # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
     # send a replica step down signal.
-    # We check using rs.status metrics information
     try:
         for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
             with attempt:
-                assert await db_step_down(
-                    ops_test, substrate, sig_term_time, app_name
-                ), "old primary departed without stepping down."
+                assert db_step_down(juju, substrate, sig_term_time, app_name), (
+                    "old primary departed without stepping down."
+                )
     except RetryError:
         assert False, "old primary departed without stepping down."
 
     # verify that no writes were missed
-    total_expected_writes = await verify_writes(ops_test, substrate, app_name)
+    total_expected_writes = verify_writes(juju, substrate, app_name)
 
-    secondary_writes = await count_writes(ops_test, substrate, app_name, unit=primary)
-    assert (
-        total_expected_writes == secondary_writes
-    ), "secondary not up to date with the cluster after restarting."
+    secondary_writes = count_writes(
+        juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
+    )
+    assert total_expected_writes == secondary_writes, (
+        "secondary not up to date with the cluster after restarting."
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_full_cluster_crash(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db, reset_restart_delay, tmp_path
+def test_full_cluster_crash(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    continuous_writes_to_db,
 ):
-    app_name = await get_app_name(ops_test)
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert other_unit, "No secondary unit found"
+    app_name = existing_app(juju)
+    assert app_name
+
+    other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
+    assert other_unit_name, "No secondary unit found"
 
     # update all units to have a new RESTART_DELAY,  Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
-    for unit in ops_test.model.applications[app_name].units:
-        await update_restart_delay(ops_test, substrate, unit, RESTART_DELAY, tmp_path)
+    for unit_name in juju.status().get_units(app_name):
+        patch_restart_delay(juju, substrate=substrate, unit_name=unit_name, delay=RESTART_DELAY)
 
-    # kill all units "simultaneously"
-    await asyncio.gather(
-        *[
-            kill_unit_process(
-                ops_test, substrate, unit.name, kill_code="SIGKILL", app_name=app_name
-            )
-            for unit in ops_test.model.applications[app_name].units
-        ]
-    )
+    for unit_name in juju.status().get_units(app_name):
+        send_process_control_signal(
+            juju, substrate, unit_name=unit_name, signal="SIGKILL", db_process=DB_PROCESS
+        )
 
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
-    assert await all_db_processes_down(
-        ops_test, substrate, app_name=app_name
-    ), "Not all units down at the same time."
+    assert all_db_processes_down(juju, substrate, app_name=app_name), (
+        "Not all units down at the same time."
+    )
 
     logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     # sleep for twice the median election time and the restart delay
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
 
     # verify all units are up and running
-    for unit in ops_test.model.applications[app_name].units:
-        ip_address = await get_address_of_unit(
-            ops_test, substrate, get_unit_id(unit.name), app_name
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
+        ip_address = get_ip_from_unit(substrate, unit_status)
+        assert mongod_ready(juju, ip_address, app_name=app_name), (
+            f"unit {unit_name} not restarted after cluster crash."
         )
-        assert await mongod_ready(
-            ops_test, ip_address, app_name=app_name
-        ), f"unit {unit.name} not restarted after cluster crash."
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     time.sleep(5)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     assert more_writes > writes, "writes not continuing to DB"
 
     # verify presence of primary, replica set member configuration, and number of primaries
-    await verify_replica_set_configuration(ops_test, substrate, app_name=app_name)
+    verify_replica_set_configuration(juju, substrate, app_name=app_name)
 
     # verify that no writes to the db were missed
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
+
+    for unit_name in juju.status().get_units(app_name):
+        patch_restart_delay(juju, substrate, unit_name=unit_name, delay=None)
 
 
 @pytest.mark.abort_on_fail
-async def test_full_cluster_restart(
-    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db, reset_restart_delay, tmp_path
-):
-    app_name = await get_app_name(ops_test)
-    ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-    other_unit = await replica_set_secondary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-    )
-    assert other_unit, "No secondary unit found"
+def test_full_cluster_restart(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+    app_name = existing_app(juju)
+    assert app_name
+
+    other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
+    assert other_unit_name, "No secondary unit found"
 
     # update all units to have a new RESTART_DELAY,  Modifying the Restart delay to 3 minutes
     # should ensure enough time for all replicas to be down at the same time.
-    for unit in ops_test.model.applications[app_name].units:
-        await update_restart_delay(ops_test, substrate, unit, RESTART_DELAY, tmp_path)
+    for unit_name in juju.status().get_units(app_name):
+        patch_restart_delay(juju, substrate=substrate, unit_name=unit_name, delay=RESTART_DELAY)
 
-    # kill all units "simultaneously"
-    await asyncio.gather(
-        *[
-            kill_unit_process(
-                ops_test, substrate, unit.name, kill_code="SIGTERM", app_name=app_name
-            )
-            for unit in ops_test.model.applications[app_name].units
-        ]
-    )
+    for unit_name in juju.status().get_units(app_name):
+        send_process_control_signal(
+            juju, substrate, unit_name=unit_name, signal="SIGTERM", db_process=DB_PROCESS
+        )
 
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
-    assert await all_db_processes_down(
-        ops_test, substrate, app_name=app_name
-    ), "Not all units down at the same time."
+    assert all_db_processes_down(juju, substrate, app_name=app_name), (
+        "Not all units down at the same time."
+    )
 
     # sleep for twice the median election time and the restart delay
     logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
 
     # verify all units are up and running
-    for unit in ops_test.model.applications[app_name].units:
-        ip_address = await get_address_of_unit(
-            ops_test, substrate, get_unit_id(unit.name), app_name
+    # verify all units are up and running
+    for unit_name, unit_status in juju.status().get_units(app_name).items():
+        ip_address = get_ip_from_unit(substrate, unit_status)
+        assert mongod_ready(juju, ip_address, app_name=app_name), (
+            f"unit {unit_name} not restarted after cluster crash."
         )
-        assert await mongod_ready(
-            ops_test, ip_address, app_name=app_name
-        ), f"unit {unit.name} not restarted after cluster crash."
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
-    writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     time.sleep(5)
-    more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
+    more_writes = count_writes(
+        juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
+    )
     assert more_writes > writes, "writes not continuing to DB"
 
     # verify presence of primary, replica set member configuration, and number of primaries
-    await verify_replica_set_configuration(ops_test, substrate, app_name=app_name)
+    verify_replica_set_configuration(juju, substrate, app_name=app_name)
 
     # verify that no writes to the db were missed
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
+
+    for unit_name in juju.status().get_units(app_name):
+        patch_restart_delay(juju, substrate, unit_name=unit_name, delay=None)
