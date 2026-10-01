@@ -758,7 +758,9 @@ def jubilant_add_writes_to_shard(juju: jubilant.Juju, substrate: Substrate, appl
     _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
     host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
 
-    password = get_password(juju=juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    password = get_password(
+        juju=juju, app_name=CONFIG_SERVER_APP_NAME, username=CHARMED_OPERATOR_USERNAME
+    )
 
     _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
     juju.config(app_name, {"mongos-uri": _mongos_uri})
