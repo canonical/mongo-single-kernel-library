@@ -34,26 +34,9 @@ from tests.integration.helpers.jubilant_common import (
 )
 from tests.integration.helpers.jubilant_sharding import build_mongos_client, write_data_to_mongodb
 from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
-from tests.integration.helpers.types import CloudConfigs, Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
-
-
-def set_credentials(
-    juju: jubilant.Juju,
-    cloud_configs: CloudConfigs,
-    cloud: str,
-    app_name: str,
-) -> None:
-    """Sets the s3 crednetials for the provided cloud, valid options are AWS or GCP."""
-    _, cloud_credentials = cloud_configs[cloud]
-    # set access key and secret keys
-    assert (
-        cloud_credentials["access-key"] and cloud_credentials["secret-key"]
-    ), f"{cloud} access key and secret key not provided."
-
-    s3_integrator_unit, _ = find_leader(juju, app_name=app_name)
-    juju.run(s3_integrator_unit, action="sync-s3-credentials", params=cloud_credentials)
 
 
 def get_backup_list(juju: jubilant.Juju, app_name: str) -> str:

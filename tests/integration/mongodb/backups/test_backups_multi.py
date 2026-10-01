@@ -20,8 +20,8 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_backups import (
     configure_gcs,
+    configure_s3,
     count_logical_backups,
-    set_credentials,
 )
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
@@ -79,12 +79,13 @@ def test_ready_correct_conf(juju: jubilant.Juju, cloud_configs: CloudConfigs) ->
     assert app_name
 
     # For AWS
-    # Set valid configuration
-    configuration_parameters, _ = cloud_configs["AWS"]
-    # apply new configuration options
-    juju.config(S3_APP_NAME, configuration_parameters)
-
-    set_credentials(juju, cloud_configs, cloud="AWS", app_name=S3_APP_NAME)
+    configuration_parameters, credentials = cloud_configs["AWS"]
+    configure_s3(
+        juju,
+        app_name=S3_APP_NAME,
+        config=configuration_parameters,
+        credentials=credentials,
+    )
 
     # For GCS
     # Set valid configuration
