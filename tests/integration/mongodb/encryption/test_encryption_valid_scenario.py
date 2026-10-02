@@ -6,7 +6,6 @@ import ssl
 
 import httpx
 import jubilant
-import pytest
 
 from single_kernel_mongo.config.statuses import VaultStatuses
 from tests.integration.helpers.constants import (
@@ -40,7 +39,6 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -62,7 +60,6 @@ def test_deploy_charms(
     juju.wait(lambda status: jubilant.all_blocked(status, base_app_name), timeout=TIMEOUT)
 
 
-@pytest.mark.abort_on_fail
 def test_no_integration_goes_to_blocked(juju: jubilant.Juju):
     app_name = existing_app(juju)
     assert app_name
@@ -73,7 +70,7 @@ def test_no_integration_goes_to_blocked(juju: jubilant.Juju):
                 status,
                 app_name,
                 idle_period=30,
-                unit_count=3,
+                unit_count=len(UNIT_IDS),
             )
             and does_status_match(
                 model_status=status,
@@ -91,7 +88,6 @@ def test_no_integration_goes_to_blocked(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integration_goes_to_active(
     juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str
 ) -> None:
@@ -108,7 +104,7 @@ def test_integration_goes_to_active(
             status,
             app_name,
             idle_period=20,
-            unit_count=3,
+            unit_count=len(UNIT_IDS),
         ),
         timeout=TIMEOUT,
     )
@@ -184,8 +180,7 @@ def test_rotate_master_key(
     verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
-def remove_relation_goes_to_blocked(
+def test_remove_relation_goes_to_blocked(
     juju: jubilant.Juju,
     substrate: Substrate,
     vault_charm_name: str,
@@ -207,7 +202,7 @@ def remove_relation_goes_to_blocked(
                 status,
                 app_name,
                 idle_period=30,
-                unit_count=3,
+                unit_count=len(UNIT_IDS),
             )
             and does_status_match(
                 model_status=status,
@@ -226,8 +221,7 @@ def remove_relation_goes_to_blocked(
     verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
-def reintegrate_goes_to_regular(
+def test_reintegrate_goes_to_regular(
     juju: jubilant.Juju,
     substrate: Substrate,
     vault_charm_name: str,
@@ -244,7 +238,7 @@ def reintegrate_goes_to_regular(
             status,
             app_name,
             idle_period=30,
-            unit_count=3,
+            unit_count=len(UNIT_IDS),
         ),
         timeout=TIMEOUT,
         delay=5,
@@ -255,7 +249,6 @@ def reintegrate_goes_to_regular(
     verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 def test_remove_token_then_reintegrate(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -277,7 +270,7 @@ def test_remove_token_then_reintegrate(
                 status,
                 app_name,
                 idle_period=30,
-                unit_count=3,
+                unit_count=len(UNIT_IDS),
             )
             and does_status_match(
                 model_status=status,
@@ -308,7 +301,7 @@ def test_remove_token_then_reintegrate(
             status,
             app_name,
             idle_period=30,
-            unit_count=3,
+            unit_count=len(UNIT_IDS),
         ),
         timeout=TIMEOUT,
     )

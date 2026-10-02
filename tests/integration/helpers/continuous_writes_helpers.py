@@ -8,7 +8,7 @@ from pathlib import Path
 import jubilant
 from jubilant.statustypes import UnitStatus
 from pymongo.synchronous.mongo_client import MongoClient
-from tenacity import retry, retry_if_result
+from tenacity import retry
 from tenacity.stop import stop_after_attempt
 from tenacity.wait import wait_exponential
 
@@ -146,7 +146,6 @@ def count_writes(
 
 
 @retry(
-    retry=retry_if_result(lambda x: x is None),
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
@@ -177,11 +176,10 @@ def replica_set_primary(
             ip_address=ip_address,
             replica_set=app_name,
         )
-        client = MongoClient(uri, directConnection=True)
-
-        # check primary status
-        if client.is_primary:
-            return unit_name, unit_status
+        with MongoClient(uri, directConnection=True) as client:
+            # check primary status
+            if client.is_primary:
+                return unit_name, unit_status
 
     raise ValueError("No Primary")
 
