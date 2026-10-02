@@ -139,3 +139,6 @@ def test_enable_tls_in_shard_using_rolling_ops(juju: jubilant.Juju, substrate: S
             assert (
                 lock_time >= tls_start_time
             ), f"Lock time on {unit_name} ({lock_time}) is before TLS start ({tls_start_time})"
+            assert (
+                lock_time >= tls_start_time
+            ), f"Lock time on {unit_name} ({lock_time}) is before TLS start ({tls_start_time})"

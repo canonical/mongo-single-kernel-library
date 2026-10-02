@@ -4,7 +4,6 @@
 import base64
 import dataclasses
 import json
-import logging
 import os
 import pathlib
 import shutil
@@ -42,6 +41,14 @@ from tests.integration.helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
+from tests.integration.helpers.continuous_writes_helpers import (
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_common import deploy_application as jubilant_deploy_app
+from tests.integration.helpers.jubilant_common import existing_app
+from tests.integration.helpers.jubilant_common import relate_application as jubilant_relate_app
 from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -268,6 +275,25 @@ async def add_continuous_writes_to_shards(
 
 
 @pytest.fixture
+def jubilant_continuous_writes_to_db(juju: jubilant.Juju, application_path: str):
+    """Continuously write for the duration of the duration of the test."""
+    db_app_name = existing_app(juju)
+    assert db_app_name
+
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+        jubilant_relate_app(juju, db_app_name, app_name)
+
+    start_continuous_writes(juju, app_name)
+    yield
+    stop_continuous_writes(juju, app_name)
+    clear_continuous_writes(juju, app_name)
+
+
+@pytest.fixture
 async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
     """This fixture builds a mongodb charm that will fail the upgrade.
 
@@ -457,7 +483,6 @@ def microceph() -> ConnectionInformation:
 
 
 _BUCKET = "testbucket"
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
