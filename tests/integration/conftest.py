@@ -4,7 +4,6 @@
 import base64
 import dataclasses
 import json
-import logging
 import os
 import pathlib
 import shutil
@@ -64,7 +63,6 @@ from tests.integration.helpers.sharding import (
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
-logger = logging.getLogger(__name__)
 
 MICROK8S_CLOUD_NAME = "mk8s"
 
@@ -278,7 +276,7 @@ async def add_continuous_writes_to_shards(
 
 @pytest.fixture
 def jubilant_continuous_writes_to_db(juju: jubilant.Juju, application_path: str):
-    """Continuously writget_app_name the duration of the test."""
+    """Continuously write for the duration of the duration of the test."""
     db_app_name = existing_app(juju)
     assert db_app_name
 

@@ -364,7 +364,6 @@ def delete_file_on_remote(
             e.returncode,
             e.stderr,
         )
-    return
 
 
 def _uri(

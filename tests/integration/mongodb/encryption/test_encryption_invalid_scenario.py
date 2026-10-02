@@ -26,7 +26,6 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -69,7 +68,6 @@ def test_deploy_charms(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integration_goes_to_blocked(
     juju: jubilant.Juju, substrate: Substrate, vault_charm_name: str
 ):
@@ -108,7 +106,6 @@ def test_integration_goes_to_blocked(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_remove_relation_goes_to_normal(juju: jubilant.Juju, vault_charm_name: str):
     """Tests that removing the vault relation goes back to normal operation."""
     app_name = existing_app(juju)
@@ -133,7 +130,6 @@ def test_remove_relation_goes_to_normal(juju: jubilant.Juju, vault_charm_name: s
     )
 
 
-@pytest.mark.abort_on_fail
 def test_rotation_fails_if_not_okay(juju: jubilant.Juju):
     """This tests that we can't rotate the master key if encryption at rest is disabled."""
     app_name = existing_app(juju)
@@ -141,9 +137,11 @@ def test_rotation_fails_if_not_okay(juju: jubilant.Juju):
     leader_unit, _ = find_leader(juju, app_name)
 
     # Trying to rotate the key fails with an error if encryption at rest is disabled.
-    try:
+    with pytest.raises(jubilant.TaskError) as error:
         juju.run(leader_unit, "rotate-encryption-master-key")
-    except jubilant.TaskError as e:
-        assert e.task.status == "failed"
-        assert e.task.results["message"] == "Encryption at rest not enabled on this application."
-        assert e.task.results["result"] == "failed"
+
+    assert error.value.task.status == "failed"
+    assert (
+        error.value.task.results["message"] == "Encryption at rest not enabled on this application."
+    )
+    assert error.value.task.results["result"] == "failed"

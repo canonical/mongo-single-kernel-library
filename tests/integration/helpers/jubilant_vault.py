@@ -18,13 +18,13 @@ from tests.integration.helpers.jubilant_common import (
     fast_forward,
     find_leader,
     get_ip_from_unit,
-    get_secret_uri_by_owner,
 )
 from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 VAULT = "vault"
 VAULT_K8S = "vault-k8s"
+VAULT_CHANNEL = "2.0/stable"
 VAULT_KV_RELATION = "vault-kv"
 
 FAST_INTERVAL = "20s"
@@ -133,7 +133,7 @@ def deploy_vault(juju: jubilant.Juju, substrate: Substrate, vault_charm_name: st
         vault_charm_name,
         vault_charm_name,
         num_units=1,
-        channel="2.0/stable",  # TODO: keep track of this after newer versions.
+        channel=VAULT_CHANNEL,  # TODO: keep track of this after newer versions.
         base=BASE,
     )
     with fast_forward(juju, update_interval=FAST_INTERVAL):
@@ -249,9 +249,7 @@ def authorize_charm(
             {"token": root_token},
             name=f"approle-token-{app_name}",
         )
-        secret = get_secret_uri_by_owner(
-            juju, app_or_unit=app_name, label=f"approle-token-{app_name}"
-        )
+        secret = juju.show_secret(identifier=f"approle-token-{app_name}").uri
 
     secret_id = secret.split(":")[-1]
 
@@ -260,22 +258,24 @@ def authorize_charm(
 
     # Run the action to authorize the charm.
     for attempt in range(attempts):
-        authorize_action = juju.run(
-            unit=leader_unit,
-            action="authorize-charm",
-            params={
-                "secret-id": secret_id,
-            },
-        )
-        result = authorize_action.results
-        if result and "result" in result:
-            return result
-        logger.warning(
-            "Failed to authorize charm. Attempt %d/%d. Waiting for 5 seconds...",
-            attempt + 1,
-            attempts,
-        )
-        time.sleep(5)
+        try:
+            authorize_action = juju.run(
+                unit=leader_unit,
+                action="authorize-charm",
+                params={
+                    "secret-id": secret_id,
+                },
+            )
+            result = authorize_action.results
+            if result and "result" in result:
+                return result
+        except jubilant.TaskError:
+            logger.warning(
+                "Failed to authorize charm. Attempt %d/%d. Waiting for 5 seconds...",
+                attempt + 1,
+                attempts,
+            )
+            time.sleep(5)
     logger.error("Failed to authorize charm")
     raise ActionFailedError("Failed to authorize charm")
 
