@@ -2,38 +2,39 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import jubilant
 import pytest
-from juju.errors import JujuAPIError
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.backups import S3_APP_NAME
-from tests.integration.helpers.common import (
-    DATA_INTEGRATOR_APP_NAME,
-    DEPLOYMENT_TIMEOUT,
-    MONGOS_APP_NAME,
-    TIMEOUT,
-    check_status_detail,
-    deploy_charm,
-    wait_for_mongodb_units_blocked,
-)
-from tests.integration.helpers.relations import (
+from single_kernel_mongo.config.statuses import MongoDBStatuses
+from tests.integration.helpers.constants import (
     APPLICATION_APP_NAME,
-    FIRST_DATABASE_RELATION_NAME,
-    REPLICATION_APP_NAME,
-)
-from tests.integration.helpers.sharding import (
+    BASE,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     CONFIG_SERVER_TWO_APP_NAME,
+    DATA_INTEGRATOR_APP_NAME,
+    DEPLOYMENT_TIMEOUT,
+    FIRST_DATABASE_RELATION_NAME,
+    MONGOS_APP_NAME,
+    REPLICATION_APP_NAME,
+    S3_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
-)
-from tests.integration.helpers.tls import (
+    TIMEOUT,
     TLS_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_BASE,
     TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+)
+from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
     remove_tls_integrations,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -42,19 +43,18 @@ SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
 RELATION_LIMIT_MESSAGE = 'cannot add relation "shard-one:sharding config-server-two:config-server": establishing a new relation for shard-one:sharding would exceed its maximum relation limit of 1'
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     mongodb_charm: str,
     mongos_charm: str,
     substrate: Substrate,
-    mongod_resource,
-    mongos_resource,
+    mongod_resource: dict[str, str],
+    mongos_resource: dict[str, str],
     client_relation_charm_path: str,
 ) -> None:
     """Build and deploy 2 config servers, one shard and one mongos."""
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=CONFIG_SERVER_APP_NAME,
@@ -62,8 +62,8 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "config-server"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=CONFIG_SERVER_TWO_APP_NAME,
@@ -71,8 +71,8 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "config-server"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=SHARD_ONE_APP_NAME,
@@ -80,311 +80,336 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "shard"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongos_charm,
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
         num_units=(1 if substrate == Substrate.k8s else 0),
     )
-    await ops_test.model.deploy(
+    juju.deploy(
         TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE
     )
-    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
+    juju.deploy(S3_APP_NAME, channel="2/edge")
 
-    await ops_test.model.deploy(
+    juju.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="noble",
+        base=BASE,
         config={"extra-user-roles": "admin"},
     )
 
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=REPLICATION_APP_NAME,
         mongod_resource=mongod_resource,
         num_units=1,
     )
-    await ops_test.model.deploy(
+    juju.deploy(
         client_relation_charm_path,
-        application_name=APPLICATION_APP_NAME,
+        app=APPLICATION_APP_NAME,
         num_units=1,
-        series="noble",
+        base=BASE,
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
             APPLICATION_APP_NAME,
             CONFIG_SERVER_APP_NAME,
             CONFIG_SERVER_TWO_APP_NAME,
             SHARD_ONE_APP_NAME,
             TLS_CERTIFICATES_APP_NAME,
-        ],
-        idle_period=20,
-        raise_on_blocked=False,
+            idle_period=20,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{MONGOS_APP_NAME}",
         f"{DATA_INTEGRATOR_APP_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR_APP_NAME, MONGOS_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
-        timeout=TIMEOUT,
-        raise_on_error=False,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            DATA_INTEGRATOR_APP_NAME,
+            MONGOS_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_only_one_config_server_relation(ops_test: OpsTest) -> None:
+def test_only_one_config_server_relation(juju: jubilant.Juju) -> None:
     """Verify that a shard can only be related to one config server."""
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    with pytest.raises(JujuAPIError) as juju_error:
-        await ops_test.model.integrate(
+    with pytest.raises(jubilant.CLIError) as juju_error:
+        juju.integrate(
             f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
             f"{CONFIG_SERVER_TWO_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
         )
 
     assert (
-        juju_error.value.args[0] == RELATION_LIMIT_MESSAGE
+        RELATION_LIMIT_MESSAGE in juju_error.value.stderr
     ), "Shard can relate to multiple config servers."
 
     # clean up relation
-    await ops_test.model.applications[SHARD_ONE_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[REPLICATION_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
-        timeout=TIMEOUT,
-    )
 
-
-@pytest.mark.abort_on_fail
-async def test_cannot_use_db_relation(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_cannot_use_db_relation(juju: jubilant.Juju) -> None:
     """Verify that sharding components cannot use the DB relation."""
     for sharded_component in SHARDING_COMPONENTS:
-        await ops_test.model.integrate(
-            f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", sharded_component
-        )
+        juju.integrate(f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", sharded_component)
 
-    for sharded_component in SHARDING_COMPONENTS:
-        await wait_for_mongodb_units_blocked(
-            ops_test,
-            substrate,
-            sharded_component,
-            status="The database relation cannot be used by sharding components (shards or config servers).",
-            timeout=300,
-        )
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, *SHARDING_COMPONENTS, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    app_name: [MongoDBStatuses.INVALID_DB_REL.value]
+                    for app_name in SHARDING_COMPONENTS
+                },
+                expected_app_statuses={},
+            )
+        ),
+        timeout=300,
+    )
 
     # clean up relations
     for sharded_component in SHARDING_COMPONENTS:
-        await ops_test.model.applications[sharded_component].remove_relation(
+        juju.remove_relation(
             f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}",
             sharded_component,
         )
 
-    await ops_test.model.wait_for_idle(
-        apps=SHARDING_COMPONENTS,
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(status, *SHARDING_COMPONENTS, idle_period=20),
         timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_replication_config_server_relation(ops_test: OpsTest, substrate: Substrate):
+def test_replication_config_server_relation(juju: jubilant.Juju):
     """Verifies that using a replica as a shard fails."""
     # attempt to add a replication deployment as a shard to the config server.
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        REPLICATION_APP_NAME,
-        status="The sharding interface cannot be used by replica sets.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    REPLICATION_APP_NAME: [MongoDBStatuses.INVALID_SHARDING_REL.value]
+                },
+                expected_app_statuses={},
+            )
+        ),
         timeout=300,
     )
 
     # clean up relations
-    await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
+    juju.wait(
+        lambda status: are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20),
+        timeout=TIMEOUT,
+    )
 
-@pytest.mark.abort_on_fail
-async def test_replication_shard_relation(ops_test: OpsTest, substrate: Substrate):
+
+def test_replication_shard_relation(juju: jubilant.Juju):
     """Verifies that using a replica as a config-server fails."""
     # attempt to add a shard to a replication deployment as a config server.
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{REPLICATION_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        REPLICATION_APP_NAME,
-        status="The sharding interface cannot be used by replica sets.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    REPLICATION_APP_NAME: [MongoDBStatuses.INVALID_SHARDING_REL.value]
+                },
+                expected_app_statuses={},
+            )
+        ),
         timeout=300,
     )
 
     # clean up relation
-    await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{REPLICATION_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[REPLICATION_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_replication_mongos_relation(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies connecting a replica to a mongos router fails."""
     # attempt to add a replication deployment as a shard to the config server.
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{REPLICATION_APP_NAME}",
         f"{MONGOS_APP_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        REPLICATION_APP_NAME,
-        status="The cluster relation can only be used by config servers.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    REPLICATION_APP_NAME: [MongoDBStatuses.INVALID_MONGOS_REL.value]
+                },
+                expected_app_statuses={},
+            )
+        ),
         timeout=300,
     )
 
     # clean up relations
-    await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{REPLICATION_APP_NAME}:cluster",
         f"{MONGOS_APP_NAME}:cluster",
     )
 
     # Ensure all gets cleaned up completely
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME, SHARD_ONE_APP_NAME, REPLICATION_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status, MONGOS_APP_NAME, SHARD_ONE_APP_NAME, REPLICATION_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
+    )
+
+
+def test_shard_mongos_relation(juju: jubilant.Juju) -> None:
+    """Verifies connecting a shard to a mongos router fails."""
+    # attempt to add a replication deployment as a shard to the config server.
+    juju.integrate(
+        f"{SHARD_ONE_APP_NAME}",
+        f"{MONGOS_APP_NAME}",
+    )
+
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, SHARD_ONE_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    SHARD_ONE_APP_NAME: [MongoDBStatuses.INVALID_MONGOS_REL.value]
+                },
+                expected_app_statuses={},
+            )
+        ),
+        timeout=300,
+    )
+
+    # clean up relations
+    juju.remove_relation(
+        f"{MONGOS_APP_NAME}:cluster",
+        f"{SHARD_ONE_APP_NAME}:cluster",
+    )
+
+    juju.wait(
+        lambda status: are_agents_idle(status, SHARD_ONE_APP_NAME, idle_period=20),
+        timeout=TIMEOUT,
+    )
+
+
+def test_shard_s3_relation(juju: jubilant.Juju, substrate: Substrate) -> None:
+    """Verifies integrating a shard to s3-integrator fails."""
+    # attempt to add a replication deployment as a shard to the config server.
+    juju.integrate(
+        f"{SHARD_ONE_APP_NAME}",
+        f"{S3_APP_NAME}",
+    )
+
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, SHARD_ONE_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={SHARD_ONE_APP_NAME: [MongoDBStatuses.INVALID_S3_REL.value]},
+                expected_app_statuses={},
+            )
+        ),
+        timeout=300,
+    )
+
+    # clean up relations
+    juju.remove_relation(
+        f"{S3_APP_NAME}:s3-credentials",
+        f"{SHARD_ONE_APP_NAME}:s3-credentials",
+    )
+
+    juju.wait(
+        lambda status: are_agents_idle(status, SHARD_ONE_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_shard_mongos_relation(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verifies connecting a shard to a mongos router fails."""
-    # attempt to add a replication deployment as a shard to the config server.
-    await ops_test.model.integrate(
-        f"{SHARD_ONE_APP_NAME}",
-        f"{MONGOS_APP_NAME}",
-    )
-
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_ONE_APP_NAME,
-        status="Invalid cluster relation.",
-        timeout=300,
-    )
-    await check_status_detail(
-        ops_test,
-        SHARD_ONE_APP_NAME,
-        status="blocked",
-        message="The cluster relation can only be used by config servers.",
-    )
-
-    # clean up relations
-    await ops_test.model.applications[SHARD_ONE_APP_NAME].remove_relation(
-        f"{MONGOS_APP_NAME}:cluster",
-        f"{SHARD_ONE_APP_NAME}:cluster",
-    )
-
-
-@pytest.mark.abort_on_fail
-async def test_shard_s3_relation(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verifies integrating a shard to s3-integrator fails."""
-    # attempt to add a replication deployment as a shard to the config server.
-    await ops_test.model.integrate(
-        f"{SHARD_ONE_APP_NAME}",
-        f"{S3_APP_NAME}",
-    )
-
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_ONE_APP_NAME,
-        status="Invalid s3-credentials relation.",
-        timeout=300,
-    )
-    await check_status_detail(
-        ops_test,
-        SHARD_ONE_APP_NAME,
-        status="blocked",
-        message="The s3-credentials relation can only be used by config servers or replica sets.",
-    )
-
-    # clean up relations
-    await ops_test.model.applications[SHARD_ONE_APP_NAME].remove_relation(
-        f"{S3_APP_NAME}:s3-credentials",
-        f"{SHARD_ONE_APP_NAME}:s3-credentials",
-    )
-
-
-@pytest.mark.abort_on_fail
-async def test_config_server_tls_replication_relation(
-    ops_test: OpsTest, substrate: Substrate
-) -> None:
+def test_config_server_tls_replication_relation(juju: jubilant.Juju) -> None:
     """Verifies that using a replica as a shard fails even when TLS is integrated."""
     # attempt to add a shard to a replication deployment as a config server.
-    await integrate_apps_with_tls(ops_test, applications=[REPLICATION_APP_NAME])
+    integrate_apps_with_tls(juju, REPLICATION_APP_NAME)
 
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        REPLICATION_APP_NAME,
-        status="The sharding interface cannot be used by replica sets.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    REPLICATION_APP_NAME: [MongoDBStatuses.INVALID_SHARDING_REL.value]
+                },
+                expected_app_statuses={},
+            )
+        ),
         timeout=300,
     )
 
     # clean up relations
-    await remove_tls_integrations(ops_test, applications=[REPLICATION_APP_NAME])
+    remove_tls_integrations(juju, REPLICATION_APP_NAME)
 
-    await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[REPLICATION_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(status, REPLICATION_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
     )
