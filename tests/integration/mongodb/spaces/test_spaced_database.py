@@ -60,7 +60,7 @@ def test_build_and_deploy(
         mongod_resource=mongod_resource,
         app_name=app_name,
         num_units=len(UNIT_IDS),
-        constraints={"spaces": "peers,clients"},
+        constraints={"spaces": "peers,client"},
         bind={"database-peers": "peers", "database": "client"},
     )
 
