@@ -119,17 +119,18 @@ def test_blocked_incorrect_creds(juju: jubilant.Juju, cloud_configs: CloudConfig
         {"access-key": "user", "secret-key": "doesnt-exist"},
     )
 
-    # verify that Charmed MongoDB is blocked and reports incorrect credentials
+    # With S3 integrator on channel 2/stable, the creds are share only if the bucket can be created.
+    # Hence the status is missing conf on MongoDB side.
     juju.wait(
         lambda status: (
             are_agents_idle(
                 status,
-                S3_APP_NAME,
+                app_name,
                 idle_period=30,
             )
             and does_status_match(
                 status,
-                expected_unit_statuses={app_name: [BackupStatuses.pbm_incompatible_conf("s3")]},
+                expected_unit_statuses={app_name: [BackupStatuses.pbm_missing_conf("s3")]},
                 expected_app_statuses={},
             )
         ),
