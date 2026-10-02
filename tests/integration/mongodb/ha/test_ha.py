@@ -114,7 +114,9 @@ def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_storage_re_use_lxd(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_storage_re_use_lxd(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
@@ -175,7 +177,9 @@ def test_storage_re_use_lxd(juju: jubilant.Juju, substrate: Substrate, continuou
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.lxd)
-def test_storage_re_use_k8s(juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db):
+def test_storage_re_use_k8s(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
@@ -229,7 +233,7 @@ def test_storage_re_use_k8s(juju: jubilant.Juju, substrate: Substrate, continuou
 @pytest.mark.skip("This is currently unsupported on MongoDB charm.")
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_storage_re_use_different_cluster(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
     """Tests that we can reuse storage from a different cluster.
 
@@ -297,7 +301,7 @@ def test_storage_re_use_different_cluster(
 
 
 def test_scale_up_capabilities(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests juju add-unit functionality.
 
@@ -335,7 +339,7 @@ def test_scale_up_capabilities(
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_scale_down_capabilities_lxd(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica.
 
@@ -419,7 +423,7 @@ def test_scale_down_capabilities_lxd(
 
 @pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_scale_down_capabilities_k8s(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
     app_name = existing_app(juju)
@@ -482,7 +486,7 @@ async def test_scale_down_capabilities_k8s(
 
 
 def test_replication_across_members(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Check consistency, ie write to primary, read data from secondaries."""
     app_name = existing_app(juju)
