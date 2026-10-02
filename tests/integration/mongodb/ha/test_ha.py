@@ -585,7 +585,7 @@ async def test_replication_member_scaling(
 
     Verify newly members have replicated data and newly removed members are gone without data.
     """
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     # first find primary, write to primary,
@@ -633,7 +633,7 @@ def test_kill_db_process(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
     # locate primary unit
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
@@ -688,7 +688,7 @@ def test_freeze_db_process(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
     # locate primary unit
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
@@ -769,7 +769,7 @@ def test_restart_db_process(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
     # locate primary unit
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     primary_name, primary_status = replica_set_primary(juju, substrate, app_name=app_name)
@@ -840,7 +840,7 @@ def test_full_cluster_crash(
     substrate: Substrate,
     jubilant_continuous_writes_to_db,
 ):
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
@@ -899,7 +899,7 @@ def test_full_cluster_crash(
 def test_full_cluster_restart(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
-    app_name = existing_app(juju)
+    app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
     other_unit_name, other_unit_info = replica_set_secondary(juju, substrate, app_name=app_name)
