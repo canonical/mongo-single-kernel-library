@@ -5,50 +5,54 @@
 import base64
 from logging import getLogger
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from mypy_boto3_s3.service_resource import Bucket
 
-from tests.integration.helpers.backups import S3_APP_NAME, S3_ENDPOINT, count_logical_backups
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    find_unit,
-    has_file,
-    is_relation_joined,
-)
-from tests.integration.helpers.sharding import (
+from tests.integration.helpers.constants import (
+    CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
+    DEPLOYMENT_TIMEOUT,
+    S3_APP_NAME,
     SHARD_APPS,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_DB_NAME,
     SHARD_TWO_APP_NAME,
     SHARD_TWO_DB_NAME,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_backups import (
     add_and_verify_unwanted_writes,
-    deploy_cluster_components,
+    configure_s3,
+    create_and_verify_backup,
     get_cluster_writes_count,
-    integrate_sharding_components,
     verify_writes_restored,
 )
-from tests.integration.helpers.tls import get_file_content
+from tests.integration.helpers.jubilant_common import find_leader, read_remote_file, unit_has_file
+from tests.integration.helpers.jubilant_sharding import (
+    deploy_cluster_components,
+    integrate_sharding_components,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy_charms(
-    ops_test: OpsTest,
+def test_deploy_charms(
+    juju: jubilant.Juju,
     mongodb_charm: str,
     substrate: Substrate,
     mongod_resource: dict[str, str],
     storage_credentials: dict[str, str],
     storage_config: dict[str, str],
 ):
-    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
-    await ops_test.model.set_config({"image-stream": "daily"})
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
@@ -59,43 +63,56 @@ async def test_deploy_charms(
         },
     )
 
-    await integrate_sharding_components(
-        ops_test, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME
-    )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
+    juju.deploy(S3_APP_NAME, channel="2/stable")
+
+    integrate_sharding_components(juju)
+
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
     logger.info(f"Configure {S3_APP_NAME}")
-    await ops_test.model.applications[S3_APP_NAME].set_config(storage_config)
-
-    s3_unit = ops_test.model.applications[S3_APP_NAME].units[0]
-    set_credentials_action = await s3_unit.run_action(
-        "sync-s3-credentials",
-        **storage_credentials,
+    configure_s3(
+        juju,
+        app_name=S3_APP_NAME,
+        config=storage_config,
+        credentials=storage_credentials,
     )
-    await set_credentials_action.wait()
 
-    await ops_test.model.wait_for_idle(
-        apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        timeout=DEPLOYMENT_TIMEOUT,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_s3_integration(
-    ops_test: OpsTest, substrate: Substrate, s3_bucket, storage_config
+def test_s3_integration(
+    juju: jubilant.Juju, substrate: Substrate, s3_bucket: Bucket, storage_config: dict[str, str]
 ) -> None:
     """Integrate charm and s3-integrator."""
     app_name = CONFIG_SERVER_APP_NAME
-    await ops_test.model.integrate(S3_APP_NAME, app_name)
-    await ops_test.model.block_until(
-        lambda: is_relation_joined(ops_test, S3_ENDPOINT, S3_ENDPOINT) is True,
-        timeout=TIMEOUT,
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
+    juju.integrate(S3_APP_NAME, app_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
     )
 
@@ -105,12 +122,12 @@ async def test_s3_integration(
     certificate: str = storage_config["tls-ca-chain"]
 
     for shard in SHARD_APPS:
-        for unit in ops_test.model.applications[shard].units:
-            cert_file_content = await get_file_content(
-                ops_test,
+        for unit_name in juju.status().get_units(app_name):
+            cert_file_content = read_remote_file(
+                juju,
                 substrate,
-                unit.name,
-                "/usr/local/share/ca-certificates/pbm.crt",
+                unit_name,
+                file_path="/usr/local/share/ca-certificates/pbm.crt",
                 container="mongod",
             )
             assert (
@@ -119,41 +136,28 @@ async def test_s3_integration(
 
 
 @pytest.mark.abort_on_fail
-async def test_create_backup(ops_test: OpsTest) -> None:
+def test_create_backup(juju: jubilant.Juju) -> None:
     """With writes in the DB test creating a backup."""
-    db_app_name = CONFIG_SERVER_APP_NAME
-
-    leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
+    app_name = CONFIG_SERVER_APP_NAME
 
     # create first backup once ready
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
-
-    action = await leader_unit.run_action(action_name="create-backup")
-    first_backup = await action.wait()
-    assert first_backup.status == "completed", "First backup not started."
-
-    # verify backup is present in the list of backups
-    # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
-    # backup can take a lot of time so this function returns once the command was successfully
-    # sent to pbm. Therefore we should retry listing the backup several times
-    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            backups = await count_logical_backups(leader_unit)
-            assert backups == 1
+    create_and_verify_backup(juju, app_name)
 
 
 @pytest.mark.abort_on_fail
-async def test_backup_restore(ops_test: OpsTest, add_writes_to_shard, substrate: Substrate) -> None:
+def test_backup_restore(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_shard
+) -> None:
     """Simple backup tests that verifies that writes are correctly restored."""
-    db_app_name = CONFIG_SERVER_APP_NAME
+    app_name = CONFIG_SERVER_APP_NAME
     # create a backup in the AWS bucket
     # count total writes
-    cluster_writes = await get_cluster_writes_count(
-        ops_test,
+    cluster_writes = get_cluster_writes_count(
+        juju,
         substrate,
         shard_app_names=SHARD_APPS,
         db_names=[SHARD_ONE_DB_NAME, SHARD_TWO_DB_NAME],
-        config_server_name=CONFIG_SERVER_APP_NAME,
+        config_server_name=app_name,
     )
 
     assert cluster_writes["total_writes"], "no writes to backup"
@@ -164,57 +168,68 @@ async def test_backup_restore(ops_test: OpsTest, add_writes_to_shard, substrate:
         == cluster_writes["total_writes"]
     ), "writes not synced"
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=20)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    action = await leader_unit.run_action(action_name="create-backup")
-    first_backup = await action.wait()
-    assert first_backup.status == "completed", "First backup not started."
+    # verify backup is started
+    create_and_verify_backup(juju, app_name)
 
-    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            backups = await count_logical_backups(leader_unit)
-            assert backups == 2
-
-    action = await leader_unit.run_action(action_name="list-backups")
-    list_result = await action.wait()
-    list_result = list_result.results["backups"]
-    most_recent_backup = list_result.split("\n")[-1]
+    leader_unit, leader_unit_status = find_leader(juju, app_name=app_name)
 
     # add writes to be cleared after restoring the backup.
-    await add_and_verify_unwanted_writes(ops_test, substrate, leader_unit, cluster_writes)
+    add_and_verify_unwanted_writes(juju, substrate, leader_unit_status, cluster_writes)
 
+    # find most recent backup id and restore
+    task = juju.run(leader_unit, action="list-backups")
+    list_result = task.results["backups"]
+    most_recent_backup = list_result.split("\n")[-1]
     backup_id = most_recent_backup.split()[0]
-    action = await leader_unit.run_action(action_name="restore", **{"backup-id": backup_id})
-    restore = await action.wait()
-    logger.info(f"Restore backup result {restore.results=}")
-    assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    restore_task = juju.run(leader_unit, action="restore", params={"backup-id": backup_id})
+    logger.info(f"Restore backup result {restore_task.results=}")
+    assert restore_task.results["restore-status"] == "restore started", "restore not successful"
 
-    # verify all writes are present
-    await verify_writes_restored(ops_test, substrate, cluster_writes)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
+    )
+
+    verify_writes_restored(juju, substrate, cluster_writes)
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_integration(ops_test: OpsTest, substrate: Substrate) -> None:
-    db_app_name = CONFIG_SERVER_APP_NAME
+def test_remove_integration(juju: jubilant.Juju, substrate: Substrate) -> None:
+    app_name = CONFIG_SERVER_APP_NAME
 
-    await ops_test.model.applications[db_app_name].remove_relation(
-        f"{db_app_name}:s3-credentials", f"{S3_APP_NAME}:s3-credentials"
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[db_app_name, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME], status="active", idle_period=20
+    juju.remove_relation(f"{app_name}:s3-credentials", f"{S3_APP_NAME}:s3-credentials")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
     for shard in SHARD_APPS:
-        for unit in ops_test.model.applications[shard].units:
-            still_present = await has_file(
-                ops_test,
+        for unit_name in juju.status().get_units(app_name):
+            still_present = unit_has_file(
+                juju,
                 substrate,
-                unit=unit,
+                unit_name=unit_name,
                 dir_path="/usr/local/share/ca-certificates/",
                 filename="pbm.crt",
                 container="mongod",
             )
-            assert not still_present, f"{unit.name} still has file"
+            assert not still_present, f"{unit_name} still has file"
