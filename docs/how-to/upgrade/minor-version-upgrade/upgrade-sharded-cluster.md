@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Refresh and upgrade a Charmed MongoDB sharded cluster to a new revision in the same channel using juju refresh."
+---
+
 (upgrade-sharded-cluster)=
 # How to upgrade (refresh) a sharded cluster
 
@@ -27,7 +33,7 @@ Before upgrading the last shard, leave a burn-in period to ensure that everythin
 
 Only refresh the next shard when the current refresh succeeds - i.e. all units show `active` and `idle` statuses.
 
-```{warning} 
+```{warning}
 Do not proceed if an upgrade of a shard fails. If an upgrade fails, {ref}`roll back <roll-back>` the entire cluster.
 ```
 
@@ -37,4 +43,4 @@ Next, upgrade any integrated mongos application.
 
 See:
 * [Charmed Mongos VM > How to perform a minor upgrade](https://charmhub.io/mongos/docs/h-minor-upgrade)
-* [Charmed Mongos K8s > How to perform a minor upgrade](https://charmhub.io/mongos-k8s/docs/h-minor-upgrade) 
+* [Charmed Mongos K8s > How to perform a minor upgrade](https://charmhub.io/mongos-k8s/docs/h-minor-upgrade)

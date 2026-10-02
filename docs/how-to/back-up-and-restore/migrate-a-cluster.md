@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Migrate a Charmed MongoDB cluster by restoring a backup from a source cluster to a new cluster and synchronizing passwords."
+---
+
 (migrate-a-cluster)=
 # How to migrate a cluster
 

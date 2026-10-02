@@ -1,5 +1,10 @@
-(configure-s3-radosgw)=
+---
+myst:
+  html_meta:
+    description: "Configure the s3-integrator charm to use Ceph RadosGW S3-compatible storage for Charmed MongoDB backups via the microceph snap."
+---
 
+(configure-s3-radosgw)=
 # How to configure S3 storage on Microceph with RadosGW
 
 Microceph S3-compatible RadosGW storage can be configured for Charmed MongoDB replica sets and sharded clusters with the [`s3-integrator` charm](https://charmhub.io/s3-integrator).

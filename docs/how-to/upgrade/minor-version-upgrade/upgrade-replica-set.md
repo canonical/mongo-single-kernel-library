@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Refresh and upgrade a Charmed MongoDB replica set to a new revision in the same channel using juju refresh."
+---
+
 (upgrade-replica-set)=
 # How to upgrade (refresh) a replica set
 

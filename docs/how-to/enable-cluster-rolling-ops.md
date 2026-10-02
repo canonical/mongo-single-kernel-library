@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Enable rolling operations across the entire MongoDB cluster via integration with Charmed etcd."
+---
+
 (enable-cluster-rolling-ops)=
 # Enable cluster-wide rolling operations
 

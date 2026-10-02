@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Observability guides for Charmed MongoDB using the Canonical Observability Stack (COS), including metrics and audit logs."
+---
+
 (monitoring)=
 # Monitoring
 

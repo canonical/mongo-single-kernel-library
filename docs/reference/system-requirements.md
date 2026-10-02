@@ -1,5 +1,10 @@
-(system-requirements)=
+---
+myst:
+  html_meta:
+    description: "Minimum hardware and software requirements for running Charmed MongoDB 8, including Ubuntu version, Juju, Kubernetes, and hardware specifications."
+---
 
+(system-requirements)=
 # System requirements
 
 Below are the minimum software and hardware requirements for running Charmed MongoDB 8.

@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Explanations for Charmed MongoDB covering architecture, sharding details, charm statuses, security, users, and rolling operations."
+---
+
 (explanation)=
 # Explanation
 
