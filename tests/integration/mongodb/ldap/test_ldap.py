@@ -52,7 +52,10 @@ def test_build_and_deploy(
     mongod_resource: dict[str, str],
     base_app_name: str,
 ) -> None:
-    """Build and deploy one unit of MongoDB."""
+    """Build and deploy three unit of MongoDB.
+
+    Deploy GLAUTH components and expose offers, consumes them and create groups on MongoDB.
+    """
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     app_name = existing_app(juju)
@@ -250,7 +253,7 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
-    """Only integrate ldap endpoint, should go into blocked state."""
+    """Only integrate ldap-certificate-transfer endpoint, should go into blocked state."""
     app_name = existing_app(juju)
     assert app_name
 
@@ -305,7 +308,7 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 def test_remove_ldap_certs_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
-    """With only certs relation it should also go to blocked."""
+    """With only ldap relation it should also go to blocked."""
     app_name = existing_app(juju)
     assert app_name
 
