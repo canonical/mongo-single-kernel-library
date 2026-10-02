@@ -129,7 +129,7 @@ def test_blocked_incorrect_creds(juju: jubilant.Juju, cloud_configs: CloudConfig
             )
             and does_status_match(
                 status,
-                expected_unit_statuses={app_name: [BackupStatuses.pbm_incompatible_conf("gcs")]},
+                expected_unit_statuses={app_name: [BackupStatuses.pbm_incorrect_creds("gcs")]},
                 expected_app_statuses={},
             )
         ),
