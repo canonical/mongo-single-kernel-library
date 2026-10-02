@@ -2,106 +2,159 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    UNIT_IDS,
-    check_or_scale_app,
-    deploy_charm,
-    get_app_name,
-)
-from tests.integration.helpers.tls import (
+from tests.integration.helpers.constants import (
     CLIENT_TLS_RELATION_NAME,
+    DEPLOYMENT_TIMEOUT,
     PEER_TLS_RELATION_NAME,
     TLS_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_BASE,
     TLS_CERTIFICATES_CHANNEL,
+    UNIT_IDS,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    ensure_app_number_units,
+    existing_app,
+)
+from tests.integration.helpers.jubilant_tls import (
     cannot_connect_without_tls,
     check_tls,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
 ) -> None:
     """Build and deploy one unit of MongoDB and one unit of TLS."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
     else:
         app_name = base_app_name
-        await deploy_charm(
-            ops_test=ops_test,
+        deploy_charm(
+            juju=juju,
             charm=mongodb_charm,
             substrate=substrate,
             mongod_resource=mongod_resource,
             app_name=base_app_name,
             num_units=len(UNIT_IDS),
         )
-        await ops_test.model.wait_for_idle(
-            apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT
-        )
 
     config = {"ca-common-name": "Test CA"}
-    await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME,
+    juju.deploy(
+        charm=TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
-        config=config,
         base=TLS_CERTIFICATES_BASE,
+        config=config,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
-async def test_enable_tls_peer_only(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_enable_tls_peer_only(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify each unit has TLS enabled after relating to the TLS application."""
     # Relate it to the MongoDB to enable TLS.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    await ops_test.model.integrate(
-        TLS_CERTIFICATES_APP_NAME, f"{app_name}:{PEER_TLS_RELATION_NAME}"
+    juju.integrate(TLS_CERTIFICATES_APP_NAME, f"{app_name}:{PEER_TLS_RELATION_NAME}")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
-
-    await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=60)
 
     # Wait for all units enabling TLS.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=app_name
-        ), f"TLS not enabled for unit {unit.name}."
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=False,
+            app_name=app_name,
+        ), f"TLS not enabled for unit {unit_name}."
 
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{app_name}:{PEER_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
+    juju.remove_relation(f"{app_name}:{PEER_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
-async def test_enable_tls_client_only(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_enable_tls_client_only(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify each unit has TLS enabled after relating to the TLS application."""
     # Relate it to the MongoDB to enable TLS.
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    await ops_test.model.integrate(
-        TLS_CERTIFICATES_APP_NAME, f"{app_name}:{CLIENT_TLS_RELATION_NAME}"
+    juju.integrate(TLS_CERTIFICATES_APP_NAME, f"{app_name}:{CLIENT_TLS_RELATION_NAME}")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count={app_name: len(UNIT_IDS), TLS_CERTIFICATES_APP_NAME: 1},
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
-
-    await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=60)
 
     # Wait for all units enabling TLS.
-    for unit in ops_test.model.applications[app_name].units:
-        assert await check_tls(
-            ops_test, substrate, unit, enabled=True, app_name=app_name
-        ), f"TLS not enabled for unit {unit.name}."
-        assert await cannot_connect_without_tls(
-            ops_test, substrate, unit, app_name=app_name
-        ), f"Client can still connect without TLS on unit {unit.name}"
-
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{app_name}:{CLIENT_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
-    )
+    for unit_name, unit_info in juju.status().get_units(app_name).items():
+        assert check_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            enabled=True,
+            app_name=app_name,
+        ), f"TLS not enabled for unit {unit_name}."
+        assert cannot_connect_without_tls(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            unit_info=unit_info,
+            app_name=app_name,
+        ), f"Client can still connect without TLS on unit {unit_name}"
