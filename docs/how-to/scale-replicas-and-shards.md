@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Scale a Charmed MongoDB sharded cluster or replica set via Juju actions."
+---
+
 (scale-replicas-and-shards)=
 # How to scale replicas and shards
 
@@ -7,7 +13,7 @@ This guide goes over how to scale replicas of any application by adding and remo
 
 ## Scale a replica set
 
-To scale a replica set, use `juju`'s  [`add-unit`](https://juju.is/docs/juju/juju-add-unit) and [`remove-unit`](https://juju.is/docs/juju/juju-remove-unit) commands. 
+To scale a replica set, use `juju`'s  [`add-unit`](https://juju.is/docs/juju/juju-add-unit) and [`remove-unit`](https://juju.is/docs/juju/juju-remove-unit) commands.
 
 To add more replicas, run:
 

@@ -1,5 +1,10 @@
-(how-to-backup-index)=
+---
+myst:
+  html_meta:
+    description: "How-to guides for backing up and restoring Charmed MongoDB, covering Amazon S3 configuration, Google Cloud configuration, creating backups, restoring, and cluster migration."
+---
 
+(how-to-backup-index)=
 # How to back up and restore
 
 Charmed MongoDB supports two different storage backends: AWS S3 (and compatibles) and Google Cloud Storage.

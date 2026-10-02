@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Details about rolling operations in Charmed MongoDB for presering service availability during disruptive operations."
+---
+
 (rolling-ops)=
 # Rolling operations
 

@@ -1,5 +1,10 @@
-(how-to)=
+---
+myst:
+  html_meta:
+    description: "How-to guides for Charmed MongoDB on VMs and Kubernetes, covering deployment, scaling, authentication, backups, observability, and data migration."
+---
 
+(how-to)=
 # How-to guides
 
 Key processes and common tasks for deploying, configuring, and operating Charmed MongoDB.

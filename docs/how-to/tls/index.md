@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "How-to guides for enabling and disable TLS/SSL encryption on Charmed MongoDB deployments and manging private keys."
+---
+
 (tls)=
 # How to manage TLS encryption
 

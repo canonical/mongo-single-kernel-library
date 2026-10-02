@@ -1,7 +1,13 @@
+---
+myst:
+  html_meta:
+    description: "Enable TLS/SSL encryption on a Charmed MongoDB cluster by integrating with a TLS certificate operator such as self-signed-certificates."
+---
+
 (enable-tls)=
 # How to enable TLS
 
-Charmed MongoDB 8 provides Transport Layer Security (TLS) for **peer-to-peer** and **client-server** communication. 
+Charmed MongoDB 8 provides Transport Layer Security (TLS) for **peer-to-peer** and **client-server** communication.
 
 Peer-to-peer
 : Communication between members in the cluster will be encrypted and authenticated using certificates.
