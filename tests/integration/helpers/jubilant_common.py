@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def mongodb_base_path(substrate: Substrate) -> str:
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return MONGODB_SNAP_CONF_DIR
     return MONGODB_ROCK_CONF_DIR
 

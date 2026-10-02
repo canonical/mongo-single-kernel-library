@@ -9,7 +9,7 @@ import pytest
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
-from tests.integration.helpers.constants import CONFIG_SERVER_APP_NAME
+from tests.integration.helpers.constants import CLUSTER_COMPONENTS, CONFIG_SERVER_APP_NAME
 from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
     mongodb_config_path,
@@ -29,7 +29,6 @@ from tests.integration.helpers.jubilant_sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.sharding import CLUSTER_COMPONENTS
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
@@ -46,14 +45,17 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
+def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
     juju_k8s_model: jubilant.Juju,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
 ) -> None:
-    """Build and deploy one unit of MongoDB."""
+    """Build and deploy a sharded cluster.
+
+    Deploy GLAUTH components and expose offers, consumes them and create groups on MongoDB.
+    """
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     deploy_cluster_components(
@@ -214,7 +216,7 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
-    """Only integrate ldap endpoint, should go into blocked state."""
+    """Only integrate ldap-certificate-transfer endpoint, should go into blocked state."""
     app_name = CONFIG_SERVER_APP_NAME
     # We remove the first relation integrated, it should go into blocked state
     juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
