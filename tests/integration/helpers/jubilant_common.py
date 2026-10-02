@@ -49,19 +49,22 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
-def external_cert_path(substrate: Substrate):
+def external_cert_path(substrate: Substrate) -> str:
+    """Path of the external CA cert for the substrate."""
     if substrate == "lxd":
         return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
 
 
-def external_pem_path(substrate: Substrate):
+def external_pem_path(substrate: Substrate) -> str:
+    """Path of the external CA PEM for the substrate."""
     if substrate == "lxd":
         return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
     return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
 
 
-def internal_cert_path(substrate: Substrate):
+def internal_cert_path(substrate: Substrate) -> str:
+    """Path of the internal CA cert for the substrate."""
     if substrate == "lxd":
         return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
@@ -247,6 +250,7 @@ def get_secret_uri_by_owner(
 
 
 def get_secret_by_label(juju: jubilant.Juju, label: str) -> dict[str, str]:
+    """Retrieve secret content by label."""
     for secret in juju.secrets():
         if label == secret.label:
             revealed_secret = juju.show_secret(secret.uri, reveal=True)
@@ -256,6 +260,7 @@ def get_secret_by_label(juju: jubilant.Juju, label: str) -> dict[str, str]:
 
 
 def get_secret_by_uri(juju: jubilant.Juju, uri: str) -> dict[str, str]:
+    """Retrieve secret content by uri."""
     revealed_secret = juju.show_secret(uri, reveal=True)
     return revealed_secret.content
 
