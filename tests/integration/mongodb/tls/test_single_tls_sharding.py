@@ -66,7 +66,7 @@ def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-def test_built_cluster_with_peer_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
+def test_build_cluster_with_peer_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster, when integrated with peer TLS, allows non TLS client relations."""
     integrate_sharding_components(juju)
 
