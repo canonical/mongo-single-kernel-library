@@ -18,11 +18,35 @@ from logging import getLogger
 import jubilant
 import urllib3
 import yaml
+from jubilant.statustypes import Status
 from kubernetes import client, config, stream
 from kubernetes.client.exceptions import ApiException
+from pymongo import MongoClient
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 
-from tests.integration.helpers.jubilant_common import run_command_on_server
+from tests.integration.helpers.common import ProcessError, mongodb_log_path
+from tests.integration.helpers.constants import (
+    CHARMED_OPERATOR_USERNAME,
+    DEFAULT_DATABASE_NAME,
+    DEFAULT_REPLICATION_COLL_NAME,
+    RELEASES,
+)
+from tests.integration.helpers.continuous_writes_helpers import replica_set_primary
+from tests.integration.helpers.ha import ProcessRunningError
+from tests.integration.helpers.jubilant_common import (
+    count_primaries,
+    execute_on_mongod,
+    find_leader,
+    get_app_name_from_unit,
+    get_ip_from_unit,
+    get_ips_for_app,
+    get_mongodb_hostnames_for_app,
+    get_password,
+    read_remote_file,
+    replica_set_uri,
+    run_command_on_server,
+    unit_uri,
+)
 from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
@@ -61,6 +85,31 @@ NETWORK_CUT_RULES = (
     "INPUT ! --in-interface lo --jump DROP",
     "OUTPUT ! --out-interface lo --jump DROP",
 )
+
+
+def storage_type(juju: jubilant.Juju, app_name: str) -> str | None:
+    """Retrieves type of storage associated with an application."""
+    storages = juju.status().storage
+
+    for storage in storages.filesystems.values():
+        unit_name = next(iter(storage.attachments.units))
+        if get_app_name_from_unit(unit_name) == app_name:
+            if storage.status.current == "detached":
+                continue
+            return storage.pool
+
+    return None
+
+
+def storage_id(juju: jubilant.Juju, unit_name: str, storage_name: str) -> str | None:
+    """Retrieves storage id associated with provided unit."""
+    for storage_info in juju.status().storage.filesystems.values():
+        storage_unit_name = next(iter(storage_info.attachments.units))
+        if unit_name != storage_unit_name:
+            continue
+        if storage_info.storage.startswith(f"{storage_name}"):
+            return storage_info.storage
+    return None
 
 
 def lxd_cut_network_from_unit_with_ip_change(machine_name: str) -> None:
@@ -436,7 +485,6 @@ def send_process_control_signal(
     juju: jubilant.Juju,
     substrate: Substrate,
     unit_name: str,
-    model_full_name: str,
     signal: str,
     db_process: str,
     container: str = "mongod",
@@ -577,7 +625,10 @@ def pebble_patch_restart_delay(
 
 
 def patch_restart_delay(
-    juju: jubilant.Juju, unit_name: str, delay: int | None, substrate: Substrate
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    delay: int | None,
 ) -> None:
     """Update the restart delay for the database process based on the substrate."""
     match substrate:
@@ -641,6 +692,10 @@ def instance_ip(juju: jubilant.Juju, instance: str) -> str:
     return ""
 
 
+def host_to_unit(host: str | None) -> str | None:
+    return "/".join(host.split(".")[0].rsplit("-", 1)) if host else None
+
+
 @retry(stop=stop_after_attempt(60), wait=wait_fixed(15), reraise=True)
 def wait_network_restore(
     juju: jubilant.Juju,
@@ -672,3 +727,247 @@ def wait_network_restore(
                 status, app_name, unit_count=unit_count, idle_period=30
             )
         )
+
+
+def fetch_replica_set_members(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str
+) -> list[str]:
+    """Fetches the hosts listed as replica set members in the MongoDB replica set configuration.
+
+    Args:
+        ops_test: reference to deployment.
+    """
+    # connect to replica set uri
+    # get ips from MongoDB replica set configuration
+    password = get_password(
+        juju=juju,
+        app_name=app_name,
+        username=CHARMED_OPERATOR_USERNAME,
+    )
+    _, leader_status = find_leader(juju, app_name)
+    host = get_ip_from_unit(substrate, leader_status)
+
+    # connect to mongod
+    uri = unit_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
+        ip_address=host,
+        replica_set=app_name,
+    )
+    with MongoClient(uri, directConnection=True) as client:
+        data = client.admin.command("replSetGetConfig")
+
+    return [member["host"].split(":")[0] for member in data["config"]["members"]]
+
+
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15))
+def verify_replica_set_configuration(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str
+) -> None:
+    """Verifies presence of primary, replica set members, and number of primaries."""
+    hosts = get_mongodb_hostnames_for_app(juju, substrate, app_name)
+
+    # verify presence of primary
+    new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
+    assert new_primary_name, "primary not elected."
+
+    # verify all units are running under the same replset
+    member_hosts = fetch_replica_set_members(juju, substrate, app_name=app_name)
+    assert set(member_hosts) == set(hosts), "all members not running under the same replset"
+
+    # verify there is only one primary
+    assert (
+        count_primaries(juju, substrate, app_name=app_name) == 1
+    ), "there are more than one primary in the replica set."
+
+
+def convert_time(time_as_str: str) -> float:
+    """Converts a string time representation to an integer time representation, in UTC."""
+    # parse time representation, provided in this format: 'YYYY-MM-DDTHH:MM:SS.MMM+00:00'
+    d = datetime.strptime(time_as_str, "%Y-%m-%dT%H:%M:%S.%f%z")
+    return d.timestamp()
+
+
+def reused_storage(
+    juju: jubilant.Juju, substrate: Substrate, unit_name: str, removal_time: float
+) -> bool:
+    """Returns True if storage provided to mongod has been reused.
+
+    MongoDB startup message indicates storage reuse:
+        If member transitions to STARTUP2 from STARTUP then it is syncing/getting data from
+        primary.
+        If member transitions to STARTUP2 from REMOVED then it is reusing the storage we
+        provided.
+    """
+    try:
+        data = read_remote_file(juju, substrate, unit_name, mongodb_log_path(substrate))
+    except jubilant.CLIError:
+        raise ProcessError(f"Failed to read file {mongodb_log_path(substrate)} on unit {unit_name}")
+
+    for line in data.splitlines():
+        if not len(line):
+            continue
+
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            logger.error(f"JSON decode error: {line}")
+            continue
+
+        # "attr" is needed and stores the state information and changes of mongodb
+        if "attr" not in item:
+            continue
+
+        # Compute reuse time
+        re_use_time = convert_time(item["t"]["$date"])
+
+        # Get newstate and oldstate if present
+        newstate = item["attr"].get("newState", "")
+        oldstate = item["attr"].get("oldState", "")
+
+        if newstate == "STARTUP2" and oldstate == "REMOVED" and re_use_time > removal_time:
+            return True
+
+    return False
+
+
+def insert_release_to_cluster(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, release: str = "focal"
+) -> None:
+    """Inserts the Focal Fossa data into the MongoDB cluster via primary replica."""
+    _, primary_status = replica_set_primary(juju, substrate, app_name)
+    primary_ip = get_ip_from_unit(substrate, primary_status)
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    uri = unit_uri(CHARMED_OPERATOR_USERNAME, password, primary_ip, app_name, mongos=False)
+    client = MongoClient(uri, directConnection=True)
+    db = client[DEFAULT_DATABASE_NAME]
+    test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
+    test_collection.insert_one(RELEASES[release])
+    client.close()
+
+
+def retrieve_entries(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    db_name: str,
+    collection_name: str,
+    query_field: str,
+):
+    """Retries entries from a specified collection within a specified database."""
+    _, primary_status = replica_set_primary(juju, substrate, app_name)
+    primary_ip = get_ip_from_unit(substrate, primary_status)
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    uri = unit_uri(CHARMED_OPERATOR_USERNAME, password, primary_ip, app_name, mongos=False)
+    client = MongoClient(uri, directConnection=True)
+
+    db = client[db_name]
+    test_collection = db[collection_name]
+
+    # read all entries from original cluster
+    cursor = test_collection.find({})
+    cluster_entries: set[dict[str, str | float | bool]] = set()
+    for document in cursor:
+        cluster_entries.add(document[query_field])
+
+    client.close()
+    return cluster_entries
+
+
+def db_step_down(  # noqa: C901
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    sigterm_time: float,
+    app_name: str,
+) -> bool:
+    """Checks that the DB has stepped down.
+
+    We check that by checking the reason of the last election in the metrics.
+    It can be stepUpRequest or stepUpRequestSkipDryRun.
+    We then confirm that it happened after the SIGTERM time.
+    """
+    username = CHARMED_OPERATOR_USERNAME
+    password = get_password(juju, app_name, username=username)
+    hosts = get_ips_for_app(juju, substrate, app_name)
+    uri = replica_set_uri(
+        username=username, password=password, ip_addresses=list(hosts), replica_set=app_name
+    )
+
+    result = execute_on_mongod(juju, substrate, app_name, uri, "rs.status()", expecting_output=True)
+
+    if result.failed:
+        return False
+
+    election_metrics = result.data.get("electionCandidateMetrics", {})
+
+    if not election_metrics:
+        return False
+
+    reason = election_metrics.get("lastElectionReason", "")
+    election_date = election_metrics.get("lastElectionDate", {}).get("$date", None)
+    if not reason.startswith("stepUpRequest"):
+        logger.info(
+            "Reason is %s, should be one of 'stepUpRequest' or 'stepUpRequestSkipDryRun'", reason
+        )
+        return False
+
+    if not election_date:
+        logger.info("Missing election date")
+        return False
+
+    election_ts = convert_time(election_date)
+
+    if election_ts >= sigterm_time:
+        return True
+
+    logger.info("Election time is %s, but sigterm time is %s", election_ts, sigterm_time)
+    return False
+
+
+def all_db_processes_down(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> bool:
+    """Verifies that all units of the charm do not have the DB process running."""
+    try:
+        for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3)):
+            with attempt:
+                for unit in juju.status().get_units(app_name):
+                    try:
+                        processes = run_command_on_server(juju, substrate, unit, "pgrep -x mongod")
+                    # This raises an error if there's no process to find.
+                    except jubilant.CLIError as e:
+                        processes = e.stdout
+                    # splitting processes by "\n" results in one or more empty lines, hence we
+                    # need to process these lines accordingly.
+                    processes = [proc for proc in processes.split("\n") if len(proc) > 0]
+                    if len(processes) > 0:
+                        raise ProcessRunningError
+    except RetryError:
+        return False
+
+    return True
+
+
+def mongodb_unit_in_status(
+    status: Status,
+    substrate: Substrate,
+    unit_to_check: str,
+    unit_to_check_hostname: str,
+    expected_status: str,
+    username: str,
+    password: str,
+) -> bool:
+    valid = True
+    app_name = get_app_name_from_unit(unit_to_check)
+    for unit_name, unit_status in status.get_units(app_name).items():
+        if unit_name == unit_to_check:
+            continue
+        host = get_ip_from_unit(substrate, unit_status)
+        uri = unit_uri(username=username, password=password, ip_address=host)
+        with MongoClient(uri, directConnection=True) as client:
+            data = client.admin.command("replSetGetStatus")
+        for member in data["members"]:
+            data_unit_name = member["name"].split(":")[0]
+            if data_unit_name == unit_to_check_hostname:
+                valid &= member["stateStr"] == expected_status
+    return valid

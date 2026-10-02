@@ -17,6 +17,8 @@ from bson.json_util import dumps as bson_dumps
 from jubilant._juju import ConstraintValue
 from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
+from tenacity import RetryError, Retrying, wait_fixed
+from tenacity.stop import stop_after_delay
 
 from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
@@ -157,6 +159,18 @@ def deploy_charm(
         )
 
 
+def get_highest_unit(juju: jubilant.Juju, app_name: str) -> str | None:
+    """Retrieves the most recently added unit to the MongoDB application."""
+    max_ordinal = -1
+    for unit in juju.status().get_units(app_name):
+        unit_id = get_unit_id(unit)
+        if unit_id >= max_ordinal:
+            max_ordinal = unit_id
+    if max_ordinal == -1:
+        return None
+    return f"{app_name}/{max_ordinal}"
+
+
 def remove_number_units(
     juju: jubilant.Juju, substrate: Substrate, app_name: str, num_units: int
 ) -> None:
@@ -281,6 +295,27 @@ def get_ips_for_app(juju: jubilant.Juju, substrate: Substrate, app_name: str) ->
     return {
         get_ip_from_unit(substrate, unit_info)
         for unit_info in juju.status().get_units(app_name).values()
+    }
+
+
+def get_mongodb_hostname_for_unit(
+    juju: jubilant.Juju, substrate: Substrate, unit_name: str, unit_status: UnitStatus
+):
+    """Get the hostname for a unit in mongodb."""
+    app_name = get_app_name_from_unit(unit_name)
+    if substrate == Substrate.lxd:
+        return get_ip_from_unit(substrate, unit_status)
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+
+
+def get_mongodb_hostnames_for_app(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str
+) -> set[str]:
+    if substrate == Substrate.lxd:
+        return get_ips_for_app(juju, substrate, app_name)
+    return {
+        f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+        for unit_name in juju.status().get_units(app_name)
     }
 
 
@@ -463,6 +498,24 @@ def count_primaries(juju: jubilant.Juju, substrate: Substrate, app_name: str) ->
             number_of_primaries += 1
 
     return number_of_primaries
+
+
+def mongod_ready(juju: jubilant.Juju, unit_ip: str, app_name: str) -> bool:
+    """Verifies replica is running and available."""
+    password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+    uri = unit_uri(username=CHARMED_OPERATOR_USERNAME, password=password, ip_address=unit_ip)
+    client = MongoClient(uri, directConnection=True)
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+            with attempt:
+                # The ping command is cheap and does not require auth.
+                client.admin.command("ping")
+    except RetryError:
+        return False
+    finally:
+        client.close()
+
+    return True
 
 
 def set_password(
