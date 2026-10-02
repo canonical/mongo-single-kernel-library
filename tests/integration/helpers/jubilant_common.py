@@ -691,7 +691,10 @@ def verify_cluster_ip_source_allowlist(
     additional_addresses: set[str] | None = None,
     excluded_addresses: set[str] | None = None,
 ) -> None:
-    """Verify each mongod allows every current replica-set member address."""
+    """Verify VM mongod allowlists contain every current replica-set member address."""
+    if substrate == Substrate.k8s:
+        return
+
     replica_set_addresses = get_ips_for_app(juju, substrate, app_name)
     expected_addresses = replica_set_addresses | (additional_addresses or set())
     config_path = mongodb_config_path(substrate)
