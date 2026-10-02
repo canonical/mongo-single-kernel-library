@@ -932,7 +932,11 @@ def all_db_processes_down(juju: jubilant.Juju, substrate: Substrate, app_name: s
         for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3)):
             with attempt:
                 for unit in juju.status().get_units(app_name):
-                    processes = run_command_on_server(juju, substrate, unit, "pgrep -x mongod")
+                    try:
+                        processes = run_command_on_server(juju, substrate, unit, "pgrep -x mongod")
+                    # This raises an error if there's no process to find.
+                    except jubilant.CLIError as e:
+                        processes = e.stdout
                     # splitting processes by "\n" results in one or more empty lines, hence we
                     # need to process these lines accordingly.
                     processes = [proc for proc in processes.split("\n") if len(proc) > 0]

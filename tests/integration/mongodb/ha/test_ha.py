@@ -798,7 +798,7 @@ def test_restart_db_process(
     more_writes = count_writes(
         juju, substrate, app_name=app_name, unit_name=other_unit_name, unit_info=other_unit_info
     )
-    assert more_writes > writes
+    assert more_writes > writes, "writes not continuing to DB"
 
     # verify that db service got restarted and is ready
     primary_address = get_ip_from_unit(substrate, primary_status)
