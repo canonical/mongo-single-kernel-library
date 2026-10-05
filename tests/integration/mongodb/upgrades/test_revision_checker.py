@@ -9,6 +9,7 @@ from tests.integration.helpers.constants import (
     CONFIG_SERVER_REL_NAME,
     DEPLOYMENT_TIMEOUT,
     SHARD_REL_NAME,
+    TIMEOUT,
 )
 from tests.integration.helpers.jubilant_common import deploy_charm
 from tests.integration.helpers.status_helpers import are_agents_idle, does_status_match
@@ -122,7 +123,8 @@ def test_local_config_server_reports_remote_shard(juju: jubilant.Juju) -> None:
                     ]
                 },
             )
-        )
+        ),
+        timeout=TIMEOUT,
     )
 
 
@@ -156,5 +158,6 @@ def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
                     ]
                 },
             )
-        )
+        ),
+        timeout=TIMEOUT,
     )

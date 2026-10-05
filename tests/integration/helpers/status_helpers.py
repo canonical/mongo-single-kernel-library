@@ -242,3 +242,19 @@ def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: s
         expected_status="waiting",
         message="Waiting for MongoDB restart.",
     )
+
+
+def unit_in_status(
+    status: jubilant.Status, app_name: str, unit_name: str, expected_status: StatusObject
+) -> bool:
+    """Checks that the given unit is in the correct status."""
+    unit_status = status.get_units(app_name).get(unit_name)
+
+    if not unit_status:
+        logger.warning("Missing unit %s to check status", unit_name)
+        return False
+
+    return (
+        does_message_match(unit_status.workload_status.message, expected_status)
+        and unit_status.workload_status.current == expected_status.status
+    )

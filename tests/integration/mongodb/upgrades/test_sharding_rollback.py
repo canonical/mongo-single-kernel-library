@@ -32,10 +32,15 @@ from tests.integration.helpers.jubilant_sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.jubilant_upgrades import refresh_charm, refresh_with_juju
+from tests.integration.helpers.jubilant_upgrades import (
+    UPGRADE_INCOMPATIBLE_STATUS,
+    refresh_charm,
+    refresh_with_juju,
+)
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
+    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -96,6 +101,12 @@ def test_rollback_on_config_server(
     assert task.status == "completed", "pre-refresh-check failed, expected to succeed."
 
     logger.info("Refreshing the application")
+    # Refresh always happens from highest to lowest unit number
+    refresh_order = sorted(
+        juju.status().get_units(CONFIG_SERVER_APP_NAME),
+        key=lambda unit: get_unit_id(unit),
+        reverse=True,
+    )
 
     logger.info("Refresing the charm")
     refresh_charm(
@@ -117,8 +128,8 @@ def test_rollback_on_config_server(
         wait=wait_fixed(10),
     ):
         with attempt:
-            assert (
-                "incompatible" in juju.status().apps.get(CONFIG_SERVER_APP_NAME).app_status.message
+            assert unit_in_status(
+                juju.status(), CONFIG_SERVER_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
@@ -136,7 +147,9 @@ def test_rollback_on_config_server(
         timeout=TIMEOUT,
     )
 
-    if "incompatible" in juju.status().apps.get(CONFIG_SERVER_APP_NAME).app_status.message:
+    if unit_in_status(
+        juju.status(), CONFIG_SERVER_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
+    ):
         # will be marked "incompatible" if rollback is not to the same revision as initially
         # deployed
         logger.info("Rollback is blocked due to incompatibility")

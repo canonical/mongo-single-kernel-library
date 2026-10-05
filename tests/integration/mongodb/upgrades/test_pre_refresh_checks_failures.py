@@ -106,7 +106,7 @@ def test_preflight_check_failure(
     juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh
 ) -> None:
     """Verifies that the preflight check can run successfully."""
-    app_name = existing_app(jubilant_chaos_mesh)
+    app_name = existing_app(juju)
     assert app_name
     assert juju.model
 
