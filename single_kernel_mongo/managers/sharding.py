@@ -320,9 +320,6 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 
-        if scope == "app":
-            return []
-
         if self.skip_config_server_status():
             return charm_statuses[scope]
 

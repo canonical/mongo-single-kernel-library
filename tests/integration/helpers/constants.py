@@ -52,12 +52,15 @@ TEST_DOCUMENTS = """[
 
 MONGOS_APP_NAME = "mongos"
 
+SNAP_MONGOD_SERVICE = "snap.charmed-mongodb.mongod.service"
+SNAP_MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_CERTIFICATES_CHANNEL = "1/stable"
 TLS_CERTIFICATES_BASE = "ubuntu@24.04"
 PEER_TLS_RELATION_NAME = "peer-certificates"
 CLIENT_TLS_RELATION_NAME = "client-certificates"
+DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
 # Sharding constants
 
