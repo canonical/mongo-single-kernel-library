@@ -273,6 +273,20 @@ def count_users(mongos_client: MongoClient) -> int:
     return users_collection.count_documents({})
 
 
+def count_shard_writes(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    config_server_name: str,
+    db_name: str,
+    collection_name: str,
+):
+    """Count the number of writes written on a specific column and database."""
+    with build_mongos_client(juju, substrate, app_name=config_server_name) as client:
+        db = client[db_name]
+        test_collection = db[collection_name]
+        return test_collection.count_documents({})
+
+
 ### For TLS testing
 
 

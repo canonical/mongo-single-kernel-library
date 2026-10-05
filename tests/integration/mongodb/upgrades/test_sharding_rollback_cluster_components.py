@@ -2,22 +2,13 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
-from pathlib import Path
+import jubilant
 
-import pytest
-from pytest_operator.plugin import OpsTest
-
-from tests.integration.helpers.common import (
-    CONTINUOUS_WRITE_APPLICATION,
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    check_app_status,
-    stop_continous_writes,
-)
-from tests.integration.helpers.sharding import (
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
+from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
+    CONTINUOUS_WRITE_APPLICATION,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_COLL_NAME,
     SHARD_ONE_DB_NAME,
@@ -25,20 +16,30 @@ from tests.integration.helpers.sharding import (
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
     SMALL_K8S_STORAGE,
+    TIMEOUT,
+)
+from tests.integration.helpers.continuous_writes_helpers import stop_continuous_writes
+from tests.integration.helpers.jubilant_sharding import (
     count_shard_writes,
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import (
+from tests.integration.helpers.jubilant_upgrades import (
     assert_successful_run_upgrade_sequence,
     refresh_with_juju,
 )
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
+)
+from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, substrate: Substrate, mongodb_charm, mongod_resource
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     num_units_cluster_config = {
@@ -47,82 +48,69 @@ async def test_build_and_deploy(
         SHARD_TWO_APP_NAME: 1,
     }
 
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
-        mongod_resource,
+        {},
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=20,
-        raise_on_blocked=False,
-        raise_on_error=False,
-    )
 
-    await integrate_sharding_components(ops_test)
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
+    integrate_sharding_components(juju)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
         timeout=TIMEOUT,
-        idle_period=120,
-        raise_on_blocked=False,
-        raise_on_error=False,
-        status="active",
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_rollback_on_shard_and_config_server(
-    ops_test: OpsTest,
+def test_rollback_on_shard_and_config_server(
+    juju: jubilant.Juju,
     substrate: Substrate,
     base_app_name: str,
-    mongod_base_path: Path,
     mongodb_charm: str,
-    mongod_resource: dict,
-    add_continuous_writes_to_shards,
+    mongod_resource: dict[str, str],
+    jubilant_add_continuous_writes_to_shards,
 ) -> None:
     """Verify that a config-server and shard can safely rollback without losing writes."""
-    await assert_successful_run_upgrade_sequence(
-        ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
+    assert_successful_run_upgrade_sequence(
+        juju, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
 
     revision = "test/0.0.0+dirty"
-    shard_revision_messages = {
-        app_name: (
-            f"Charm revision ({ops_test.model.applications[app_name].charm_url.rsplit('-', 1)[-1]}) "
-            f"is not up-to date with config-server ({revision}-locally built)."
-        )
+    shard_revision_statuses = {
+        app_name: [
+            ShardStatuses.shard_needs_upgrade(
+                str(juju.status().apps.get(app_name).charm_rev), "", revision, "-locally built"
+            )
+        ]
         for app_name in (SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME)
+    }
+    config_server_statuses = {
+        CONFIG_SERVER_APP_NAME: [
+            ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built")
+        ]
     }
 
     # Wait for statuses to settle down
-    await asyncio.gather(
-        check_app_status(
-            ops_test,
-            SHARD_ONE_APP_NAME,
-            status="blocked",
-            message=shard_revision_messages[SHARD_ONE_APP_NAME],
-        ),
-        check_app_status(
-            ops_test,
-            SHARD_TWO_APP_NAME,
-            status="blocked",
-            message=shard_revision_messages[SHARD_TWO_APP_NAME],
-        ),
-        check_app_status(
-            ops_test,
-            CONFIG_SERVER_APP_NAME,
-            status="waiting",
-            message=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
-        ),
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={},
+                expected_app_statuses=shard_revision_statuses | config_server_statuses,
+            )
+        )
     )
 
-    await assert_successful_run_upgrade_sequence(
-        ops_test,
+    assert_successful_run_upgrade_sequence(
+        juju,
         substrate,
         SHARD_ONE_APP_NAME,
         new_charm=mongodb_charm,
@@ -130,49 +118,45 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    await asyncio.gather(
-        check_app_status(
-            ops_test,
-            SHARD_TWO_APP_NAME,
-            status="blocked",
-            message=shard_revision_messages[SHARD_TWO_APP_NAME],
-        ),
-        ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
-        check_app_status(
-            ops_test,
-            CONFIG_SERVER_APP_NAME,
-            status="waiting",
-            message=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
-        ),
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={},
+                expected_app_statuses={
+                    SHARD_TWO_APP_NAME: shard_revision_statuses[SHARD_TWO_APP_NAME]
+                }
+                | config_server_statuses,
+            )
+        )
     )
 
-    await refresh_with_juju(
-        ops_test, CONFIG_SERVER_APP_NAME, channel="8/edge", charm_name=base_app_name
-    )
+    refresh_with_juju(juju, CONFIG_SERVER_APP_NAME, channel="8/edge", charm_name=base_app_name)
 
     # verify no writes were skipped during upgrade process
-    shard_one_expected_writes = await stop_continous_writes(
-        ops_test,
+    shard_one_expected_writes = stop_continuous_writes(
+        juju,
         client_app_name=CONTINUOUS_WRITE_APPLICATION,
         db_name=SHARD_ONE_DB_NAME,
         coll_name=SHARD_ONE_COLL_NAME,
     )
-    shard_two_expected_writes = await stop_continous_writes(
-        ops_test,
+    shard_two_expected_writes = stop_continuous_writes(
+        juju,
         client_app_name=CONTINUOUS_WRITE_APPLICATION,
         db_name=SHARD_TWO_DB_NAME,
         coll_name=SHARD_TWO_COLL_NAME,
     )
 
-    shard_one_actual_writes = await count_shard_writes(
-        ops_test,
+    shard_one_actual_writes = count_shard_writes(
+        juju,
         substrate,
         CONFIG_SERVER_APP_NAME,
         SHARD_ONE_DB_NAME,
         collection_name=SHARD_ONE_COLL_NAME,
     )
-    shard_two_actual_writes = await count_shard_writes(
-        ops_test,
+    shard_two_actual_writes = count_shard_writes(
+        juju,
         substrate,
         CONFIG_SERVER_APP_NAME,
         SHARD_TWO_DB_NAME,
