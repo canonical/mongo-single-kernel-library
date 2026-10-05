@@ -792,3 +792,56 @@ def jubilant_add_writes_to_shard(juju: jubilant.Juju, substrate: Substrate, appl
     remove_db_writes(mongos_client, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
     remove_db_writes(mongos_client, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
     mongos_client.close()
+
+
+@pytest.fixture
+def jubilant_add_continuous_writes_to_shards(
+    juju: jubilant.Juju, substrate: Substrate, application_path: str
+):
+    """Generates continuous writes on two shards."""
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+
+    # configure write app to use mongos uri
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+
+    password = get_password(
+        juju=juju, app_name=CONFIG_SERVER_APP_NAME, username=CHARMED_OPERATOR_USERNAME
+    )
+
+    _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
+    juju.config(app_name, {"mongos-uri": _mongos_uri})
+
+    start_continuous_writes(
+        juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    start_continuous_writes(
+        juju, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
+    )
+
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
+
+    mongos_client.admin.command("movePrimary", SHARD_ONE_DB_NAME, to=SHARD_ONE_APP_NAME)
+    mongos_client.admin.command("movePrimary", SHARD_TWO_DB_NAME, to=SHARD_TWO_APP_NAME)
+
+    mongos_client.close()
+
+    yield
+
+    stop_continuous_writes(
+        juju, app_name, db_name=SHARD_ONE_APP_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    stop_continuous_writes(
+        juju, app_name, db_name=SHARD_TWO_APP_NAME, coll_name=SHARD_TWO_COLL_NAME
+    )
+
+    clear_continuous_writes(
+        juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    clear_continuous_writes(
+        juju, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
+    )

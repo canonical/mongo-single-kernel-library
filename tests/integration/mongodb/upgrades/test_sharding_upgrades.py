@@ -2,20 +2,13 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
-    CONTINUOUS_WRITE_APPLICATION,
-    DEPLOYMENT_TIMEOUT,
-    find_unit,
-    stop_continous_writes,
-    unit_hostname,
-)
-from tests.integration.helpers.ha import cut_network_from_unit, restore_network_for_unit
-from tests.integration.helpers.sharding import (
+from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
+    CONTINUOUS_WRITE_APPLICATION,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_COLL_NAME,
     SHARD_ONE_DB_NAME,
@@ -23,17 +16,29 @@ from tests.integration.helpers.sharding import (
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
     SMALL_K8S_STORAGE,
+    TIMEOUT,
+)
+from tests.integration.helpers.continuous_writes_helpers import stop_continuous_writes
+from tests.integration.helpers.jubilant_common import (
+    find_leader,
+    find_non_leader,
+    unit_hostname,
+)
+from tests.integration.helpers.jubilant_ha import cut_network_from_unit, restore_network_to_unit
+from tests.integration.helpers.jubilant_sharding import (
     count_shard_writes,
     deploy_cluster_components,
     integrate_sharding_components,
 )
+from tests.integration.helpers.jubilant_upgrades import assert_successful_run_upgrade_sequence
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import assert_successful_run_upgrade_sequence
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, substrate: Substrate, mongodb_charm, mongod_resource, application_path
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     num_units_cluster_config = {
@@ -42,82 +47,75 @@ async def test_build_and_deploy(
         SHARD_TWO_APP_NAME: 3,
     }
 
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
-        mongod_resource,
+        {},
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=20,
-        raise_on_blocked=False,
-        raise_on_error=False,
-    )
 
-    await integrate_sharding_components(ops_test)
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        timeout=DEPLOYMENT_TIMEOUT,
-        status="active",
-        idle_period=20,
-        raise_on_blocked=False,
-        raise_on_error=False,
+    integrate_sharding_components(juju)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_upgrade(
-    ops_test: OpsTest,
+def test_upgrade(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongodb_charm,
-    mongod_resource,
-    add_continuous_writes_to_shards,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    jubilant_add_continuous_writes_to_shards,
 ) -> None:
     """Verify that the sharded cluster can be safely upgraded without losing writes."""
     for sharding_component in CLUSTER_COMPONENTS:
-        await assert_successful_run_upgrade_sequence(
-            ops_test,
+        assert_successful_run_upgrade_sequence(
+            juju,
             substrate,
             app_name=sharding_component,
             new_charm=mongodb_charm,
             mongod_resource=mongod_resource,
         )
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )
 
-    shard_one_expected_writes = await stop_continous_writes(
-        ops_test,
+    shard_one_expected_writes = stop_continuous_writes(
+        juju,
         client_app_name=CONTINUOUS_WRITE_APPLICATION,
         db_name=SHARD_ONE_DB_NAME,
         coll_name=SHARD_ONE_COLL_NAME,
     )
-    shard_two_total_expected_writes = await stop_continous_writes(
-        ops_test,
+    shard_two_total_expected_writes = stop_continuous_writes(
+        juju,
         client_app_name=CONTINUOUS_WRITE_APPLICATION,
         db_name=SHARD_TWO_DB_NAME,
         coll_name=SHARD_TWO_COLL_NAME,
     )
 
-    actual_shard_one_writes = await count_shard_writes(
-        ops_test,
+    actual_shard_one_writes = count_shard_writes(
+        juju,
         substrate,
         config_server_name=CONFIG_SERVER_APP_NAME,
         db_name=SHARD_ONE_DB_NAME,
         collection_name=SHARD_ONE_COLL_NAME,
     )
-    actual_shard_two_writes = await count_shard_writes(
-        ops_test,
+    actual_shard_two_writes = count_shard_writes(
+        juju,
         substrate,
         config_server_name=CONFIG_SERVER_APP_NAME,
         db_name=SHARD_TWO_DB_NAME,
@@ -132,63 +130,57 @@ async def test_upgrade(
     ), "missed writes during upgrade procedure."
 
 
-@pytest.mark.abort_on_fail
-async def test_pre_upgrade_check_success(ops_test: OpsTest) -> None:
+def test_pre_upgrade_check_success(juju: jubilant.Juju) -> None:
     """Verify that the pre-refresh check succeeds in the happy path."""
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )
 
     for sharding_component in CLUSTER_COMPONENTS:
-        leader_unit = await find_unit(ops_test, leader=True, app_name=sharding_component)
-        action = await leader_unit.run_action("pre-refresh-check")
-        await action.wait()
-        assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
+        leader_name, _ = find_leader(juju, app_name=sharding_component)
+        task = juju.run(leader_name, "pre-refresh-check")
+        assert task.status == "completed", "pre-refresh-check failed, expected to succeed."
 
 
-@pytest.mark.abort_on_fail
-async def test_pre_upgrade_check_failure(
-    ops_test: OpsTest, substrate: Substrate, chaos_mesh
+def test_pre_upgrade_check_failure(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh
 ) -> None:
     """Verify that the pre-refresh check fails if there is a problem with one of the shards."""
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
+    assert juju.model
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_TWO_APP_NAME)
+    leader_name, _ = find_leader(juju, app_name=SHARD_TWO_APP_NAME)
+    non_leader_name, _ = find_non_leader(juju, app_name=SHARD_TWO_APP_NAME)
 
-    non_leader_unit = None
-    for unit in ops_test.model.applications[SHARD_TWO_APP_NAME].units:
-        if unit.name != leader_unit.name:
-            non_leader_unit = unit
-            break
+    machine_name = unit_hostname(juju, non_leader_name)
 
-    assert non_leader_unit, "No non leader unit found"
-
-    machine_name = await unit_hostname(ops_test, unit.name)
-
-    cut_network_from_unit(ops_test, substrate, machine_name)
+    cut_network_from_unit(substrate, juju.model, machine_name)
 
     for sharding_component in CLUSTER_COMPONENTS:
-        leader_unit = await find_unit(ops_test, leader=True, app_name=sharding_component)
-        action = await leader_unit.run_action("pre-refresh-check")
-        await action.wait()
-        assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
+        with pytest.raises(jubilant.TaskError) as error:
+            leader_name, _ = find_leader(juju, app_name=sharding_component)
+            juju.run(leader_name, "pre-refresh-check")
+        assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     # restore network after test
-    restore_network_for_unit(ops_test, substrate, machine_name)
-    await ops_test.model.wait_for_idle(
-        apps=[SHARD_TWO_APP_NAME],
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
+    restore_network_to_unit(substrate, substrate, machine_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
     )

@@ -4,128 +4,154 @@
 
 import logging
 
-import pytest
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    deploy_charm,
-    find_unit,
-    get_app_name,
-    get_juju_status,
-    get_unit_id,
-)
-from tests.integration.helpers.ha import (
+from tests.integration.helpers.constants import DEPLOYMENT_TIMEOUT, TIMEOUT, UNIT_IDS
+from tests.integration.helpers.continuous_writes_helpers import (
     verify_writes,
 )
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    existing_app,
+    find_leader,
+    get_unit_id,
+)
+from tests.integration.helpers.jubilant_upgrades import refresh_charm
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
+def test_build_and_deploy(juju: jubilant.Juju, substrate: Substrate, base_app_name: str) -> None:
     """Build and deploy one unit of MongoDB."""
     mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm_name,
         substrate,
         app_name=base_app_name,
         mongod_resource={},  # unused
         channel="8/edge",
+        num_units=len(UNIT_IDS),
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[base_app_name],
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, base_app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=20,
-        raise_on_error=False,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_upgrade(
-    ops_test: OpsTest,
+def test_upgrade(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
-    continuous_writes_to_db,
+    jubilant_continuous_writes_to_db,
 ) -> None:
     """Verifies that the upgrade can run successfully."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    leader_id = get_unit_id(leader_unit.name)
-    mongodb_application = ops_test.model.applications[app_name]
+    leader_name, _ = find_leader(juju, app_name)
+    leader_id = get_unit_id(leader_name)
+
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
-        mongodb_application.units,
-        key=lambda unit: int(unit.name.split("/")[1]),
+        juju.status().get_units(app_name),
+        key=lambda unit: get_unit_id(unit),
         reverse=True,
     )
 
     logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
+    task = juju.run(leader_name, "pre-refresh-check")
 
-    assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
+    assert task.status == "completed", "pre-refresh-check-failed, expected to succeed"
 
     logger.info("Refreshing the application")
-    await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
-    await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
+    refresh_charm(juju, substrate, app_name, mongodb_charm, mongod_resource)
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            app_name,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
+    if "incompatible" in juju.status().apps.get(app_name).app_status.message:
         logger.info("Upgrade is blocked due to incompatibility")
 
-        logger.info(f"Continue refresh on unit {refresh_order[0].name}")
+        logger.info(f"Continue refresh on unit {refresh_order[0]}")
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        force_refresh_action = await refresh_order[0].run_action(
+        force_refresh_task = juju.run(
+            refresh_order[0],
             "force-refresh-start",
-            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+            params={"check-compatibility": False, "run-pre-refresh-checks": False},
         )
-        force_refresh_response = await force_refresh_action.wait()
-        assert force_refresh_response.results.get("return-code") == 0, "action failed"
+        assert force_refresh_task.results.get("return-code") == 0, "action failed"
 
-    await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            app_name,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    if "resume-refresh" in mongodb_application.status_message:
+    if "resume-refresh" in juju.status().apps.get(app_name).app_status.message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")
         if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
-            unit = leader_unit
+            unit = leader_name
 
-        action = await unit.run_action("resume-refresh")
-        await action.wait()
+        task = juju.run(unit, "resume-refresh")
+
         if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
         ):
-            assert action.status == "completed", "resume-refresh failed, expected to succeed."
+            assert task.status == "completed", "resume-refresh failed, expected to succeed."
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=120
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # verify that the no writes were skipped
-    await verify_writes(ops_test, substrate, app_name)
+    verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
-async def test_preflight_check(ops_test: OpsTest) -> None:
+def test_preflight_check(juju: jubilant.Juju) -> None:
     """Verifies that the preflight check can run successfully."""
-    app_name = await get_app_name(ops_test)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
-    assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
+    app_name = existing_app(juju)
+    assert app_name
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=20
+    leader_name, _ = find_leader(juju, app_name)
+    logger.info("Calling pre-refresh-check")
+    task = juju.run(leader_name, "pre-refresh-check")
+
+    assert task.status == "completed", "pre-refresh-check failed, expected to succeed."
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
