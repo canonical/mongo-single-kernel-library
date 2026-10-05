@@ -9,7 +9,6 @@ import pytest
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
-from tests.integration.helpers.backups import S3_APP_NAME
 from tests.integration.helpers.constants import CLUSTER_COMPONENTS, CONFIG_SERVER_APP_NAME
 from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
@@ -75,7 +74,6 @@ def test_build_and_deploy(
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            S3_APP_NAME,
             idle_period=30,
         ),
         timeout=TIMEOUT,

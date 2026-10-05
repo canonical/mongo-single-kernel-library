@@ -119,7 +119,7 @@ def test_blocked_incorrect_creds(juju: jubilant.Juju, cloud_configs: CloudConfig
         {"access-key": "user", "secret-key": "doesnt-exist"},
     )
 
-    # With S3 integrator on channel 2/stable, the creds are share only if the bucket can be created.
+    # With S3 integrator on channel 2/stable, the creds are shared after the bucket is be created.
     # Hence the status is missing conf on MongoDB side.
     juju.wait(
         lambda status: (

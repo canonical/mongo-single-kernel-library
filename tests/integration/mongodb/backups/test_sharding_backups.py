@@ -48,7 +48,7 @@ logger = getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
+def test_build_and_deploy(
     juju: jubilant.Juju,
     mongodb_charm: str,
     substrate: Substrate,
@@ -134,20 +134,17 @@ def test_create_and_list_backups_in_cluster(juju: jubilant.Juju) -> None:
 def test_shards_cannot_run_backup_actions(juju: jubilant.Juju) -> None:
     shard_unit, _ = find_leader(juju, app_name=SHARD_ONE_APP_NAME)
 
-    try:
+    with pytest.raises(jubilant.TaskError) as error:
         juju.run(shard_unit, "create-backup")
-    except jubilant.TaskError as e:
-        assert e.task.status == "failed", "shard ran create-backup command, it shouldn't."
+    assert error.value.task.status == "failed", "shard ran create-backup command, it shouldn't."
 
-    try:
+    with pytest.raises(jubilant.TaskError) as error:
         juju.run(shard_unit, "list-backups")
-    except jubilant.TaskError as e:
-        assert e.task.status == "failed", "shard ran list-backup command, it shouldn't."
+    assert error.value.task.status == "failed", "shard ran list-backup command, it shouldn't."
 
-    try:
+    with pytest.raises(jubilant.TaskError) as error:
         juju.run(shard_unit, "restore")
-    except jubilant.TaskError as e:
-        assert e.task.status == "failed", "shard ran restore command, it shouldn't."
+    assert error.value.task.status == "failed", "shard ran restore command, it shouldn't."
 
 
 @pytest.mark.abort_on_fail

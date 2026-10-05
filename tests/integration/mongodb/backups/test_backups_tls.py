@@ -106,7 +106,9 @@ def test_s3_integration(juju: jubilant.Juju, s3_bucket: Bucket) -> None:
 
 
 @pytest.mark.abort_on_fail
-def test_backup_restore(juju: jubilant.Juju, substrate: Substrate, add_writes_to_db) -> None:
+def test_backup_restore(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_db
+) -> None:
     """Simple backup tests that verifies that writes are correctly restored."""
     app_name = existing_app(juju)
     assert app_name
