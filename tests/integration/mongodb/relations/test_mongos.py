@@ -67,7 +67,7 @@ def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=(1 if substrate == Substrate.k8s else 0),
+        num_units=1,
     )
     juju.deploy(
         DATA_INTEGRATOR_APP_NAME,

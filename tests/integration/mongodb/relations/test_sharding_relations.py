@@ -86,7 +86,7 @@ def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=(1 if substrate == Substrate.k8s else 0),
+        num_units=1,
     )
     juju.deploy(
         TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE
