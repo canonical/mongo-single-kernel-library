@@ -7,14 +7,20 @@ import shlex
 
 import jubilant
 import tomllib
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from tests.integration.helpers.constants import DEPLOYMENT_TIMEOUT, TIMEOUT
 from tests.integration.helpers.jubilant_common import fast_forward, find_leader, get_unit_id
-from tests.integration.helpers.status_helpers import are_agents_idle
+from tests.integration.helpers.status_helpers import are_agents_idle, unit_in_status
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+UPGRADE_INCOMPATIBLE_STATUS = StatusObject(
+    status="blocked",
+    message="Refresh incompatible. Rollback with instructions in Charmhub docs or see `juju debug-log`",
+)
 
 
 @retry(
@@ -94,7 +100,12 @@ def assert_successful_run_upgrade_sequence(
         timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    if "incompatible" in juju.status().apps.get(app_name).app_status.message:
+    if unit_in_status(
+        juju.status(),
+        app_name,
+        refresh_order[0],
+        UPGRADE_INCOMPATIBLE_STATUS,
+    ):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0]}")

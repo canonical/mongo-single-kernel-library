@@ -16,10 +16,11 @@ from tests.integration.helpers.jubilant_common import (
     find_leader,
     get_unit_id,
 )
-from tests.integration.helpers.jubilant_upgrades import refresh_charm
+from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS, refresh_charm
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
+    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -87,7 +88,12 @@ def test_upgrade(
         timeout=TIMEOUT,
     )
 
-    if "incompatible" in juju.status().apps.get(app_name).app_status.message:
+    if unit_in_status(
+        juju.status(),
+        app_name,
+        refresh_order[0],
+        UPGRADE_INCOMPATIBLE_STATUS,
+    ):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0]}")
@@ -116,7 +122,10 @@ def test_upgrade(
         else:
             unit = leader_name
 
-        task = juju.run(unit, "resume-refresh")
+        try:
+            task = juju.run(unit, "resume-refresh")
+        except jubilant.TaskError as error:
+            task = error.task
 
         if (substrate == Substrate.lxd) or (
             substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
