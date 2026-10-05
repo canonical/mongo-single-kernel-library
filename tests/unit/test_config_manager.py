@@ -26,15 +26,8 @@ from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.parametrize(
-    "role,expected_parameter",
-    (
-        (MongoDBRoles.CONFIG_SERVER, {"sharding": {"clusterRole": "configsvr"}}),
-        (MongoDBRoles.SHARD, {"sharding": {"clusterRole": "shardsvr"}}),
-        (MongoDBRoles.REPLICATION, {}),
-    ),
-)
-def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: dict[str, Any]):
+@pytest.fixture
+def mongodb_config_manager(mocker, role):
     mock = mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.write",
     )
@@ -71,6 +64,20 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
         workload,
     )
 
+    return manager, mock
+
+
+@pytest.mark.parametrize(
+    "role,expected_parameter",
+    (
+        (MongoDBRoles.CONFIG_SERVER, {"sharding": {"clusterRole": "configsvr"}}),
+        (MongoDBRoles.SHARD, {"sharding": {"clusterRole": "shardsvr"}}),
+        (MongoDBRoles.REPLICATION, {}),
+    ),
+)
+def test_mongodb_config_manager_vm(mongodb_config_manager, expected_parameter: dict[str, Any]):
+    manager, mock = mongodb_config_manager
+    manager.state.substrate = Substrates.VM
     port_parameter = manager.port_parameter
     replset_option = manager.replset_option
     role_parameter = manager.role_parameter
@@ -121,6 +128,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     }
     assert client_tls_parameters == {}
     assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
+    assert manager.cluster_ip_source_allowlist == ["10.0.0.1/24", "127.0.0.1"]
 
     assert (
         all_params
@@ -157,7 +165,22 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     )
 
 
-@pytest.mark.skip_if_substrate(Substrate.k8s)
+@pytest.mark.parametrize(
+    "role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.SHARD, MongoDBRoles.REPLICATION]
+)
+def test_mongodb_config_manager_omits_allowlist_k8s(mongodb_config_manager):
+    manager, mock_write = mongodb_config_manager
+    manager.state.substrate = Substrates.K8S
+
+    config = manager.build_config()
+    manager.set_environment()
+
+    assert manager.cluster_ips == {}
+    assert manager.cluster_ip_source_allowlist == []
+    assert "clusterIpSourceAllowlist" not in config["security"]
+    mock_write.assert_called_once_with(manager.file, safe_dump(config))
+
+
 def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
     state = mocker.MagicMock(CharmState)
     state.peer_network.return_value.bind_addresses = []

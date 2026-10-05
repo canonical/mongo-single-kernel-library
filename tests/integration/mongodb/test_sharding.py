@@ -170,8 +170,9 @@ def test_cluster_active(juju: jubilant.Juju, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_cluster_ip_source_allowlists(juju: jubilant.Juju, substrate: Substrate) -> None:
-    """Verify cluster allowlists contain the replica-set IPs expected for the substrate."""
+    """Verify VM cluster allowlists contain the expected replica-set IPs."""
     verify_sharding_cluster_ip_source_allowlists(
         juju,
         substrate,

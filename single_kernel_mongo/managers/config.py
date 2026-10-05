@@ -540,7 +540,10 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def cluster_ips(self) -> dict[str, Any]:
-        """The allowed cluster IPs."""
+        """The allowed cluster IPs for the VM substrate."""
+        if self.state.substrate == Substrates.K8S:
+            return {}
+
         # Always include IPs from the local peer relation
         cidrs_list = cidrs(self.state.peer_network().bind_addresses)
         cidrs_list.extend(self.state.peer_database_addresses)
@@ -566,6 +569,8 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def cluster_ip_source_allowlist(self) -> list[str]:
         """Return the computed cluster IP source allowlist."""
+        if self.state.substrate == Substrates.K8S:
+            return []
         return self.cluster_ips["security"]["clusterIpSourceAllowlist"]
 
     def sync_cluster_ip_source_allowlist_to_file(self, new_allowlist: list[str]) -> None:
