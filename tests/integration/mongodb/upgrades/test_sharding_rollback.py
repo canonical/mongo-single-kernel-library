@@ -160,7 +160,7 @@ def test_rollback_on_config_server(
             "force-refresh-start",
             params={"check-compatibility": False, "run-pre-refresh-checks": False},
         )
-        assert force_refresh_task.results.get("return-code") == 0, "action failed"
+        assert force_refresh_task.return_code == 0, "action failed"
 
     juju.wait(
         lambda status: are_agents_idle(
