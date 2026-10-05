@@ -83,7 +83,7 @@ class ConfigServerEventHandler(Object):
         try:
             self.manager.state.statuses.delete(
                 ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.manager.name,
             )
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
@@ -107,7 +107,7 @@ class ConfigServerEventHandler(Object):
         ) as e:
             self.manager.state.statuses.add(
                 ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.manager.name,
             )
             defer_event_with_info_log(logger, event, str(type(event)), str(e))

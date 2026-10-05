@@ -17,7 +17,7 @@ def does_status_match(
     model_status: jubilant.Status,
     expected_unit_statuses: dict[str, list[StatusObject]] | None = None,
     expected_app_statuses: dict[str, list[StatusObject]] | None = None,
-    num_units: dict[str, int] | None = None,
+    num_units: dict[str, int | None] | None = None,
 ) -> bool:
     """Check that current app and/or unit status matches expectation for given apps.
 
@@ -53,6 +53,7 @@ def _does_unit_workload_status_match(
         all(
             any(
                 does_message_match(unit_status.workload_status.message, status)
+                and unit_status.workload_status.current == status.status
                 for status in expected_status
             )
             for unit_status in model_status.get_units(app).values()
@@ -73,6 +74,7 @@ def _does_app_status_match(
     return all(
         any(
             does_message_match(model_status.apps.get(app).app_status.message, status)
+            and model_status.apps.get(app).app_status.current == status.status
             for status in expected_status
         )
         for app, expected_status in expected_statuses.items()
@@ -83,6 +85,8 @@ def does_message_match(expected_status_message: str, status: StatusObject) -> bo
     """Check if the status message matches the expected message."""
     try:
         juju_status = StatusBase.from_name(status.status, status.message)
+        if expected_status_message == "":
+            return juju_status.message == "" or (not status.short_message)
         return (
             expected_status_message == juju_status.message
             or expected_status_message.startswith(juju_status.message)
@@ -100,7 +104,7 @@ def are_apps_active_and_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that all given apps are active, their agents idle (optional idle interval too).
 
@@ -127,7 +131,7 @@ def are_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that agents of all given apps are idle (optional idle interval too).
 
