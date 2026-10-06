@@ -5,7 +5,6 @@
 from logging import getLogger
 
 import jubilant
-import pytest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.statuses import BackupStatuses
@@ -44,7 +43,6 @@ from tests.integration.helpers.types import CloudConfigs, Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -76,7 +74,6 @@ def test_deploy_charms(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_blocked_missing_config(juju: jubilant.Juju) -> None:
     """Test that when charm is missing pbm information that it reports that."""
     app_name = existing_app(juju)
@@ -103,7 +100,6 @@ def test_blocked_missing_config(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_blocked_incorrect_creds(juju: jubilant.Juju, cloud_configs: CloudConfigs) -> None:
     """Verifies that the charm goes into blocked status when GCS creds are incorrect."""
     app_name = existing_app(juju)
@@ -137,7 +133,6 @@ def test_blocked_incorrect_creds(juju: jubilant.Juju, cloud_configs: CloudConfig
     )
 
 
-@pytest.mark.abort_on_fail
 def test_ready_correct_conf(juju: jubilant.Juju, cloud_configs: CloudConfigs) -> None:
     """Verifies charm goes into active status when gcs config and creds options are correct."""
     app_name = existing_app(juju)
@@ -160,7 +155,6 @@ def test_ready_correct_conf(juju: jubilant.Juju, cloud_configs: CloudConfigs) ->
     )
 
 
-@pytest.mark.abort_on_fail
 def test_create_and_list_backups(juju: jubilant.Juju) -> None:
     """Tests that we can create a backup, and that it is listed in the backups."""
     app_name = existing_app(juju)
@@ -197,7 +191,6 @@ def test_create_and_list_backups(juju: jubilant.Juju) -> None:
         assert backups == 1, "Backup not created."
 
 
-@pytest.mark.abort_on_fail
 def test_restore(juju: jubilant.Juju, jubilant_add_writes_to_db, substrate: Substrate) -> None:
     """Simple backup tests that verifies that writes are correctly restored."""
     app_name = existing_app(juju)
@@ -381,7 +374,6 @@ def test_restore_new_cluster(
         ), "new cluster writes do not match old cluster writes after restore"
 
 
-@pytest.mark.abort_on_fail
 def test_update_backup_password(juju: jubilant.Juju) -> None:
     """Verifies that after changing the backup password the pbm tool is updated and functional."""
     app_name = existing_app(juju, test_deployments=[f"{NEW_CLUSTER}-gcs"])

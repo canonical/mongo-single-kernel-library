@@ -6,7 +6,6 @@ import base64
 from logging import getLogger
 
 import jubilant
-import pytest
 from mypy_boto3_s3.service_resource import Bucket
 
 from tests.integration.helpers.constants import (
@@ -42,7 +41,6 @@ from tests.integration.helpers.types import Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -98,7 +96,6 @@ def test_deploy_charms(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_s3_integration(
     juju: jubilant.Juju, substrate: Substrate, s3_bucket: Bucket, storage_config: dict[str, str]
 ) -> None:
@@ -122,7 +119,7 @@ def test_s3_integration(
     certificate: str = storage_config["tls-ca-chain"]
 
     for shard in SHARD_APPS:
-        for unit_name in juju.status().get_units(app_name):
+        for unit_name in juju.status().get_units(shard):
             cert_file_content = read_remote_file(
                 juju,
                 substrate,
@@ -135,7 +132,6 @@ def test_s3_integration(
             )
 
 
-@pytest.mark.abort_on_fail
 def test_create_backup(juju: jubilant.Juju) -> None:
     """With writes in the DB test creating a backup."""
     app_name = CONFIG_SERVER_APP_NAME
@@ -144,7 +140,6 @@ def test_create_backup(juju: jubilant.Juju) -> None:
     create_and_verify_backup(juju, app_name)
 
 
-@pytest.mark.abort_on_fail
 def test_backup_restore(
     juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_shard
 ) -> None:
@@ -208,7 +203,6 @@ def test_backup_restore(
     verify_writes_restored(juju, substrate, cluster_writes)
 
 
-@pytest.mark.abort_on_fail
 def test_remove_integration(juju: jubilant.Juju, substrate: Substrate) -> None:
     app_name = CONFIG_SERVER_APP_NAME
 
@@ -223,7 +217,7 @@ def test_remove_integration(juju: jubilant.Juju, substrate: Substrate) -> None:
     )
 
     for shard in SHARD_APPS:
-        for unit_name in juju.status().get_units(app_name):
+        for unit_name in juju.status().get_units(shard):
             still_present = unit_has_file(
                 juju,
                 substrate,

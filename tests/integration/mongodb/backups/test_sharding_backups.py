@@ -47,7 +47,6 @@ from tests.integration.helpers.types import CloudConfigs, Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -83,7 +82,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_set_credentials_in_cluster(juju: jubilant.Juju, cloud_configs: CloudConfigs) -> None:
     """Tests that sharded cluster can be configured for s3 configurations."""
     configuration_parameters, credentials = cloud_configs["AWS"]
@@ -119,7 +117,6 @@ def test_set_credentials_in_cluster(juju: jubilant.Juju, cloud_configs: CloudCon
     )
 
 
-@pytest.mark.abort_on_fail
 def test_create_and_list_backups_in_cluster(juju: jubilant.Juju) -> None:
     """Tests that sharded cluster can successfully create and list backups."""
     # verify backup list works
@@ -130,7 +127,6 @@ def test_create_and_list_backups_in_cluster(juju: jubilant.Juju) -> None:
     create_and_verify_backup(juju, CONFIG_SERVER_APP_NAME)
 
 
-@pytest.mark.abort_on_fail
 def test_shards_cannot_run_backup_actions(juju: jubilant.Juju) -> None:
     shard_unit, _ = find_leader(juju, app_name=SHARD_ONE_APP_NAME)
 
@@ -147,7 +143,6 @@ def test_shards_cannot_run_backup_actions(juju: jubilant.Juju) -> None:
     assert error.value.task.status == "failed", "shard ran restore command, it shouldn't."
 
 
-@pytest.mark.abort_on_fail
 def test_rotate_backup_password(juju: jubilant.Juju) -> None:
     """Tests that sharded cluster can successfully create and list backups."""
     juju.wait(
@@ -210,7 +205,6 @@ def test_rotate_backup_password(juju: jubilant.Juju) -> None:
     create_and_verify_backup(juju, app_name=CONFIG_SERVER_APP_NAME)
 
 
-@pytest.mark.abort_on_fail
 def test_restore_backup(
     juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_shard
 ) -> None:

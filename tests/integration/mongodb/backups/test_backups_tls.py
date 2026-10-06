@@ -5,7 +5,6 @@
 from logging import getLogger
 
 import jubilant
-import pytest
 from mypy_boto3_s3.service_resource import Bucket
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -35,7 +34,6 @@ from tests.integration.helpers.types import Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -83,7 +81,6 @@ def test_deploy_charms(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_s3_integration(juju: jubilant.Juju, s3_bucket: Bucket) -> None:
     """Integrate charm and s3-integrator."""
     app_name = existing_app(juju)
@@ -105,7 +102,6 @@ def test_s3_integration(juju: jubilant.Juju, s3_bucket: Bucket) -> None:
     assert s3_bucket.meta.client.head_bucket(Bucket=s3_bucket.name)
 
 
-@pytest.mark.abort_on_fail
 def test_backup_restore(
     juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_db
 ) -> None:

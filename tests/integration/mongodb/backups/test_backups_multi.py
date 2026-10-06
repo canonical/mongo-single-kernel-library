@@ -5,7 +5,6 @@
 from logging import getLogger
 
 import jubilant
-import pytest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.statuses import BackupStatuses
@@ -39,7 +38,6 @@ from tests.integration.helpers.types import CloudConfigs, Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -72,7 +70,6 @@ def test_deploy_charms(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_ready_correct_conf(juju: jubilant.Juju, cloud_configs: CloudConfigs) -> None:
     """Verifies charm goes into active status when s3 config and creds options are correct."""
     app_name = existing_app(juju)
@@ -107,7 +104,6 @@ def test_ready_correct_conf(juju: jubilant.Juju, cloud_configs: CloudConfigs) ->
     )
 
 
-@pytest.mark.abort_on_fail
 def test_both_integrated_incompatible(juju: jubilant.Juju, substrate: Substrate) -> None:
     app_name = existing_app(juju)
     assert app_name
@@ -155,10 +151,9 @@ def test_both_integrated_incompatible(juju: jubilant.Juju, substrate: Substrate)
     )
 
 
-@pytest.mark.abort_on_fail
 def test_multi_backup(
     juju: jubilant.Juju,
-    continuous_writes_to_db,
+    jubilant_continuous_writes_to_db,
 ):
     """With writes in the DB test creating a backup while another one is running.
 
