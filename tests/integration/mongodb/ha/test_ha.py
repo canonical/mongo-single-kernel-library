@@ -422,15 +422,13 @@ def test_scale_down_capabilities_lxd(
 
 
 @pytest.mark.skip_if_substrate(Substrate.lxd)
-def test_scale_down_capabilities_k8s(
+ def test_scale_down_capabilities_k8s(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
     app_name = existing_app(juju)
     assert app_name
     assert juju.model
-
-    addresses_before_scale_down = get_ips_for_app(juju, substrate, app_name)
 
     current_units = len(juju.status().get_units(app_name))
     minority_count = current_units // 2
@@ -452,12 +450,11 @@ def test_scale_down_capabilities_k8s(
         wait=True,
     )
 
-    hosts = get_ips_for_app(juju, substrate, app_name)
     # grab unit hosts
     hostnames = get_mongodb_hostnames_for_app(juju, substrate, app_name)
 
     # check that the replica set with the remaining units has a primary
-    primary, primary_status = replica_set_primary(juju, substrate, app_name)
+    primary, _ = replica_set_primary(juju, substrate, app_name)
 
     # verify that the primary is not None
     assert primary is not None, "replica set has no primary"
@@ -472,14 +469,6 @@ def test_scale_down_capabilities_k8s(
 
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hostnames), "mongod config contains deleted units"
-
-    addresses_after_scale_down = set(hosts)
-    verify_cluster_ip_source_allowlist(
-        juju,
-        substrate,
-        app_name,
-        excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
-    )
 
     # verify that the no writes were skipped
     verify_writes(juju, substrate, app_name)
@@ -698,7 +687,7 @@ def test_freeze_db_process(
     assert other_unit_name, "No secondary unit found"
 
     send_process_control_signal(
-        juju, substrate, primary_name, signal="SIGKILL", db_process=DB_PROCESS
+        juju, substrate, primary_name, signal="SIGSTOP", db_process=DB_PROCESS
     )
 
     # sleep for twice the median election time

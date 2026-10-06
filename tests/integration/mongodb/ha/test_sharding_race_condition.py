@@ -33,7 +33,7 @@ def test_build_and_deploy(
     substrate: Substrate,
     mongod_resource: dict[str, str],
 ) -> None:
-    """Build and deploy 2 config servers, one shard and one mongos."""
+    """Deploys a config-sever, and 3 shards."""
     deploy_charm(
         juju=juju,
         charm=mongodb_charm,
