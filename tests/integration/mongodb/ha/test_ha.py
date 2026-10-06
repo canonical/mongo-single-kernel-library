@@ -422,7 +422,7 @@ def test_scale_down_capabilities_lxd(
 
 
 @pytest.mark.skip_if_substrate(Substrate.lxd)
- def test_scale_down_capabilities_k8s(
+def test_scale_down_capabilities_k8s(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
