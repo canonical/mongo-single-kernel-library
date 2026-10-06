@@ -76,7 +76,7 @@ def test_build_and_deploy(
     mongod_resource: dict[str, str],
     base_app_name: str,
 ):
-    """Build and deploy one unit of MongoDB."""
+    """Build and deploy three units of MongoDB."""
     if substrate == Substrate.lxd:
         logger.info("Create storage pool on VM")
         juju.cli("create-storage-pool", "mongodb-storage", "lxd")
@@ -422,7 +422,7 @@ def test_scale_down_capabilities_lxd(
 
 
 @pytest.mark.skip_if_substrate(Substrate.lxd)
-async def test_scale_down_capabilities_k8s(
+def test_scale_down_capabilities_k8s(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
@@ -520,7 +520,7 @@ def test_replication_across_members(
     verify_writes(juju, substrate, app_name)
 
 
-async def test_unique_cluster_dbs(
+def test_unique_cluster_dbs(
     juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
@@ -578,7 +578,7 @@ async def test_unique_cluster_dbs(
     verify_writes(juju, substrate, app_name)
 
 
-async def test_replication_member_scaling(
+def test_replication_member_scaling(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ) -> None:
     """Verify newly added and newly removed members properly replica data.
@@ -923,7 +923,6 @@ def test_full_cluster_restart(
     logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
 
-    # verify all units are up and running
     # verify all units are up and running
     for unit_name, unit_status in juju.status().get_units(app_name).items():
         ip_address = get_ip_from_unit(substrate, unit_status)
