@@ -24,7 +24,6 @@ from tests.integration.helpers.common import (
     ProcessError,
     SecretNotFoundError,
     find_json,
-    mongodb_config_path,
     mongosh,
 )
 from tests.integration.helpers.constants import (
@@ -49,25 +48,27 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
-def external_cert_path(substrate: Substrate) -> str:
-    """Path of the external CA cert for the substrate."""
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
+def mongodb_base_path(substrate: Substrate) -> str:
+    if substrate == Substrate.lxd:
+        return MONGODB_SNAP_CONF_DIR
+    return MONGODB_ROCK_CONF_DIR
 
 
-def external_pem_path(substrate: Substrate) -> str:
-    """Path of the external CA PEM for the substrate."""
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
+def mongodb_config_path(substrate: Substrate) -> str:
+    """Return the path to the mongod configuration file."""
+    return f"{mongodb_base_path(substrate)}/mongod.conf"
 
 
-def internal_cert_path(substrate: Substrate) -> str:
-    """Path of the internal CA cert for the substrate."""
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
+def external_cert_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/external-ca.crt"
+
+
+def external_pem_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/external-cert.pem"
+
+
+def internal_cert_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/internal-ca.crt"
 
 
 @contextmanager
