@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CONFIG_SERVER_APP_NAME,
@@ -77,7 +76,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_immediate_relate(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests the immediate integration of cluster components works without error."""
     juju.integrate(

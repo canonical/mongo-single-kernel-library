@@ -6,7 +6,6 @@ import time
 from logging import getLogger
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.common import CHARMED_OPERATOR_USERNAME
 from tests.integration.helpers.constants import (
@@ -48,7 +47,6 @@ from tests.integration.helpers.types import Substrate
 logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -83,7 +81,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_network_cut(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db, jubilant_chaos_mesh
 ):

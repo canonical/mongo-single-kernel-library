@@ -176,7 +176,6 @@ def test_storage_re_use_lxd(
     verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_storage_re_use_k8s(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
@@ -629,7 +628,6 @@ async def test_replication_member_scaling(
     verify_writes(juju, substrate, app_name)
 
 
-@pytest.mark.abort_on_fail
 def test_kill_db_process(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
@@ -835,7 +833,6 @@ def test_restart_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.abort_on_fail
 def test_full_cluster_crash(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -896,7 +893,6 @@ def test_full_cluster_crash(
         patch_restart_delay(juju, substrate, unit_name=unit_name, delay=None)
 
 
-@pytest.mark.abort_on_fail
 def test_full_cluster_restart(
     juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
