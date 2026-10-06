@@ -91,7 +91,7 @@ def test_integrate_with_spaces(juju: jubilant.Juju, substrate: Substrate):
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, CONTINUOUS_WRITE_APPLICATION, idle_period=20
+            status, app_name, CONTINUOUS_WRITE_APPLICATION, idle_period=20
         ),
         timeout=TIMEOUT,
     )
@@ -132,13 +132,16 @@ def test_integrate_with_isolated_space(juju: jubilant.Juju, application_path: st
         lambda status: (
             jubilant.all_waiting(status, ISOLATED_APP_NAME)
             and jubilant.all_agents_idle(status, ISOLATED_APP_NAME)
-        )
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     juju.integrate(f"{app_name}:database", f"{ISOLATED_APP_NAME}:mongodb")
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, ISOLATED_APP_NAME, idle_period=20),
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, ISOLATED_APP_NAME, idle_period=20
+        ),
         timeout=TIMEOUT,
     )
 
