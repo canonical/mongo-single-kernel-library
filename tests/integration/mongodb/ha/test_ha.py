@@ -169,9 +169,9 @@ def test_storage_re_use_lxd(
 
     new_unit = next(iter(added_units))
 
-    assert reused_storage(juju, substrate, new_unit, removal_time), (
-        "attached storage not properly reused by MongoDB."
-    )
+    assert reused_storage(
+        juju, substrate, new_unit, removal_time
+    ), "attached storage not properly reused by MongoDB."
 
     verify_writes(juju, substrate, app_name)
 
@@ -218,14 +218,14 @@ def test_storage_re_use_k8s(
     new_unit = get_highest_unit(juju, app_name)
     assert new_unit, "No highest unit found"
 
-    assert reused_storage(juju, substrate, new_unit, removal_time), (
-        "attached storage not properly reused by MongoDB."
-    )
+    assert reused_storage(
+        juju, substrate, new_unit, removal_time
+    ), "attached storage not properly reused by MongoDB."
 
     # verify presence of primary, replica set member configuration, and number of primaries
-    assert count_primaries(juju, substrate, app_name) == 1, (
-        "there is more than one primary in the replica set."
-    )
+    assert (
+        count_primaries(juju, substrate, app_name) == 1
+    ), "there is more than one primary in the replica set."
 
     # verify all units are up to date.
     verify_writes(juju, substrate, app_name)
@@ -406,9 +406,9 @@ def test_scale_down_capabilities_lxd(
     assert primary_status, "replica set has no primary status information"
 
     # check that the primary is one of the remaining units
-    assert primary_status.public_address in hosts, (
-        "replica set primary is not one of the available units"
-    )
+    assert (
+        primary_status.public_address in hosts
+    ), "replica set primary is not one of the available units"
 
     # verify that the configuration of mongodb no longer has the deleted ip
     member_ips = fetch_replica_set_members(juju, substrate, app_name=app_name)
@@ -464,9 +464,9 @@ async def test_scale_down_capabilities_k8s(
     assert primary is not None, "replica set has no primary"
 
     # check that the primary is one of the remaining units
-    assert primary in [host_to_unit(hostname) for hostname in hostnames], (
-        "replica set primary is not one of the available units"
-    )
+    assert primary in [
+        host_to_unit(hostname) for hostname in hostnames
+    ], "replica set primary is not one of the available units"
 
     # verify that the configuration of mongodb no longer has the deleted ip
     member_hosts = fetch_replica_set_members(juju, substrate, app_name)
@@ -670,9 +670,9 @@ def test_kill_db_process(
     new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
     assert new_primary_name, "No new primary found"
 
-    assert new_primary_name != primary_name, (
-        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
-    )
+    assert (
+        new_primary_name != primary_name
+    ), f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
 
     # verify that no writes were missed
     total_expected_writes = verify_writes(juju, substrate, app_name)
@@ -680,9 +680,9 @@ def test_kill_db_process(
     secondary_writes = count_writes(
         juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
     )
-    assert total_expected_writes == secondary_writes, (
-        "secondary not up to date with the cluster after restarting."
-    )
+    assert (
+        total_expected_writes == secondary_writes
+    ), "secondary not up to date with the cluster after restarting."
 
 
 def test_freeze_db_process(
@@ -711,9 +711,9 @@ def test_freeze_db_process(
     new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
     assert new_primary_name, "No new primary found"
 
-    assert new_primary_name != primary_name, (
-        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
-    )
+    assert (
+        new_primary_name != primary_name
+    ), f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
     # verify new writes are continuing by counting the number of writes before
     # and after a 5 second wait
     writes = count_writes(
@@ -743,17 +743,17 @@ def test_freeze_db_process(
     assert set(member_ips) == set(unit_hostnames), "all members not running under the same replset"
 
     # verify there is only one primary after un-freezing old primary
-    assert count_primaries(juju, substrate, app_name=app_name) == 1, (
-        "there are more than one primary in the replica set."
-    )
+    assert (
+        count_primaries(juju, substrate, app_name=app_name) == 1
+    ), "there are more than one primary in the replica set."
 
     # verify that the old primary does not "reclaim" primary status after un-freezing old primary
     new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
     assert new_primary_name, "No new primary found"
 
-    assert new_primary_name != primary_name, (
-        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
-    )
+    assert (
+        new_primary_name != primary_name
+    ), f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
 
     # verify that no writes were missed
     total_expected_writes = verify_writes(juju, substrate, app_name)
@@ -761,9 +761,9 @@ def test_freeze_db_process(
     secondary_writes = count_writes(
         juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
     )
-    assert total_expected_writes == secondary_writes, (
-        "secondary not up to date with the cluster after restarting."
-    )
+    assert (
+        total_expected_writes == secondary_writes
+    ), "secondary not up to date with the cluster after restarting."
 
 
 def test_restart_db_process(
@@ -809,18 +809,18 @@ def test_restart_db_process(
     new_primary_name, _ = replica_set_primary(juju, substrate, app_name=app_name)
     assert new_primary_name, "No new primary found"
 
-    assert new_primary_name != primary_name, (
-        f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
-    )
+    assert (
+        new_primary_name != primary_name
+    ), f"New primary {new_primary_name=} is equal to old primary {primary_name=}"
 
     # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
     # send a replica step down signal.
     try:
         for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
             with attempt:
-                assert db_step_down(juju, substrate, sig_term_time, app_name), (
-                    "old primary departed without stepping down."
-                )
+                assert db_step_down(
+                    juju, substrate, sig_term_time, app_name
+                ), "old primary departed without stepping down."
     except RetryError:
         assert False, "old primary departed without stepping down."
 
@@ -830,9 +830,9 @@ def test_restart_db_process(
     secondary_writes = count_writes(
         juju, substrate, app_name, unit_name=primary_name, unit_info=primary_status
     )
-    assert total_expected_writes == secondary_writes, (
-        "secondary not up to date with the cluster after restarting."
-    )
+    assert (
+        total_expected_writes == secondary_writes
+    ), "secondary not up to date with the cluster after restarting."
 
 
 @pytest.mark.abort_on_fail
@@ -860,9 +860,9 @@ def test_full_cluster_crash(
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
-    assert all_db_processes_down(juju, substrate, app_name=app_name), (
-        "Not all units down at the same time."
-    )
+    assert all_db_processes_down(
+        juju, substrate, app_name=app_name
+    ), "Not all units down at the same time."
 
     logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     # sleep for twice the median election time and the restart delay
@@ -871,9 +871,9 @@ def test_full_cluster_crash(
     # verify all units are up and running
     for unit_name, unit_status in juju.status().get_units(app_name).items():
         ip_address = get_ip_from_unit(substrate, unit_status)
-        assert mongod_ready(juju, ip_address, app_name=app_name), (
-            f"unit {unit_name} not restarted after cluster crash."
-        )
+        assert mongod_ready(
+            juju, ip_address, app_name=app_name
+        ), f"unit {unit_name} not restarted after cluster crash."
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
@@ -919,9 +919,9 @@ def test_full_cluster_restart(
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
-    assert all_db_processes_down(juju, substrate, app_name=app_name), (
-        "Not all units down at the same time."
-    )
+    assert all_db_processes_down(
+        juju, substrate, app_name=app_name
+    ), "Not all units down at the same time."
 
     # sleep for twice the median election time and the restart delay
     logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
@@ -931,9 +931,9 @@ def test_full_cluster_restart(
     # verify all units are up and running
     for unit_name, unit_status in juju.status().get_units(app_name).items():
         ip_address = get_ip_from_unit(substrate, unit_status)
-        assert mongod_ready(juju, ip_address, app_name=app_name), (
-            f"unit {unit_name} not restarted after cluster crash."
-        )
+        assert mongod_ready(
+            juju, ip_address, app_name=app_name
+        ), f"unit {unit_name} not restarted after cluster crash."
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
