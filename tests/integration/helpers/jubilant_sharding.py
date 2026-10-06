@@ -58,7 +58,7 @@ def deploy_cluster_components(
     shard_two_name: str = SHARD_TWO_APP_NAME,
     channel: str | None = None,
     base: str | None = None,
-    extra_config_config_server: dict[str, str] | None = None,
+    extra_config_config_server: dict[str, jubilant.ConfigValue] | None = None,
     storage: dict[str, str] | None = None,
 ) -> None:
     if not extra_config_config_server:
