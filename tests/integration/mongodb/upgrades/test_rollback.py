@@ -91,7 +91,6 @@ def test_rollback(
 
     logger.info("Re-refresh the charm")
 
-    juju.refresh(app=app_name, channel="8/edge")
     refresh_with_juju(juju, app_name, "8/edge", charm_name=base_app_name)
 
     # sleep to ensure that active status from before re-refresh does not affect below check
