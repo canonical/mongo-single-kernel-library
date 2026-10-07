@@ -13,10 +13,12 @@ from tests.integration.helpers.constants import (
     S3_APP_NAME,
     S3_ENDPOINT,
     TIMEOUT,
+    UNIT_IDS,
 )
 from tests.integration.helpers.jubilant_backups import configure_s3
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
+    ensure_app_number_units,
     existing_app,
     find_leader,
     find_non_leader,
@@ -35,24 +37,33 @@ from tests.integration.helpers.types import CloudConfigs, Substrate
 logger = logging.getLogger(__name__)
 
 
-def test_build_and_deploy(juju: jubilant.Juju, substrate: Substrate, base_app_name: str) -> None:
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
+) -> None:
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
-
-    deploy_charm(
-        juju,
-        mongodb_charm_name,
-        substrate,
-        app_name=base_app_name,
-        mongod_resource={},  # unused
-        channel="8/edge",
-    )
+    app_name = existing_app(juju)
+    if app_name:
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
+    else:
+        app_name = base_app_name
+        deploy_charm(
+            juju=juju,
+            charm=mongodb_charm,
+            substrate=substrate,
+            mongod_resource=mongod_resource,
+            app_name=base_app_name,
+            num_units=len(UNIT_IDS),
+        )
 
     # deploy the s3 integrator charm
     juju.deploy(S3_APP_NAME, channel="2/stable")
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, base_app_name, idle_period=30),
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=30),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
@@ -109,7 +120,6 @@ def test_preflight_check_failure(
     app_name = existing_app(juju)
     assert app_name
     assert juju.model
-
     leader_name, _ = find_leader(juju, app_name)
     non_leader_name, non_leader_status = find_non_leader(juju, app_name)
 

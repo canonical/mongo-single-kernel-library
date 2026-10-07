@@ -244,7 +244,7 @@ def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
 def find_non_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
     """Gets the name and status of the first non leader unit."""
     units = juju.status().get_units(app_name)
-    return next((name, unit) for name, unit in units.items() if unit.leader)
+    return next((name, unit) for name, unit in units.items() if not unit.leader)
 
 
 def get_secret_uri_by_owner(
