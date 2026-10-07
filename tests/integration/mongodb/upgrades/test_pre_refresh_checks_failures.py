@@ -114,7 +114,7 @@ def test_preflight_check_failure(
     non_leader_name, non_leader_status = find_non_leader(juju, app_name)
 
     machine_name = unit_hostname(juju, non_leader_name)
-    mongodb_primary_hostname = get_mongodb_hostname_for_unit(
+    mongodb_non_leader_hostname = get_mongodb_hostname_for_unit(
         juju, substrate, non_leader_name, non_leader_status
     )
     password = get_password(juju, app_name, username=CHARMED_OPERATOR_USERNAME)
@@ -125,7 +125,7 @@ def test_preflight_check_failure(
             status,
             substrate,
             unit_to_check=non_leader_name,
-            unit_to_check_hostname=mongodb_primary_hostname,
+            unit_to_check_hostname=mongodb_non_leader_hostname,
             expected_status="(not reachable/healthy)",
             username=CHARMED_OPERATOR_USERNAME,
             password=password,
@@ -135,7 +135,8 @@ def test_preflight_check_failure(
 
     logger.info("Calling pre-refresh-check")
     with pytest.raises(jubilant.TaskError) as error:
-        juju.run(leader_name, "pre-refresh-check")
+        # Pre refresh check can take a lot of time.
+        juju.run(leader_name, "pre-refresh-check", wait=120)
     assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     restore_network_to_unit(substrate, substrate, machine_name)

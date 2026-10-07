@@ -12,7 +12,11 @@ from tests.integration.helpers.constants import (
     TIMEOUT,
 )
 from tests.integration.helpers.jubilant_common import deploy_charm
-from tests.integration.helpers.status_helpers import are_agents_idle, does_status_match
+from tests.integration.helpers.status_helpers import (
+    app_has_status,
+    are_agents_idle,
+    does_status_match,
+)
 from tests.integration.helpers.types import Substrate
 
 LOCAL_SHARD_APP_NAME = "local-shard"
@@ -102,30 +106,24 @@ def test_local_config_server_reports_remote_shard(juju: jubilant.Juju) -> None:
     """Tests that the local config server reports remote shard."""
     revision = "test/0.0.0+dirty"
     juju.integrate(
-        f"{REMOTE_SHARD_APP_NAME}:{SHARD_REL_NAME}",
         f"{LOCAL_CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+        f"{REMOTE_SHARD_APP_NAME}:{SHARD_REL_NAME}",
     )
 
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                LOCAL_CONFIG_SERVER_APP_NAME,
-                idle_period=20,
-                unit_count={},
-            )
-            and does_status_match(
-                model_status=status,
-                expected_unit_statuses={},
-                expected_app_statuses={
-                    LOCAL_CONFIG_SERVER_APP_NAME: [
-                        ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built")
-                    ]
-                },
-            )
+        lambda status: are_agents_idle(
+            status,
+            LOCAL_CONFIG_SERVER_APP_NAME,
+            idle_period=20,
+            unit_count={},
         ),
         timeout=TIMEOUT,
     )
+    assert app_has_status(
+        juju=juju,
+        app_name=LOCAL_CONFIG_SERVER_APP_NAME,
+        expected_status=ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built"),
+    ), "Application is not reporting the correct status."
 
 
 def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
@@ -140,24 +138,18 @@ def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
     # Because we can't provide an exact status easily, we build a status that
     # contains the correct prefixes.
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                LOCAL_CONFIG_SERVER_APP_NAME,
-                idle_period=20,
-                unit_count={},
-            )
-            and does_status_match(
-                model_status=status,
-                expected_unit_statuses={},
-                expected_app_statuses={
-                    LOCAL_SHARD_APP_NAME: [
-                        ShardStatuses.shard_needs_upgrade(
-                            revision, "-locally built", cfg_server_revision, ""
-                        )
-                    ]
-                },
-            )
+        lambda status: are_agents_idle(
+            status,
+            LOCAL_SHARD_APP_NAME,
+            idle_period=20,
+            unit_count={},
         ),
         timeout=TIMEOUT,
+    )
+    assert app_has_status(
+        juju=juju,
+        app_name=LOCAL_SHARD_APP_NAME,
+        expected_status=ShardStatuses.shard_needs_upgrade(
+            revision, "-locally built", cfg_server_revision, ""
+        ),
     )

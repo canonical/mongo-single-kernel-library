@@ -230,6 +230,28 @@ def none_has_status(
     return True
 
 
+def app_has_status(juju: jubilant.Juju, app_name: str, expected_status: StatusObject) -> bool:
+    """Checks that the app has the correct status in the peer databag."""
+    leader_unit = f"{app_name}/leader"
+
+    try:
+        status_detail = juju.run(leader_unit, "status-detail")
+    except jubilant.CLIError:
+        logger.warning("Failed to run `status-detail` on %s", leader_unit)
+        return False
+
+    try:
+        output = json.loads(status_detail.results["json-output"]["app"])
+        return any(
+            item["Status"].lower() == expected_status.status
+            and item["Message"] == expected_status.message
+            for item in output
+        )
+    except (KeyError, json.JSONDecodeError):
+        logger.warning("Invalid output in `status-detail` on %s", leader_unit)
+        return False
+
+
 def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: str) -> bool:
     """This checks that no unit is waiting for restart, based on the unit statuses.
 
