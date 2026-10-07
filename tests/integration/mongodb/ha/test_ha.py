@@ -126,7 +126,7 @@ def test_storage_re_use_lxd(
     """
     app_name = existing_app(juju)
     assert app_name
-    if storage_type(juju, app_name) == "rootfs":
+    if storage_type(juju, app_name, storage_name="data") == "rootfs":
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
@@ -222,6 +222,14 @@ def test_storage_re_use_k8s(
     ), "attached storage not properly reused by MongoDB."
 
     # verify presence of primary, replica set member configuration, and number of primaries
+    # grab unit hosts
+    hosts = get_mongodb_hostnames_for_app(juju, substrate, app_name)
+
+    # connect to replica set uri and get replica set members
+    member_hosts = fetch_replica_set_members(juju, substrate, app_name)
+
+    assert set(member_hosts) == set(hosts), "all members not running under the same replset"
+
     assert (
         count_primaries(juju, substrate, app_name) == 1
     ), "there is more than one primary in the replica set."
@@ -243,7 +251,7 @@ def test_storage_re_use_different_cluster(
     """
     app_name = existing_app(juju)
     assert app_name
-    if storage_type(juju, app_name) == "rootfs":
+    if storage_type(juju, app_name, storage_name="data") == "rootfs":
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
@@ -376,7 +384,7 @@ def test_scale_down_capabilities_lxd(
         if not unit_name == leader_unit_name:
             avail_units.append((unit_name, unit_status))
 
-    for _ in range(minority_count):
+    for _ in range(minority_count - 1):
         unit_name, unit_status = avail_units.pop()
         deleted_unit_ips.append(unit_status.public_address)
         units_to_remove.append(unit_name)

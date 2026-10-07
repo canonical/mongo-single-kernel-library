@@ -43,7 +43,6 @@ def scale_and_verify(juju: jubilant.Juju, substrate: Substrate, app_name: str, c
     assert count_primaries(juju, substrate, app_name) == 1, "Replica set has no primary."
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.juju_setup
 def test_build_and_deploy(
     juju: jubilant.Juju,
@@ -78,7 +77,7 @@ def test_build_and_deploy(
 
 
 def test_long_scale_up_scale_down_units(
-    juju: jubilant.Juju, substrate: Substrate, continuous_writes_to_db
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
 ):
     """Scale up and down the application and verify the replica set is healthy."""
     scales = [2, -1, -1, 2, -2, 3, -4]

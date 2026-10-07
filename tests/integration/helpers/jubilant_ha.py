@@ -87,14 +87,18 @@ NETWORK_CUT_RULES = (
 )
 
 
-def storage_type(juju: jubilant.Juju, app_name: str) -> str | None:
+def storage_type(juju: jubilant.Juju, app_name: str, storage_name: str) -> str | None:
     """Retrieves type of storage associated with an application."""
     storages = juju.status().storage
 
     for storage in storages.filesystems.values():
         unit_name = next(iter(storage.attachments.units))
         if get_app_name_from_unit(unit_name) == app_name:
+            # We don't want to consider the detached storages
             if storage.status.current == "detached":
+                continue
+            # We don't want to consider the storages that don't match the storage name.
+            if not storage.storage.startswith(f"{storage_name}"):
                 continue
             return storage.pool
 
@@ -966,8 +970,13 @@ def mongodb_unit_in_status(
         uri = unit_uri(username=username, password=password, ip_address=host)
         with MongoClient(uri, directConnection=True) as client:
             data = client.admin.command("replSetGetStatus")
+        found = False
         for member in data["members"]:
             data_unit_name = member["name"].split(":")[0]
             if data_unit_name == unit_to_check_hostname:
                 valid &= member["stateStr"] == expected_status
+                # We found the member, let's remember it.
+                found = True
+        # Add the clause that stores if we found the member or not.
+        valid &= found
     return valid
