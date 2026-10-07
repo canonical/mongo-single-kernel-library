@@ -21,8 +21,7 @@ from tests.integration.helpers.jubilant_mongos import (
     deploy_cluster_components,
     generate_mongos_uri,
 )
-from tests.integration.helpers.jubilant_upgrade import refresh_charm
-from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS
+from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS, refresh_charm
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
