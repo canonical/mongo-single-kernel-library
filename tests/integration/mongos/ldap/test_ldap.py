@@ -3,20 +3,27 @@
 # See LICENSE file for licensing details.
 
 
-import pytest
-from juju.model import Model
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import LdapStatuses, MongosStatuses
+from tests.integration.helpers.common import MONGOS_APP_NAME
+from tests.integration.helpers.constants import (
+    BASE,
+    CLUSTER_COMPONENTS,
+    CLUSTER_REL_NAME,
+    CONFIG_SERVER_APP_NAME,
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
-    check_or_scale_app,
+    SHARD_ONE_APP_NAME,
+    SHARD_TWO_APP_NAME,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
     execute_on_mongod,
-    get_app_name,
-    wait_for_mongodb_units_blocked,
+    existing_app,
 )
-from tests.integration.helpers.ldap import (
+from tests.integration.helpers.jubilant_ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -26,37 +33,36 @@ from tests.integration.helpers.ldap import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from tests.integration.helpers.sharding import (
-    CLUSTER_COMPONENTS,
-    CLUSTER_REL_NAME,
-    CONFIG_SERVER_APP_NAME,
-    SHARD_ONE_APP_NAME,
-    SHARD_TWO_APP_NAME,
+from tests.integration.helpers.jubilant_sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
+)
 from tests.integration.helpers.types import Substrate
 
-TIMEOUT = 15 * 60
 
-
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy_mongodb_cluster(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_build_and_deploy_mongodb_cluster(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource,
-    kubernetes_model: Model,
+    juju_k8s_model: jubilant.Juju,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
 ) -> None:
-    """Build and deploy one unit of MongoDB."""
-    # deploy the glauth-k8s charm
-    await deploy_glauth(ops_test, kubernetes_model)
-    await consume_glauth_offers(ops_test, kubernetes_model)
+    """Build and deploy a sharded cluster.
 
-    # it is possible for users to provide their own cluster for testing. Hence check if there
-    # is a pre-existing cluster.
-    await deploy_cluster_components(
-        ops_test,
+    Deploy GLAUTH components and expose offers, consumes them and create groups on MongoDB.
+    """
+    # deploy the glauth-k8s charm
+    deploy_glauth(juju_k8s_model)
+    # Consume the offers exposed by glauth
+    consume_glauth_offers(juju, juju_k8s_model)
+
+    deploy_cluster_components(
+        juju,
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
@@ -69,32 +75,30 @@ async def test_build_and_deploy_mongodb_cluster(
             SHARD_TWO_APP_NAME: 1,
         },
     )
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
-        timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_blocked=False,
-    )
-    await integrate_sharding_components(ops_test)
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        idle_period=20,
-        timeout=DEPLOYMENT_TIMEOUT,
+    integrate_sharding_components(juju)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    await create_mongodb_user_roles(
-        ops_test, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    # Apply the LDIF file on glauth-utils to create users and groups
+    apply_ldif(juju_k8s_model, "ldap_entries.ldif")
+
+    create_mongodb_user_roles(
+        juju, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 
-    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
 
-
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy_mongos(
-    ops_test: OpsTest,
-    mongos_charm: str,
+def test_build_and_deploy_mongos(
+    juju: jubilant.Juju,
     substrate: Substrate,
+    mongos_charm: str,
     mongos_resource: dict[str, str],
     base_app_name: str,
 ) -> None:
@@ -102,156 +106,186 @@ async def test_build_and_deploy_mongos(
 
     Then integrate mongos and sharded cluster.
     """
-    if app_name := await get_app_name(ops_test, charm_name="mongos"):
-        await check_or_scale_app(ops_test, substrate, app_name, 1)
-    else:
-        await deploy_charm(
-            ops_test=ops_test,
-            charm=mongos_charm,
-            substrate=substrate,
-            mongod_resource=mongos_resource,
-            app_name=base_app_name,
-            num_units=1,
-            subordinate=(substrate == Substrate.lxd),
-        )
-        app_name = base_app_name
+    deploy_charm(
+        juju=juju,
+        charm=mongos_charm,
+        substrate=substrate,
+        mongod_resource=mongos_resource,
+        app_name=base_app_name,
+        num_units=1,
+        subordinate=(substrate == Substrate.lxd),
+    )
 
     # This is necessary for mongos operator on VM, but we deploy it anyway for flow unicity.
-    await ops_test.model.deploy(
+    juju.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="noble",
+        base=BASE,
         num_units=1,
         config={"database-name": "test-database"},
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
 
-    await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, app_name)
+    juju.wait(
+        lambda status: are_agents_idle(status, DATA_INTEGRATOR_APP_NAME, idle_period=20),
+        timeout=DEPLOYMENT_TIMEOUT,
+    )
+
+    juju.integrate(DATA_INTEGRATOR_APP_NAME, base_app_name)
 
     # verify that Charmed Mongos is blocked and reports incorrect credentials
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="The cluster relation with the config-server is missing",
-        timeout=300,
-        subordinate=(substrate == Substrate.lxd),
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, base_app_name, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    base_app_name: [MongosStatuses.MISSING_CONF_SERVER_REL.value],
+                },
+                expected_app_statuses={},
+            )
+        ),
+        timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_config_server_only_integrated_with_mongos(ops_test: OpsTest, substrate: Substrate):
-    app_name = await get_app_name(ops_test, charm_name="mongos")
+def test_config_server_only_integrated_with_mongos(juju: jubilant.Juju):
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
 
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
-    await ops_test.model.integrate(
+    juju.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    juju.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
     )
 
     # connect sharded cluster to mongos
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{app_name}:{CLUSTER_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=20,
-        status="active",
-    )
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="mongos and config-server not integrated with the same ldap server.",
-        timeout=300,
-        subordinate=(substrate == Substrate.lxd),
+    juju.wait(
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                SHARD_TWO_APP_NAME,
+                idle_period=20,
+            )
+            and are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
+            and does_status_match(status, {app_name: [LdapStatuses.LDAP_SERVERS_MISMATCH.value]})
+        ),
+        timeout=TIMEOUT,
     )
 
     # Go back to normal state
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
-    )
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    juju.remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, app_name],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            app_name,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: Substrate):
+def test_glauth_only_integrated_with_mongos(juju: jubilant.Juju):
     """Integrate only mongos, it should go to a blocked state.
 
     This is because config server is not integrated with LDAP.
     """
-    app_name = await get_app_name(ops_test, charm_name="mongos")
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
 
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+    juju.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="TLS is mandatory for LDAP transport.",
-        timeout=300,
-        subordinate=(substrate == Substrate.lxd),
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, app_name, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    app_name: [LdapStatuses.TLS_REQUIRED.value],
+                },
+            )
+        ),
+        timeout=TIMEOUT,
     )
-    await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
-    )
+    juju.integrate(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
     # We go to blocked because config server is not integrated with ldap.
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        app_name,
-        status="mongos and config-server not integrated with the same ldap server.",
-        timeout=600,
-        subordinate=(substrate == Substrate.lxd),
+    juju.wait(
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                SHARD_TWO_APP_NAME,
+                idle_period=20,
+            )
+            and are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
+            and does_status_match(status, {app_name: [LdapStatuses.LDAP_SERVERS_MISMATCH.value]})
+        ),
+        timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_glauth_fully_integrated(ops_test: OpsTest, substrate: Substrate):
+def test_glauth_fully_integrated(juju: jubilant.Juju):
     """Integrate the config server as well, everything should be green."""
-    app_name = await get_app_name(ops_test, charm_name="mongos")
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
 
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        CONFIG_SERVER_APP_NAME,
-        status="TLS is mandatory for LDAP transport.",
-        timeout=300,
+    juju.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, CONFIG_SERVER_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    CONFIG_SERVER_APP_NAME: [LdapStatuses.TLS_REQUIRED.value],
+                },
+            )
+        ),
+        timeout=TIMEOUT,
     )
 
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 
     # Everything should be integrated now!
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, app_name],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            app_name,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
-    app_name = await get_app_name(ops_test, charm_name="mongos")
+def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
 
     # We create a client which should be able to write
-    uri = await generate_mongodb_ldap_client(
-        ops_test,
+    uri = generate_mongodb_ldap_client(
+        juju,
         substrate,
         app_name,
         database="superdb",
@@ -260,20 +294,20 @@ async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
         mongos=True,
     )
 
-    result = await execute_on_mongod(
-        ops_test,
-        app_name,
+    result = execute_on_mongod(
+        juju,
         substrate,
+        app_name,
         uri,
         "db.test.insertOne({number: 1})",
         container_name="mongos",
     )
     assert result.succeeded, "Failed to insert value with LDAP client"
 
-    await execute_on_mongod(
-        ops_test,
-        app_name,
+    execute_on_mongod(
+        juju,
         substrate,
+        app_name,
         uri,
         "db.test.findOne({number: 1})",
         container_name="mongos",
@@ -281,25 +315,27 @@ async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
-async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
-    app_name = await get_app_name(ops_test, charm_name="mongos")
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
-    )
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
-    )
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
-    )
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
+
+    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+    juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
+    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    juju.remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, app_name],
-        status="active",
+    # Everything should be integrated now!
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            app_name,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
     )
-    await teardown_offers(ops_test, kubernetes_model)
+    teardown_offers(juju, juju_k8s_model)

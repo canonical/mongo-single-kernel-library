@@ -2,51 +2,61 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import MongosStatuses
+from tests.integration.helpers.constants import (
+    BASE,
+    CLUSTER_REL_NAME,
+    CONFIG_SERVER_APP_NAME,
+    CONFIG_SERVER_REL_NAME,
     DATA_INTEGRATOR_APP_NAME,
+    DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
-    deploy_charm,
-    wait_for_mongodb_units_blocked,
+    SHARD_ONE_APP_NAME,
+    SHARD_REL_NAME,
+    TIMEOUT,
 )
-from tests.integration.helpers.mongos import (
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    ensure_app_number_units,
+    find_leader,
+    get_connection_string,
+)
+from tests.integration.helpers.jubilant_mongos import (
     generate_mongos_uri,
     get_k8s_public_ip,
     is_mongos_running,
 )
-from tests.integration.helpers.sharding import (
-    CLUSTER_REL_NAME,
-    CONFIG_SERVER_APP_NAME,
-    CONFIG_SERVER_REL_NAME,
-    SHARD_ONE_APP_NAME,
-    SHARD_REL_NAME,
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
-    mongod_resource: dict,
-    mongos_resource: dict,
+    mongod_resource: dict[str, str],
+    mongos_resource: dict[str, str],
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="noble")
-    await deploy_charm(
-        ops_test,
+    juju.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", base=BASE)
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=CONFIG_SERVER_APP_NAME,
         mongod_resource=mongod_resource,
         config={"role": "config-server"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=SHARD_ONE_APP_NAME,
@@ -54,142 +64,162 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "shard"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongos_charm,
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
         num_units=0 if substrate == Substrate.lxd else 1,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR_APP_NAME, SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME],
-        idle_period=10,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            DATA_INTEGRATOR_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            CONFIG_SERVER_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     if substrate == Substrate.k8s:
-        await ops_test.model.applications[MONGOS_APP_NAME].set_config(
-            {"expose-external": "nodeport"}
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[MONGOS_APP_NAME], idle_period=10, raise_on_blocked=False
+        juju.config(MONGOS_APP_NAME, {"expose-external": "nodeport"})
+        juju.wait(
+            lambda status: are_agents_idle(
+                status,
+                MONGOS_APP_NAME,
+                idle_period=20,
+            ),
+            timeout=DEPLOYMENT_TIMEOUT,
         )
 
 
-@pytest.mark.abort_on_fail
-async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_mongos_starts_with_config_server(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify mongos is running and can be accessed externally via IP-address."""
     # mongos cannot start until it has a host application
-    await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config(
+    juju.config(
+        DATA_INTEGRATOR_APP_NAME,
         {
             "database-name": "test-database",
-        }
+        },
     )
 
-    await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, MONGOS_APP_NAME)
-    await wait_for_mongodb_units_blocked(
-        ops_test, substrate, MONGOS_APP_NAME, timeout=300, subordinate=(substrate == Substrate.lxd)
+    juju.integrate(DATA_INTEGRATOR_APP_NAME, MONGOS_APP_NAME)
+
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status, MONGOS_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, idle_period=20
+            )
+            and does_status_match(
+                status, {MONGOS_APP_NAME: [MongosStatuses.MISSING_CONF_SERVER_REL.value]}
+            )
+        ),
+        timeout=TIMEOUT,
     )
     # prepare sharded cluster
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
-        idle_period=10,
-        raise_on_blocked=False,
-    )
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
     )
 
     # connect sharded cluster to mongos
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, MONGOS_APP_NAME],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, MONGOS_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
     )
 
-    mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await is_mongos_running(
-        ops_test, substrate, mongos_unit, app_name=MONGOS_APP_NAME, auth=False, external=True
-    )
-    assert mongos_running, "Mongos is not currently running."
-
-
-@pytest.mark.abort_on_fail
-async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verify mongos has user and is able to connect externally via IP-address."""
-    mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await is_mongos_running(
-        ops_test,
+    leader_name, _ = find_leader(juju, MONGOS_APP_NAME)
+    uri = generate_mongos_uri(juju, substrate, MONGOS_APP_NAME, auth=False, external=True)
+    mongos_running = is_mongos_running(
+        juju,
         substrate,
-        mongos_unit,
-        app_name=DATA_INTEGRATOR_APP_NAME,
-        auth=True,
-        external=True,
+        app_name=MONGOS_APP_NAME,
+        unit_name=leader_name,
+        uri=uri,
     )
     assert mongos_running, "Mongos is not currently running."
 
 
-@pytest.mark.abort_on_fail
-async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verify hosts are up to date after scaling."""
-    first_mongos_host = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
-
-    # in order to scale mongos, we need to scale the host
-    if substrate == Substrate.lxd:
-        await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].add_unit(count=1)
-    else:
-        await ops_test.model.applications[MONGOS_APP_NAME].scale(scale_change=1)
-
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME], idle_period=20, wait_for_exact_units=2, status="active"
+def test_mongos_has_user(juju: jubilant.Juju, substrate: Substrate) -> None:
+    """Verify mongos has user and is able to connect externally via IP-address."""
+    leader_name, _ = find_leader(juju, MONGOS_APP_NAME)
+    uri = generate_mongos_uri(juju, substrate, DATA_INTEGRATOR_APP_NAME, auth=True, external=True)
+    mongos_running = is_mongos_running(
+        juju,
+        substrate,
+        app_name=MONGOS_APP_NAME,
+        unit_name=leader_name,
+        uri=uri,
     )
+    assert mongos_running, "Mongos is not currently running."
 
-    for mongos_unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        secret_uri = await generate_mongos_uri(
-            ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
-        )
+
+def test_mongos_can_scale(juju: jubilant.Juju, substrate: Substrate) -> None:
+    """Verify hosts are up to date after scaling."""
+    # in order to scale mongos, we need to scale the host
+    app_name = DATA_INTEGRATOR_APP_NAME if substrate == Substrate.lxd else MONGOS_APP_NAME
+    n_units = len(juju.status().get_units(MONGOS_APP_NAME))
+    ensure_app_number_units(juju, substrate, app_name=app_name, required_units=n_units + 1)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, MONGOS_APP_NAME, idle_period=20, unit_count=n_units + 1
+        ),
+        timeout=TIMEOUT,
+    )
+    rel_name = "mongos" if substrate == Substrate.lxd else "mongodb"
+    uri_from_secret = get_connection_string(juju, DATA_INTEGRATOR_APP_NAME, rel_name)
+
+    for mongos_unit_name, mongos_unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
         if substrate == Substrate.lxd:
-            mongos_ip = mongos_unit.public_address
+            mongos_ip = mongos_unit_status.public_address
         else:
             mongos_ip = get_k8s_public_ip()
-        assert mongos_ip in secret_uri, f"host for {mongos_unit} is not present in URI"
+        assert mongos_ip in uri_from_secret, f"host for {mongos_unit_name} is not present in URI"
 
-        mongos_running = await is_mongos_running(
-            ops_test,
+        mongos_running = is_mongos_running(
+            juju,
             substrate,
-            mongos_unit,
             app_name=DATA_INTEGRATOR_APP_NAME,
-            auth=True,
-            external=True,
+            unit_name=mongos_unit_name,
+            uri=uri_from_secret,
         )
-        assert mongos_running, f"Mongos is not currently running on unit {mongos_unit}."
+        assert mongos_running, f"Mongos is not currently running on unit {mongos_unit_name}."
 
-    if substrate == Substrate.lxd:
-        # destroy the first unit so the hosts are different from when the application was deployed
-        first_mongos_host_public_address = first_mongos_host.public_address
-        await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].destroy_unit(
-            first_mongos_host.name
-        )
 
-        await ops_test.model.wait_for_idle(
-            apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
-            idle_period=20,
-        )
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_ip_change_after_scale_down(juju: jubilant.Juju):
+    """Destroy a unit and ensure that it's IP is removed from the URI."""
+    first_mongos_host_name, first_mongos_host_status = next(
+        iter(juju.status().get_units(MONGOS_APP_NAME).items())
+    )
 
-        secret_uri = await generate_mongos_uri(
-            ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
-        )
-        assert (
-            first_mongos_host_public_address not in secret_uri
-        ), "old host is still present in URI"
+    # destroy the first unit so the hosts are different from when the application was deployed
+    first_mongos_host_public_address = first_mongos_host_status.public_address
+    juju.remove_unit(first_mongos_host_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
+    )
+
+    uri_from_secret = get_connection_string(juju, DATA_INTEGRATOR_APP_NAME, "mongos")
+    assert (
+        first_mongos_host_public_address not in uri_from_secret
+    ), "old host is still present in URI"

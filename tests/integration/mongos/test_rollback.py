@@ -6,32 +6,35 @@
 import logging
 import time
 
-import pytest
+import jubilant
 import tenacity
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
+    DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
-    TIMEOUT,
-    find_unit,
-    get_juju_status,
-    get_unit_id,
-)
-from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import execute_on_mongod, find_leader, get_unit_id
+from tests.integration.helpers.jubilant_mongos import (
     build_cluster,
     deploy_cluster_components,
-    exec_on_mongos,
+    generate_mongos_uri,
+)
+from tests.integration.helpers.jubilant_upgrade import refresh_charm
+from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
@@ -40,8 +43,8 @@ async def test_build_and_deploy(
     mongos_client_application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
         mongos_charm,
@@ -50,79 +53,119 @@ async def test_build_and_deploy(
         mongos_client_application_path,
         mongos_units=3,
     )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=True)
+    build_cluster(juju, substrate, integrate_with_mongos=True)
 
 
-@pytest.mark.abort_on_fail
-async def test_failed_upgrade_and_rollback(
-    ops_test: OpsTest,
+def test_failed_upgrade_and_rollback(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongos_charm: str,
     mongos_resource: dict[str, str],
     faulty_mongos_upgrade_charm: str,
 ) -> None:
     """Tests that upgrade can be ran successfully."""
-    leader_unit = await find_unit(ops_test, leader=True, app_name=MONGOS_APP_NAME)
-    leader_id = get_unit_id(leader_unit.name)
-    mongos_application = ops_test.model.applications[MONGOS_APP_NAME]
+    leader_unit, _ = find_leader(juju, app_name=MONGOS_APP_NAME)
+    leader_id = get_unit_id(leader_unit)
+
+    # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
-        mongos_application.units,
-        key=lambda unit: int(unit.name.split("/")[1]),
+        juju.status().get_units(MONGOS_APP_NAME),
+        key=lambda unit: get_unit_id(unit),
         reverse=True,
     )
-    await mongos_application.refresh(path=faulty_mongos_upgrade_charm)
+
+    refresh_charm(juju, substrate, MONGOS_APP_NAME, faulty_mongos_upgrade_charm, mongos_resource)
     logger.info("Wait for upgrade to fail")
+
     for attempt in tenacity.Retrying(
         reraise=True,
         stop=tenacity.stop_after_delay(TIMEOUT),
         wait=tenacity.wait_fixed(10),
     ):
         with attempt:
-            assert "incompatible" in get_juju_status(
-                ops_test.model.name, MONGOS_APP_NAME
+            assert unit_in_status(
+                juju.status(), MONGOS_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
-    await refresh_charm(ops_test, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
+    refresh_charm(juju, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
 
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=30)
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            MONGOS_APP_NAME,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    if "incompatible" in mongos_application.status_message:
+    if unit_in_status(
+        juju.status(), MONGOS_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
+    ):
         # will be marked "incompatible" if rollback is not to the same revision as initially
         # deployed
         logger.info("Rollback is blocked due to incompatibility")
 
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        await refresh_order[0].run_action(
+        force_refresh_task = juju.run(
+            refresh_order[0],
             "force-refresh-start",
-            **{
+            {
                 "check-compatibility": False,
                 "check-workload-container": False,
             },
         )
 
-    logger.info("Wait for the charm to be rolled back")
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=20)
+        assert force_refresh_task.return_code == 0, "action failed"
 
-    if "resume-refresh" in get_juju_status(ops_test.model.name, MONGOS_APP_NAME):
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            MONGOS_APP_NAME,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
+
+    if "resume-refresh" in juju.status().apps.get(MONGOS_APP_NAME).app_status.message:
         if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = leader_unit
 
-        action = await unit.run_action("resume-refresh")
-        await action.wait()
-        if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
-        ):
-            assert action.status == "completed", "resume-refresh failed, expected to succeed."
+        task = juju.run(unit, "resume-refresh")
 
-    for unit in mongos_application.units:
-        number = unit.name.split("/")[-1]
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
+        ):
+            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, MONGOS_APP_NAME, idle_period=30),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    for unit, mongos_unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
+        number = get_unit_id(unit)
         cmd = f"db.test_collection.insertOne({{number: {number}}} );"
-        check = await exec_on_mongos(
-            ops_test, substrate, unit, auth=True, app_name=MONGOS_CLIENT_APPLICATION, cmd=cmd
+        uri = generate_mongos_uri(
+            juju,
+            substrate,
+            MONGOS_CLIENT_APPLICATION,
+            auth=True,
+            mongos_unit_status=mongos_unit_status,
+        )
+        check = execute_on_mongod(
+            juju,
+            substrate,
+            app_name=MONGOS_APP_NAME,
+            uri=uri,
+            command=cmd,
+            unit_name=unit,
+            container_name="mongos",
         )
         assert check, "mongos user failed to write data"
