@@ -230,8 +230,10 @@ def none_has_status(
     return True
 
 
-def app_has_status(juju: jubilant.Juju, app_name: str, expected_status: StatusObject) -> bool:
-    """Checks that the app has the correct status in the peer databag."""
+def app_has_extended_status(
+    juju: jubilant.Juju, app_name: str, expected_status: StatusObject
+) -> bool:
+    """Checks that the app has the correct status output from status details."""
     leader_unit = f"{app_name}/leader"
 
     try:
