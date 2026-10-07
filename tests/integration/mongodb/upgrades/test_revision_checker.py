@@ -13,7 +13,7 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_common import deploy_charm
 from tests.integration.helpers.status_helpers import (
-    app_has_status,
+    app_has_extended_status,
     are_agents_idle,
     does_status_match,
 )
@@ -119,7 +119,7 @@ def test_local_config_server_reports_remote_shard(juju: jubilant.Juju) -> None:
         ),
         timeout=TIMEOUT,
     )
-    assert app_has_status(
+    assert app_has_extended_status(
         juju=juju,
         app_name=LOCAL_CONFIG_SERVER_APP_NAME,
         expected_status=ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built"),
@@ -146,7 +146,7 @@ def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
         ),
         timeout=TIMEOUT,
     )
-    assert app_has_status(
+    assert app_has_extended_status(
         juju=juju,
         app_name=LOCAL_SHARD_APP_NAME,
         expected_status=ShardStatuses.shard_needs_upgrade(
