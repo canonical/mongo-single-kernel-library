@@ -20,7 +20,10 @@ from tests.integration.helpers.jubilant_common import (
     existing_app,
     fast_forward,
 )
-from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -88,4 +91,9 @@ def test_long_scale_up_scale_down_units(
     for count in scales:
         scale_and_verify(juju, substrate, app_name=app_name, count=count)
 
+    juju.wait(
+        lambda status: are_agents_idle(
+            status, app_name, CONTINUOUS_WRITE_APPLICATION, idle_period=20
+        )
+    )
     verify_writes(juju, substrate, app_name, CONTINUOUS_WRITE_APPLICATION)
