@@ -118,7 +118,7 @@ def test_preflight_check_failure(
         juju, substrate, non_leader_name, non_leader_status
     )
     password = get_password(juju, app_name, username=CHARMED_OPERATOR_USERNAME)
-    cut_network_from_unit(substrate, juju.model, machine_name)
+    cut_network_from_unit(substrate, juju.model, machine_name, ip_change=True)
 
     juju.wait(
         lambda status: mongodb_unit_in_status(
