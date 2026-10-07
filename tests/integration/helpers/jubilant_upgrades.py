@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 UPGRADE_INCOMPATIBLE_STATUS = StatusObject(
     status="blocked",
-    message="Refresh incompatible. Rollback with instructions in Charmhub docs or see `juju debug-log`",
+    message="Refresh incompatible.",
 )
 
 
@@ -65,6 +65,20 @@ def refresh_with_juju(juju: jubilant.Juju, app_name: str, channel: str, charm_na
     juju.cli(*shlex.split(refresh_cmd))
 
 
+def upgrade_incompatible(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, unit_name: str
+) -> bool:
+    """Returns True if upgrade is incompatible."""
+    if substrate == Substrate.lxd:
+        return "incompatible" in juju.status().apps.get(app_name).app_status.message
+    return unit_in_status(
+        juju.status(),
+        app_name,
+        unit_name,
+        UPGRADE_INCOMPATIBLE_STATUS,
+    )
+
+
 def assert_successful_run_upgrade_sequence(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -100,12 +114,7 @@ def assert_successful_run_upgrade_sequence(
         timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    if unit_in_status(
-        juju.status(),
-        app_name,
-        refresh_order[0],
-        UPGRADE_INCOMPATIBLE_STATUS,
-    ):
+    if upgrade_incompatible(juju, substrate, app_name, refresh_order[0]):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0]}")

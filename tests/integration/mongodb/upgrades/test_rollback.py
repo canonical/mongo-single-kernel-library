@@ -16,14 +16,13 @@ from tests.integration.helpers.jubilant_common import (
     get_unit_id,
 )
 from tests.integration.helpers.jubilant_upgrades import (
-    UPGRADE_INCOMPATIBLE_STATUS,
     get_workload_version,
     refresh_with_juju,
+    upgrade_incompatible,
 )
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
-    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -85,8 +84,8 @@ def test_rollback(
         wait=wait_fixed(10),
     ):
         with attempt:
-            assert unit_in_status(
-                juju.status(), app_name, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
+            assert upgrade_incompatible(
+                juju, substrate, app_name, refresh_order[0]
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
@@ -103,7 +102,7 @@ def test_rollback(
         ),
         timeout=TIMEOUT,
     )
-    if unit_in_status(juju.status(), app_name, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS):
+    if upgrade_incompatible(juju, substrate, app_name, refresh_order[0]):
         # will be marked "incompatible" if rollback is not to the same revision as initially
         # deployed
         logger.info("Rollback is blocked due to incompatibility")
