@@ -100,7 +100,7 @@ def test_config_server_database_requested_failed_role_invalid(
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.prepare_sharding_config(relation)
 
-    assert err.value.args[0] == "is only executed by config-server"
+    assert err.value.args[0] == "relation is not feasible"
 
 
 def test_config_server_database_requested_failed_not_leader(
@@ -492,7 +492,7 @@ def test_shard_manager_synchronise_user_password_invalid_role(
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.synchronize_user_passwords(relation)
 
-    assert err.value.args[0] == "is only executed by shards"
+    assert err.value.args[0] == "relation is not feasible"
 
 
 def test_shard_manager_synchronise_member_auth_invalid_role(
@@ -515,7 +515,7 @@ def test_shard_manager_synchronise_member_auth_invalid_role(
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.synchronize_member_auth(relation)
 
-    assert err.value.args[0] == "is only executed by shards"
+    assert err.value.args[0] == "relation is not feasible"
 
 
 def test_shard_manager_synchronise_member_auth_success(
