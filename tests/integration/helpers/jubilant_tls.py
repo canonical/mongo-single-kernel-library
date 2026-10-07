@@ -128,6 +128,7 @@ def check_tls(
     app_name: str,
     mongos: bool = False,
     container: str = "mongod",
+    uri: str | None = None,
 ) -> bool:
     """Returns whether TLS is enabled on the specific MongoDB instance.
 
@@ -147,7 +148,7 @@ def check_tls(
     assert juju.model
     status_command = _tls_command_check(app_name, mongos)
 
-    uri = _craft_tls_uri(juju, substrate, unit_name, unit_info, app_name, mongos)
+    uri = uri or _craft_tls_uri(juju, substrate, unit_name, unit_info, app_name, mongos)
 
     try:
         for attempt in Retrying(
@@ -191,6 +192,7 @@ def cannot_connect_without_tls(
     unit_info: UnitStatus,
     mongos: bool = False,
     container: str = "mongod",
+    uri: str | None = None,
 ):
     """Confirms that we cannot connect without TLS.
 
@@ -209,7 +211,7 @@ def cannot_connect_without_tls(
     """
     status_command = _tls_command_check(app_name, mongos)
 
-    uri = _craft_tls_uri(juju, substrate, unit_name, unit_info, app_name, mongos)
+    uri = uri or _craft_tls_uri(juju, substrate, unit_name, unit_info, app_name, mongos)
 
     output = execute_on_mongod(
         juju,
