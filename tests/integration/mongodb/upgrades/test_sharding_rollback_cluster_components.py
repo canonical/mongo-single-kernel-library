@@ -91,10 +91,28 @@ async def test_rollback_on_shard_and_config_server(
     with open(mongod_base_path / "charm_version") as fd:
         revision = fd.read().strip()
 
+    shard_revision_messages = {
+        app_name: (
+            f"Charm revision ({ops_test.model.applications[app_name].charm_url.rsplit('-', 1)[-1]}) "
+            f"is not up-to date with config-server ({revision}-locally built)."
+        )
+        for app_name in (SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME)
+    }
+
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
+    await asyncio.gather(
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_ONE_APP_NAME,
+            status=shard_revision_messages[SHARD_ONE_APP_NAME],
+        ),
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_TWO_APP_NAME,
+            status=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
         ops_test.model.wait_for_idle(
             apps=[CONFIG_SERVER_APP_NAME],
             timeout=1000,
@@ -112,8 +130,13 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
+    await asyncio.gather(
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_TWO_APP_NAME,
+            status=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
         ops_test.model.wait_for_idle(
             apps=[CONFIG_SERVER_APP_NAME],
