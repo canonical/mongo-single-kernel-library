@@ -29,6 +29,7 @@ from single_kernel_mongo.exceptions import (
     ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -160,10 +161,17 @@ class ShardEventHandler(Object):
         """SecretChanged event handler, which is used to propagate the updated passwords."""
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (NotReadyError, FailedToUpdateCredentialsError):
+        except (
+            NotReadyError,
+            FailedToUpdateCredentialsError,
+            DeferrableFailedHookChecksError,
+            WorkloadServiceError,
+        ):
             event.defer()
+            return
         except WaitingForSecretsError:
             logger.info("Missing secrets, ignoring")
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""
@@ -172,11 +180,15 @@ class ShardEventHandler(Object):
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+        except (DeferrableFailedHookChecksError, WorkloadServiceError) as e:
             self.manager.state.statuses.set(
                 ShardStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="unit",
                 component=self.manager.name,
             )
-            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            try:
+                self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            except WorkloadServiceError as err:
+                logger.error(f"Failed to remove PBM CA certificate: {str(err)}")
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
