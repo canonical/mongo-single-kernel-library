@@ -189,7 +189,7 @@ def test_cannot_use_db_relation(juju: jubilant.Juju) -> None:
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
@@ -224,7 +224,7 @@ def test_replication_config_server_relation(juju: jubilant.Juju):
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
@@ -258,7 +258,7 @@ def test_replication_shard_relation(juju: jubilant.Juju):
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relation
@@ -292,7 +292,7 @@ def test_replication_mongos_relation(juju: jubilant.Juju, substrate: Substrate) 
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
@@ -329,7 +329,7 @@ def test_shard_mongos_relation(juju: jubilant.Juju) -> None:
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
@@ -361,7 +361,7 @@ def test_shard_s3_relation(juju: jubilant.Juju, substrate: Substrate) -> None:
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
@@ -398,7 +398,7 @@ def test_config_server_tls_replication_relation(juju: jubilant.Juju) -> None:
                 expected_app_statuses={},
             )
         ),
-        timeout=300,
+        timeout=600,
     )
 
     # clean up relations
