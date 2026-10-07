@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -90,6 +91,15 @@ async def test_rollback_on_shard_and_config_server(
 
     with open(mongod_base_path / "charm_version") as fd:
         revision = fd.read().strip()
+
+    # `scripts/build_lib_for_integration.sh` builds the revision as `{charm_version}+{git describe}`
+    git_hash = subprocess.run(
+        ["git", "describe", "--always", "--dirty"],
+        capture_output=True,
+        check=True,
+        encoding="utf-8",
+    ).stdout.strip()
+    revision = f"{revision}+{git_hash}"
 
     shard_revision_messages = {
         app_name: (
