@@ -88,11 +88,11 @@ def test_user_can_connect(juju: jubilant.Juju, substrate: Substrate) -> None:
     assert password, "Password not provided to client"
 
     leader_name, _ = find_leader(juju, MONGOS_APP_NAME)
-    uri = generate_mongos_uri(juju, substrate, MONGOS_APP_NAME, auth=True)
+    uri = generate_mongos_uri(juju, substrate, MONGOS_CLIENT_APPLICATION, auth=True)
     mongos_running = is_mongos_running(
         juju,
         substrate,
-        app_name=MONGOS_CLIENT_APPLICATION,
+        app_name=MONGOS_APP_NAME,
         unit_name=leader_name,
         uri=uri,
     )
@@ -140,7 +140,7 @@ def test_user_with_extra_roles(juju: jubilant.Juju, substrate: Substrate) -> Non
 def test_removed_relation_no_longer_has_access(juju: jubilant.Juju, substrate: Substrate):
     """Verify removed applications no longer have access to the database."""
     # before removing relation we need its authorisation via connection string
-    mongos_unit, unit_status = next(iter(juju.status().get_units(MONGOS_APP_NAME).items()))
+    mongos_unit, _ = next(iter(juju.status().get_units(MONGOS_APP_NAME).items()))
 
     uri = generate_mongos_uri(juju, substrate, auth=True, app_name=MONGOS_CLIENT_APPLICATION)
 
