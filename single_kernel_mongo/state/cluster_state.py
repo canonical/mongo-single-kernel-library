@@ -91,7 +91,8 @@ class ClusterState(AbstractRelationState[Data]):
 
     def set_client_entity_fields(self, fields: dict[str, str]) -> None:
         """Forwards the client's entity request to the config-server (VM mongos)."""
-        self.update(fields)
+        payload: dict[str, str | None] = dict(fields)
+        self.update(payload)
 
     @property
     def entity_name(self) -> str | None:
