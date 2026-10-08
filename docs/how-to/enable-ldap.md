@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Integrate LDAP as a centralised authentication method for Charmed MongoDB using Juju, with TLS certificate support."
+---
+
 (enable-ldap)=
 # How to enable LDAP authentication
 
@@ -13,7 +19,7 @@ In this guide, we use [self-signed certificates](https://en.wikipedia.org/wiki/S
 Check the collection of [Charmhub operators](https://charmhub.io/?q=tls-certificates) that implement the `tls-certificate` interface.
 ```
 
-## Prerequisites 
+## Prerequisites
 
 ````{tab-set}
 ```{tab-item} VM

@@ -13,7 +13,7 @@ It helps organizations comply with security and privacy standards like HIPAA, PC
 Charmed MongoDB provides encryption at rest using Vault as a key management backend for the encryption keys.
 
 ```{caution}
-**This feature can only be enabled at deploy time.** 
+**This feature can only be enabled at deploy time.**
 
 It requires a MongoDB instance that has never been started. The charm will prevent you from enabling it after it has started.
 

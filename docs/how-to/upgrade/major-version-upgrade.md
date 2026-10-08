@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Upgrade from Charmed MongoDB 6 to 8 by performing a cluster migration via backup and restore"
+---
+
 (major-version-upgrade)=
 # How to perform a major version upgrade
 

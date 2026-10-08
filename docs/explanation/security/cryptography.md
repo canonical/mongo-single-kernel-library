@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Learn about cryptograpy mechanisms in Charmed MongoDB including resource verification, signed commits, and TLS encryption for cluster connections."
+---
+
 (cryptography)=
 # Cryptography
 

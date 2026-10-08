@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Security hardening guide for Charmed MongoDB covering cloud environments, Juju security, OS hardening, encryption, authentication, and monitoring."
+---
+
 (hardening-guide)=
 # Security hardening guide
 
