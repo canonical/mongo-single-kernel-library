@@ -204,13 +204,13 @@ def test_mongos_can_scale(juju: jubilant.Juju, substrate: Substrate) -> None:
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_ip_change_after_scale_down(juju: jubilant.Juju):
     """Destroy a unit and ensure that it's IP is removed from the URI."""
-    first_mongos_host_name, first_mongos_host_status = next(
-        iter(juju.status().get_units(MONGOS_APP_NAME).items())
-    )
+    _, first_mongos_host_status = next(iter(juju.status().get_units(MONGOS_APP_NAME).items()))
+
+    unit_to_remove = next(iter(juju.status().get_units(DATA_INTEGRATOR_APP_NAME)))
 
     # destroy the first unit so the hosts are different from when the application was deployed
     first_mongos_host_public_address = first_mongos_host_status.public_address
-    juju.remove_unit(first_mongos_host_name)
+    juju.remove_unit(unit_to_remove)
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
