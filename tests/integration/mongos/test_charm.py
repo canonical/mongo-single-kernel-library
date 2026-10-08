@@ -81,6 +81,7 @@ def test_waits_for_config_server(juju: jubilant.Juju) -> None:
                 },
                 expected_app_statuses={
                     CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
+                    MONGOS_APP_NAME: [MongosStatuses.MISSING_CONF_SERVER_REL.value],
                 },
             )
         ),
