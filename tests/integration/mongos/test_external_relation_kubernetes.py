@@ -172,8 +172,11 @@ def test_mongos_external_connections_scale(juju: jubilant.Juju) -> None:
 
 
 @pytest.mark.skip_if_substrate(Substrate.lxd)
-def test_mongos_bad_configuration(juju: jubilant.Juju, substrate: Substrate) -> None:
-    """Tests that mongos is accessible externally."""
+def test_mongos_bad_configuration(juju: jubilant.Juju) -> None:
+    """Tests that an invalid expose-external setting raises the proper statuses.
+
+    It also checks that rolling back to a correct value goes back to normal.
+    """
     configuration_parameters = {"expose-external": "nonsensical-setting"}
 
     # apply invalid configuration options
@@ -184,7 +187,11 @@ def test_mongos_bad_configuration(juju: jubilant.Juju, substrate: Substrate) -> 
         lambda status: (
             are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
             and does_status_match(
-                status, {MONGOS_APP_NAME: [MongosStatuses.INVALID_EXPOSE_EXTERNAL.value]}
+                status,
+                {MONGOS_APP_NAME: [MongosStatuses.INVALID_EXPOSE_EXTERNAL.value]},
+                expected_app_statuses={
+                    MONGOS_APP_NAME: [MongosStatuses.INVALID_EXPOSE_EXTERNAL.value]
+                },
             )
         ),
         timeout=TIMEOUT,
@@ -249,5 +256,5 @@ def test_mongos_disable_external_connections(juju: jubilant.Juju) -> None:
         juju, app_name=DATA_INTEGRATOR_APP_NAME, rel_name="mongodb", external=False
     )
     assert_app_uri_matches_external_setting(
-        juju, app_name=MONGOS_CLIENT_APPLICATION, rel_name="mongos", external=False
+        juju, app_name=MONGOS_CLIENT_APPLICATION, rel_name="mongodb", external=False
     )
