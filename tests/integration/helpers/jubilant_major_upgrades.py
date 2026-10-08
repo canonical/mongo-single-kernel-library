@@ -127,7 +127,7 @@ def set_fcv(
     replica_set_hosts = get_mongodb_hostnames_for_app(juju, substrate, app_name)
 
     uri = replica_set_uri(
-        username=CHARMED_OPERATOR_USERNAME,
+        username=username,
         password=password,
         ip_addresses=list(replica_set_hosts),
         replica_set=app_name,
