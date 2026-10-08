@@ -375,6 +375,8 @@ def _uri(
 ) -> str:
     port = MONGOS_PORT if mongos else MONGOD_PORT
     _hosts = ",".join(f"{host}:{port}" for host in hosts)
+    if mongos:
+        return f"mongodb://{username}:{password}@{_hosts}/admin"
     if replica_set:
         return f"mongodb://{username}:{password}@{_hosts}/admin?replicaSet={replica_set}"
     return f"mongodb://{username}:{password}@{_hosts}/admin"
@@ -495,6 +497,20 @@ def set_password(
     logger.info(
         f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config in {app_name} to {secret_id} {username}={password}"
     )
+
+
+def add_juju_secret(
+    juju: jubilant.Juju, app_name: str, secret_label: str, data: dict[str, str]
+) -> str:
+    """Add a new juju secret."""
+    # pass arguments as list
+
+    secret_uri = juju.add_secret(name=secret_label, content=data)
+
+    # grant using the secret URI
+    juju.grant_secret(identifier=secret_uri, app=app_name)
+
+    return secret_uri
 
 
 def execute_on_mongod(
