@@ -149,7 +149,7 @@ def test_preflight_check_failure(
         juju.run(leader_name, "pre-refresh-check", wait=120)
     assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
-    restore_network_to_unit(substrate, substrate, machine_name)
+    restore_network_to_unit(substrate, juju.model, machine_name)
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),

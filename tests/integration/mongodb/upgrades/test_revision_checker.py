@@ -13,7 +13,6 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_common import deploy_charm
 from tests.integration.helpers.status_helpers import (
-    app_has_extended_status,
     are_agents_idle,
     does_status_match,
 )
@@ -111,19 +110,25 @@ def test_local_config_server_reports_remote_shard(juju: jubilant.Juju) -> None:
     )
 
     juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            LOCAL_CONFIG_SERVER_APP_NAME,
-            idle_period=20,
-            unit_count={},
+        lambda status: (
+            are_agents_idle(
+                status,
+                LOCAL_CONFIG_SERVER_APP_NAME,
+                idle_period=20,
+                unit_count={},
+            )
+            and does_status_match(
+                status,
+                expected_unit_statuses={},
+                expected_app_statuses={
+                    LOCAL_CONFIG_SERVER_APP_NAME: [
+                        ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built")
+                    ]
+                },
+            )
         ),
         timeout=TIMEOUT,
     )
-    assert app_has_extended_status(
-        juju=juju,
-        app_name=LOCAL_CONFIG_SERVER_APP_NAME,
-        expected_status=ConfigServerStatuses.waiting_for_shard_upgrade(revision, "-locally built"),
-    ), "Application is not reporting the correct status."
 
 
 def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
@@ -138,18 +143,24 @@ def test_local_shard_reports_remote_config_server(juju: jubilant.Juju) -> None:
     # Because we can't provide an exact status easily, we build a status that
     # contains the correct prefixes.
     juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            LOCAL_SHARD_APP_NAME,
-            idle_period=20,
-            unit_count={},
+        lambda status: (
+            are_agents_idle(
+                status,
+                LOCAL_SHARD_APP_NAME,
+                idle_period=20,
+                unit_count={},
+            )
+            and does_status_match(
+                status,
+                expected_unit_statuses={},
+                expected_app_statuses={
+                    LOCAL_SHARD_APP_NAME: [
+                        ShardStatuses.shard_needs_upgrade(
+                            revision, "-locally built", cfg_server_revision, ""
+                        )
+                    ]
+                },
+            )
         ),
         timeout=TIMEOUT,
-    )
-    assert app_has_extended_status(
-        juju=juju,
-        app_name=LOCAL_SHARD_APP_NAME,
-        expected_status=ShardStatuses.shard_needs_upgrade(
-            revision, "-locally built", cfg_server_revision, ""
-        ),
     )
