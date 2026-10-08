@@ -23,6 +23,7 @@ from tests.integration.helpers.continuous_writes_helpers import (
 from tests.integration.helpers.jubilant_backups import configure_s3, count_logical_backups
 from tests.integration.helpers.jubilant_common import (
     deploy_application,
+    deploy_charm,
     find_leader,
     get_ip_from_unit,
     get_password,
@@ -75,16 +76,37 @@ def test_deploy_mongodb_6(
         SHARD_ONE_SIX: 1,
         SHARD_TWO_SIX: 1,
     }
-    deploy_cluster_components(
+    deploy_charm(
         juju,
-        substrate,
         mongodb_charm_name,
-        {},
-        num_units_cluster_config=num_units_cluster_config,
+        substrate,
+        app_name=CONFIG_SERVER_SIX,
+        mongod_resource={},
+        num_units=num_units_cluster_config[CONFIG_SERVER_SIX],
         channel="6/edge",
-        config_server_name=CONFIG_SERVER_SIX,
-        shard_one_name=SHARD_ONE_SIX,
-        shard_two_name=SHARD_TWO_SIX,
+        config={"role": "config-server"},
+        base="ubuntu@22.04",
+    )
+    deploy_charm(
+        juju,
+        mongodb_charm_name,
+        substrate,
+        app_name=SHARD_ONE_SIX,
+        mongod_resource={},
+        num_units=num_units_cluster_config[SHARD_ONE_SIX],
+        channel="6/edge",
+        config={"role": "shard"},
+        base="ubuntu@22.04",
+    )
+    deploy_charm(
+        juju,
+        mongodb_charm_name,
+        substrate,
+        app_name=SHARD_TWO_SIX,
+        mongod_resource={},
+        num_units=num_units_cluster_config[SHARD_TWO_SIX],
+        channel="6/edge",
+        config={"role": "shard"},
         base="ubuntu@22.04",
     )
 
@@ -173,16 +195,38 @@ def test_deploy_mongodb_7(juju: jubilant.Juju, substrate: Substrate):
         SHARD_TWO_SEVEN: 1,
     }
     mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
-    deploy_cluster_components(
+    deploy_charm(
         juju,
-        substrate,
         mongodb_charm_name,
-        {},
-        num_units_cluster_config=num_units_cluster_config,
+        substrate,
+        app_name=CONFIG_SERVER_SEVEN,
+        mongod_resource={},
+        num_units=num_units_cluster_config[CONFIG_SERVER_SEVEN],
         channel="8-transition/edge",
-        config_server_name=CONFIG_SERVER_SEVEN,
-        shard_one_name=SHARD_ONE_SEVEN,
-        shard_two_name=SHARD_TWO_SEVEN,
+        config={"role": "config-server"},
+        base="ubuntu@24.04",
+    )
+    deploy_charm(
+        juju,
+        mongodb_charm_name,
+        substrate,
+        app_name=SHARD_ONE_SEVEN,
+        mongod_resource={},
+        num_units=num_units_cluster_config[SHARD_ONE_SEVEN],
+        channel="8-transition/edge",
+        config={"role": "shard"},
+        base="ubuntu@24.04",
+    )
+    deploy_charm(
+        juju,
+        mongodb_charm_name,
+        substrate,
+        app_name=SHARD_TWO_SEVEN,
+        mongod_resource={},
+        num_units=num_units_cluster_config[SHARD_TWO_SEVEN],
+        channel="8-transition/edge",
+        config={"role": "shard"},
+        base="ubuntu@24.04",
     )
 
     integrate_sharding_components(
