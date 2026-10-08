@@ -6,17 +6,30 @@ import logging
 
 import jubilant
 
-from tests.integration.helpers.constants import MONGOS_APP_NAME, TIMEOUT
+from tests.integration.helpers.constants import (
+    DEPLOYMENT_TIMEOUT,
+    MONGOS_APP_NAME,
+    MONGOS_CLIENT_APPLICATION,
+    TIMEOUT,
+)
 from tests.integration.helpers.jubilant_common import (
+    execute_on_mongod,
     find_leader,
     get_unit_id,
 )
-from tests.integration.helpers.jubilant_mongos import build_cluster, deploy_cluster_components
+from tests.integration.helpers.jubilant_mongos import (
+    build_cluster,
+    deploy_cluster_components,
+    generate_mongos_uri,
+)
 from tests.integration.helpers.jubilant_upgrades import (
     refresh_charm,
     upgrade_incompatible,
 )
-from tests.integration.helpers.status_helpers import are_agents_idle
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger()
@@ -112,3 +125,31 @@ def test_upgrade(
             substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
         ):
             assert task.status == "completed", "resume-refresh failed, expected to succeed."
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, MONGOS_APP_NAME, idle_period=30),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    for unit, mongos_unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
+        number = get_unit_id(unit)
+        cmd = f"db.test_collection.insertOne({{number: {number}}} );"
+        uri = generate_mongos_uri(
+            juju,
+            substrate,
+            MONGOS_CLIENT_APPLICATION,
+            auth=True,
+            mongos_unit_status=mongos_unit_status,
+        )
+        check = execute_on_mongod(
+            juju,
+            substrate,
+            app_name=MONGOS_APP_NAME,
+            uri=uri,
+            command=cmd,
+            unit_name=unit,
+            container_name="mongos",
+        )
+        assert check, "mongos user failed to write data"
