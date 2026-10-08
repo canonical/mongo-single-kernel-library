@@ -49,6 +49,7 @@ from single_kernel_mongo.exceptions import (
     ClusterTLSError,
     ContainerNotReadyError,
     DeferrableError,
+    EntityRequestError,
     InvalidLdapStateError,
     MissingConfigServerError,
     UpgradeInProgressError,
@@ -69,6 +70,8 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.cluster_state import ClusterStateKeys
+from single_kernel_mongo.utils.entities import requested_entity_name_from_secret
 from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
@@ -592,6 +595,13 @@ class MongosOperator(OperatorProtocol, Object):
                 # For consistency however it's easier to "just" loop on the
                 # `client_relations` method.
                 for relation in self.state.client_relations:
+                    data_interface = DatabaseProviderData(self.model, relation.name)
+                    if data_interface.fetch_relation_field(relation.id, "entity-type") is not None:
+                        if entity_name := self.state.cluster.entity_name:
+                            data_interface.update_relation_data(
+                                relation.id, {"entity-name": entity_name}
+                            )
+                        continue
                     self.mongo_manager.update_app_relation_data_for_config(
                         relation, self.state.mongos_config
                     )
@@ -633,8 +643,66 @@ class MongosOperator(OperatorProtocol, Object):
             self.state.cluster.external_node_connectivity = external_connectivity
         self.state.app_peer_data.external_connectivity = external_connectivity
 
+        self._forward_client_entity_request(relation, data_interface)
+
         if external_connectivity:
             self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT.value)
+
+    def _forward_client_entity_request(
+        self, relation: Relation, data_interface: DatabaseProviderData
+    ) -> None:
+        """Stores and forwards the client's entity request, or rejects it locally.
+
+        The request cannot change after creation (spec 3.3), so it is forwarded once per
+        client relation: the requester removes its helper secret after the role exists,
+        and re-reading it would reject a fulfilled request. A rejected request stays
+        rejected until the relation is removed, so nothing is evaluated or forwarded once
+        the client relation carries a status.
+        """
+        forwarded = self.state.app_peer_data.client_entity_fields
+        if forwarded.get(ClusterStateKeys.CLIENT_ENTITY_RELATION.value) == str(relation.id):
+            return
+        if data_interface.get_statuses(relation.id):
+            return
+        if data_interface.fetch_my_relation_field(relation.id, "entity-name"):
+            # Fulfilled, and the requester may have removed its helper secret since: never
+            # re-read it, even when the record of this relation is missing.
+            return
+        try:
+            entity_fields = self._client_entity_fields(relation, data_interface)
+        except EntityRequestError as e:
+            self.mongo_manager.reject_entity(relation, e.reason)
+            return
+        if entity_fields and entity_fields != self.state.app_peer_data.client_entity_fields:
+            self.state.app_peer_data.client_entity_fields = entity_fields
+            self.cluster_manager.forward_client_entity_fields()
+
+    def _client_entity_fields(
+        self, relation: Relation, data_interface: DatabaseProviderData
+    ) -> dict[str, str] | None:
+        """The entity request of the client, as `client-*` keys for the config-server.
+
+        Raises:
+            EntityRequestError: when the requested-entity-secret cannot be read.
+        """
+        entity_type = data_interface.fetch_relation_field(relation.id, "entity-type")
+        if entity_type is None:
+            return None
+        fields = {
+            ClusterStateKeys.CLIENT_ENTITY_TYPE.value: entity_type,
+            ClusterStateKeys.CLIENT_ENTITY_RELATION.value: str(relation.id),
+        }
+        for source, target in (
+            ("extra-group-roles", ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES),
+            ("entity-permissions", ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS),
+        ):
+            if (value := data_interface.fetch_relation_field(relation.id, source)) is not None:
+                fields[target.value] = value
+        if secret_id := data_interface.fetch_relation_field(relation.id, "requested-entity-secret"):
+            fields[ClusterStateKeys.CLIENT_ENTITY_NAME.value] = requested_entity_name_from_secret(
+                self.model, secret_id
+            )
+        return fields
 
     # BEGIN: Helpers
     def update_k8s_external_services(self):

@@ -22,6 +22,7 @@ from single_kernel_mongo.config.models import MongosTLSState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     CharmStatuses,
+    EntityStatuses,
     MongoDBStatuses,
     MongosStatuses,
 )
@@ -41,6 +42,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
+    RelationStatus,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
@@ -190,6 +192,7 @@ class ClusterProvider(Object):
                 # attempt to retrieve hosts while non-leader units are still enabling node port
                 # resulting in an exception.
                 raise DeferrableError("Failed to remove user for mongos.")
+        self.dependent.mongo_manager.forget_entity_request(relation)
 
     def update_config_server_db(self) -> None:
         """Updates the config server DB URI in the mongos relation."""
@@ -333,6 +336,71 @@ class ClusterRequirer(Object):
             scope="unit",
             component=self.dependent.name,
         )
+
+    def forward_client_entity_fields(self) -> None:
+        """Writes the stored client entity request to the cluster databag (VM mongos).
+
+        The record is kept when its client relation breaks, since a leader whose principal
+        unit leaves gets relation-broken too while the relation lives on. It is forwarded only
+        while it names a live client relation carrying `entity-type`; relation ids are never
+        reused, so the request of a removed relation never reaches a later config-server.
+        """
+        if not self.charm.unit.is_leader() or not self.state.mongos_cluster_relation:
+            return
+        if not self._entity_client_relation():
+            return
+        self.state.cluster.set_client_entity_fields(self.state.app_peer_data.client_entity_fields)
+
+    def _entity_client_relation(self) -> Relation | None:
+        """The client relation whose entity request was forwarded to the config-server."""
+        forwarded = self.state.app_peer_data.client_entity_fields
+        relation_id = forwarded.get(ClusterStateKeys.CLIENT_ENTITY_RELATION.value)
+        for relation in self.state.client_relations:
+            if str(relation.id) != relation_id:
+                continue
+            data_interface = DatabaseProviderData(self.model, relation.name)
+            if data_interface.fetch_relation_field(relation.id, "entity-type") is not None:
+                return relation
+        return None
+
+    def mirror_status(self, status: RelationStatus, resolved: bool) -> None:
+        """Mirrors a status the config-server raised on `cluster` onto the client relation.
+
+        Only the client relation whose entity request was forwarded receives it: the
+        config-server judges that request and nothing else.
+        """
+        if not self.charm.unit.is_leader():
+            return
+        if not (relation := self._entity_client_relation()):
+            logger.info("No forwarded entity request, not mirroring status %s.", status.code)
+            return
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        blocked = EntityStatuses.rejected(status.message, relation.id)
+        if resolved:
+            data_interface.resolve_status(relation.id, status.code)
+            self.state.statuses.delete(blocked, scope="app", component=self.dependent.name)
+        else:
+            data_interface.raise_status(relation.id, status)
+            self.state.statuses.add(blocked, scope="app", component=self.dependent.name)
+
+    def resolve_client_entity_statuses(self) -> None:
+        """Resolves the entity statuses on the client relations (VM mongos leader).
+
+        Run when the `cluster` relation is gone: the role went with it (spec 5.3) and the
+        request is forwarded again to the next config-server, which judges it afresh.
+        """
+        entity_codes = (EntityStatuses.INVALID_REQUEST_CODE, EntityStatuses.MONGODB_REFUSED_CODE)
+        for relation in self.state.client_relations:
+            data_interface = DatabaseProviderData(self.model, relation.name)
+            for status in list((data_interface.get_statuses(relation.id) or {}).values()):
+                if status.code not in entity_codes:
+                    continue
+                data_interface.resolve_status(relation.id, status.code)
+                self.state.statuses.delete(
+                    EntityStatuses.rejected(status.message, relation.id),
+                    scope="app",
+                    component=self.dependent.name,
+                )
 
     def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
         """Database created event.
@@ -551,6 +619,7 @@ class ClusterRequirer(Object):
 
         if self.substrate == Substrates.VM:
             self.dependent.remove_connection_info()
+            self.resolve_client_entity_statuses()
         else:
             self.state.db_initialised = False
 
