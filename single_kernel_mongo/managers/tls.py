@@ -680,6 +680,12 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
         for relation in self.state.client_relations:
+            # A GROUP entity relation only ever carries `entity-name` (no connection data).
+            entity_type = self.state.client_data_interface.fetch_relation_field(
+                relation.id, "entity-type"
+            )
+            if entity_type is not None:
+                continue
             if new_ca:
                 self.state.client_data_interface.set_tls(relation.id, "True")
                 self.state.client_data_interface.set_tls_ca(relation.id, new_ca)

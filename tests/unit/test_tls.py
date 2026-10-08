@@ -798,6 +798,36 @@ def test_reconcile_tls_files_propagates_ca_secrets(
     assert relation_data["tls-ca"] == "ext-ca"
 
 
+def test_reconcile_tls_skips_entity_relations(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    with harness.hooks_disabled():
+        plain_id = harness.add_relation("database", "client-app")
+        harness.update_relation_data(plain_id, "client-app", {"database": "client-db"})
+        entity_id = harness.add_relation("database", "group-app")
+        harness.update_relation_data(
+            entity_id, "group-app", {"database": "client-db", "entity-type": "GROUP"}
+        )
+    manager.state.tls.set_secret(internal=False, label_name=SECRET_CA_LABEL, contents="ext-ca")
+
+    manager.reconcile_tls()
+
+    assert harness.get_relation_data(plain_id, harness.charm.app.name)["tls"] == "True"
+    entity_data = harness.get_relation_data(entity_id, harness.charm.app.name)
+    assert "tls" not in entity_data and "tls-ca" not in entity_data
+
+    manager.state.tls.set_secret(internal=False, label_name=SECRET_CA_LABEL, contents=None)
+
+    manager.reconcile_tls()
+
+    assert harness.get_relation_data(plain_id, harness.charm.app.name)["tls"] == "False"
+    entity_data = harness.get_relation_data(entity_id, harness.charm.app.name)
+    assert "tls" not in entity_data and "tls-ca" not in entity_data
+
+
 def test_reconcile_tls_files_continues_ca_propagation_after_premature_relation(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):

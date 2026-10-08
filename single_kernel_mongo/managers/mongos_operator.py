@@ -750,6 +750,9 @@ class MongosOperator(OperatorProtocol, Object):
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 
+        if scope == "app":
+            charm_statuses += self.mongo_manager.entity_statuses()
+
         if (
             self.substrate == Substrates.K8S
             and self.config.expose_external == ExposeExternal.UNKNOWN
