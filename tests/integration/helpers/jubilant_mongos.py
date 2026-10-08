@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import copy
 import time
 from logging import getLogger
 
@@ -177,7 +178,7 @@ def build_cluster(
         )
     )
 
-    apps = MONGOS_CLUSTER_COMPONENTS
+    apps = copy.deepcopy(MONGOS_CLUSTER_COMPONENTS)
     if integrate_with_mongos:
         # connect sharded cluster to mongos
         juju.integrate(

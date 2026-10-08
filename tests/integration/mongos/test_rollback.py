@@ -21,11 +21,13 @@ from tests.integration.helpers.jubilant_mongos import (
     deploy_cluster_components,
     generate_mongos_uri,
 )
-from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS, refresh_charm
+from tests.integration.helpers.jubilant_upgrades import (
+    refresh_charm,
+    upgrade_incompatible,
+)
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
-    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -82,8 +84,8 @@ def test_failed_upgrade_and_rollback(
         wait=tenacity.wait_fixed(10),
     ):
         with attempt:
-            assert unit_in_status(
-                juju.status(), MONGOS_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
+            assert upgrade_incompatible(
+                juju, substrate, MONGOS_APP_NAME, refresh_order[0]
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
@@ -100,9 +102,7 @@ def test_failed_upgrade_and_rollback(
         timeout=TIMEOUT,
     )
 
-    if unit_in_status(
-        juju.status(), MONGOS_APP_NAME, refresh_order[0], UPGRADE_INCOMPATIBLE_STATUS
-    ):
+    if upgrade_incompatible(juju, substrate, MONGOS_APP_NAME, refresh_order[0]):
         # will be marked "incompatible" if rollback is not to the same revision as initially
         # deployed
         logger.info("Rollback is blocked due to incompatibility")

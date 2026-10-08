@@ -12,8 +12,11 @@ from tests.integration.helpers.jubilant_common import (
     get_unit_id,
 )
 from tests.integration.helpers.jubilant_mongos import build_cluster, deploy_cluster_components
-from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS, refresh_charm
-from tests.integration.helpers.status_helpers import are_agents_idle, unit_in_status
+from tests.integration.helpers.jubilant_upgrades import (
+    refresh_charm,
+    upgrade_incompatible,
+)
+from tests.integration.helpers.status_helpers import are_agents_idle
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger()
@@ -68,12 +71,7 @@ def test_upgrade(
         timeout=TIMEOUT,
     )
 
-    if unit_in_status(
-        juju.status(),
-        MONGOS_APP_NAME,
-        refresh_order[0],
-        UPGRADE_INCOMPATIBLE_STATUS,
-    ):
+    if upgrade_incompatible(juju, substrate, MONGOS_APP_NAME, refresh_order[0]):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0]}")
