@@ -307,3 +307,7 @@ class IncompatibleMongosTLSError(ClusterTLSError):
 
 class WaitingForACertError(ClusterTLSError):
     """Raised when Mongos is waiting for a certificate."""
+
+
+class ClusterVersionMismatchError(DeferrableFailedHookChecksError):
+    """Raised when there's a mismatch in cluster version."""
