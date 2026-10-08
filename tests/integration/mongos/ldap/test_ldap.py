@@ -6,7 +6,6 @@
 import jubilant
 
 from single_kernel_mongo.config.statuses import LdapStatuses, MongosStatuses
-from tests.integration.helpers.common import MONGOS_APP_NAME
 from tests.integration.helpers.constants import (
     BASE,
     CLUSTER_COMPONENTS,
@@ -141,7 +140,9 @@ def test_build_and_deploy_mongos(
                 expected_unit_statuses={
                     base_app_name: [MongosStatuses.MISSING_CONF_SERVER_REL.value],
                 },
-                expected_app_statuses={},
+                expected_app_statuses={
+                    base_app_name: [MongosStatuses.MISSING_CONF_SERVER_REL.value],
+                },
             )
         ),
         timeout=TIMEOUT,
@@ -172,12 +173,10 @@ def test_config_server_only_integrated_with_mongos(juju: jubilant.Juju):
         lambda status: (
             are_apps_active_and_agents_idle(
                 status,
-                CONFIG_SERVER_APP_NAME,
-                SHARD_ONE_APP_NAME,
-                SHARD_TWO_APP_NAME,
+                *CLUSTER_COMPONENTS,
                 idle_period=20,
             )
-            and are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
+            and are_agents_idle(status, app_name, idle_period=20)
             and does_status_match(status, {app_name: [LdapStatuses.LDAP_SERVERS_MISMATCH.value]})
         ),
         timeout=TIMEOUT,
@@ -230,12 +229,10 @@ def test_glauth_only_integrated_with_mongos(juju: jubilant.Juju):
         lambda status: (
             are_apps_active_and_agents_idle(
                 status,
-                CONFIG_SERVER_APP_NAME,
-                SHARD_ONE_APP_NAME,
-                SHARD_TWO_APP_NAME,
+                *CLUSTER_COMPONENTS,
                 idle_period=20,
             )
-            and are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
+            and are_agents_idle(status, app_name, idle_period=20)
             and does_status_match(status, {app_name: [LdapStatuses.LDAP_SERVERS_MISMATCH.value]})
         ),
         timeout=TIMEOUT,
