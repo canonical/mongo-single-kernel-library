@@ -21,6 +21,8 @@ class AppPeerDataKeys(str, Enum):
 
     # MongoDB
     MANAGED_USERS_KEY = "managed-users-key"
+    MANAGED_ENTITIES_KEY = "managed-entities-key"
+    REQUESTED_ENTITY_NAMES_KEY = "requested-entity-names-key"
     DB_INITIALISED = "db_initialised"
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
@@ -38,6 +40,7 @@ class AppPeerDataKeys(str, Enum):
     EXPOSE_EXTERNAL = "expose-external"
     USERNAME = "username"
     PASSWORD = "password"  # nosec: B105
+    CLIENT_ENTITY_FIELDS = "client-entity-fields"
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
@@ -132,6 +135,51 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def managed_users(self, value: set[str]) -> None:
         """Stores the managed users set."""
         self.update({AppPeerDataKeys.MANAGED_USERS_KEY.value: json.dumps(sorted(value))})
+
+    @property
+    def managed_entities(self) -> dict[str, str]:
+        """The roles created for entity relations, keyed by relation id."""
+        if not self.relation:
+            return {}
+        return json.loads(self.relation_data.get(AppPeerDataKeys.MANAGED_ENTITIES_KEY.value, "{}"))
+
+    @managed_entities.setter
+    def managed_entities(self, value: dict[str, str]) -> None:
+        """Stores the roles created for entity relations."""
+        self.update({AppPeerDataKeys.MANAGED_ENTITIES_KEY.value: json.dumps(value, sort_keys=True)})
+
+    @property
+    def requested_entity_names(self) -> dict[str, str]:
+        """The role names requested by entity relations, keyed by relation id.
+
+        Kept apart from `managed_entities` so a role dropped while its relation lives on
+        (a mongos-k8s router un-integrated from its config-server) is re-created under the
+        same name: the requester removes its `requested-entity-secret` once the role exists.
+        """
+        if not self.relation:
+            return {}
+        return json.loads(
+            self.relation_data.get(AppPeerDataKeys.REQUESTED_ENTITY_NAMES_KEY.value, "{}")
+        )
+
+    @requested_entity_names.setter
+    def requested_entity_names(self, value: dict[str, str]) -> None:
+        """Stores the role names requested by entity relations."""
+        self.update(
+            {AppPeerDataKeys.REQUESTED_ENTITY_NAMES_KEY.value: json.dumps(value, sort_keys=True)}
+        )
+
+    @property
+    def client_entity_fields(self) -> dict[str, str]:
+        """The client entity request a VM mongos forwards to its config-server."""
+        if not self.relation:
+            return {}
+        return json.loads(self.relation_data.get(AppPeerDataKeys.CLIENT_ENTITY_FIELDS.value, "{}"))
+
+    @client_entity_fields.setter
+    def client_entity_fields(self, value: dict[str, str]) -> None:
+        """Stores the client entity request to forward."""
+        self.update({AppPeerDataKeys.CLIENT_ENTITY_FIELDS.value: json.dumps(value, sort_keys=True)})
 
     @property
     def mongos_hosts(self) -> list[str]:

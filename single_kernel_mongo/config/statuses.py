@@ -16,6 +16,8 @@ from enum import Enum
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import RelationStatus
+
 
 class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
@@ -801,3 +803,46 @@ class VaultStatuses(Enum):
         message="Master key rotation in progress.",
         running="blocking",
     )
+
+
+class EntityStatuses:
+    """Statuses for mongodb_client entity (GROUP) requests.
+
+    Relation statuses travel in the relation's `status` field through the
+    data_interfaces library; the Blocked status is what the charm itself reports.
+    """
+
+    INVALID_REQUEST_CODE = 5001
+    MONGODB_REFUSED_CODE = 5002
+
+    @staticmethod
+    def invalid_request(reason: str) -> RelationStatus:
+        """A request the charm cannot honour; fatal: remove and re-add the relation."""
+        return RelationStatus(
+            code=EntityStatuses.INVALID_REQUEST_CODE,
+            message=f"invalid or unsupported request: {reason}",
+            resolution="fix the request, then remove and re-add the relation",
+        )
+
+    @staticmethod
+    def mongodb_refused(errmsg: str) -> RelationStatus:
+        """MongoDB refused createRole; fatal: remove and re-add the relation."""
+        return RelationStatus(
+            code=EntityStatuses.MONGODB_REFUSED_CODE,
+            message=f"MongoDB refused createRole: {errmsg}",
+            resolution=(
+                "fix the privileges or drop the conflicting role, "
+                "then remove and re-add the relation"
+            ),
+        )
+
+    @staticmethod
+    def rejected(message: str, relation_id: int) -> StatusObject:
+        """The charm-side Blocked status for a rejected request."""
+        return StatusObject(
+            status="blocked",
+            message=f"{message} (relation {relation_id})",
+            short_message="Entity request rejected.",
+            check="Entity request validation.",
+            action="Fix the request on the requirer side, then remove and re-add the relation.",
+        )

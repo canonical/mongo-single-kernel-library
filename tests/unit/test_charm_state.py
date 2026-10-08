@@ -330,3 +330,48 @@ def test_state_cluster_id_mongos_is_none(mongos_harness: Harness[MongosTestCharm
     state.remove_cluster_id()
 
     assert state.get_cluster_id() is None
+
+
+def test_managed_entities_roundtrip(harness):
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    assert state.app_peer_data.managed_entities == {}
+
+    state.app_peer_data.managed_entities = {"7": "ou=dba,dc=glauth,dc=com"}
+
+    assert state.app_peer_data.managed_entities == {"7": "ou=dba,dc=glauth,dc=com"}
+
+
+def test_requested_entity_names_roundtrip(harness):
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    assert state.app_peer_data.requested_entity_names == {}
+
+    state.app_peer_data.requested_entity_names = {"7": "ou=dba,dc=glauth,dc=com"}
+
+    assert state.app_peer_data.requested_entity_names == {"7": "ou=dba,dc=glauth,dc=com"}
+
+
+def test_client_entity_fields_roundtrip(mongos_harness):
+    mongos_harness.set_leader(True)
+    state = mongos_harness.charm.operator.state
+    assert state.app_peer_data.client_entity_fields == {}
+
+    state.app_peer_data.client_entity_fields = {"client-entity-type": "GROUP"}
+
+    assert state.app_peer_data.client_entity_fields == {"client-entity-type": "GROUP"}
+
+
+def test_cluster_state_client_entity_fields(mongos_harness):
+    mongos_harness.set_leader(True)
+    rel_id = mongos_harness.add_relation("cluster", "mongodb")
+    state = mongos_harness.charm.operator.state
+
+    state.cluster.set_client_entity_fields(
+        {"client-entity-type": "GROUP", "client-entity-name": "cn=dba,dc=glauth,dc=com"}
+    )
+
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert data["client-entity-type"] == "GROUP"
+    assert data["client-entity-name"] == "cn=dba,dc=glauth,dc=com"
+    assert state.cluster.entity_name is None
