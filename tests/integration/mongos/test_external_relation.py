@@ -70,7 +70,7 @@ def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=0 if substrate == Substrate.lxd else 1,
+        num_units=1,
     )
     juju.wait(
         lambda status: are_agents_idle(
