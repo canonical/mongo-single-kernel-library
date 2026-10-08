@@ -9,6 +9,7 @@ import jubilant
 from cryptography import x509
 from jubilant.statustypes import UnitStatus
 from kubernetes import client, config
+from kubernetes.client.exceptions import ApiException
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
@@ -274,7 +275,10 @@ def get_node_port_info(model_name: str, node_port_name: str) -> int:
     config.load_kube_config()
     v1 = client.CoreV1Api()
 
-    namespaced_service = v1.read_namespaced_service(name=node_port_name, namespace=model_name)
+    try:
+        namespaced_service = v1.read_namespaced_service(name=node_port_name, namespace=model_name)
+    except ApiException as err:
+        raise ValueError("Failed to get node port: API Exception.") from err
 
     if not namespaced_service.spec:
         raise ValueError("Missing spec from namespace.")
@@ -562,7 +566,7 @@ def assert_app_uri_matches_external_setting(
         assert local_host_in_ip != external, f"client URI for {app_name} has incorrect hosts."
 
 
-def is_external_mongos_client_reachable(juju: jubilant.Juju, exposed_node_port: str) -> bool:
+def is_external_mongos_client_reachable(juju: jubilant.Juju, exposed_node_port: int) -> bool:
     """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
     public_k8s_ip = get_k8s_public_ip()
     username, password = get_relation_username_password(juju, MONGOS_APP_NAME, CLUSTER_REL_NAME)
