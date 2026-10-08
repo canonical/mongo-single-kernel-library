@@ -2,8 +2,6 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
-import subprocess
 import time
 from logging import getLogger
 
@@ -47,6 +45,7 @@ from tests.integration.helpers.jubilant_common import (
     get_file_content,
     get_ip_from_unit,
     get_mongodb_hostnames_for_app,
+    get_relation_id_for,
     get_relation_username_password,
     get_secret_by_uri,
     get_unit_id,
@@ -247,20 +246,17 @@ def get_k8s_public_ip() -> str:
 
     This is used when we're testing for external connection.
     """
-    result = subprocess.run(
-        "sudo k8s kubectl get nodes -o json", shell=True, capture_output=True, text=True
-    )
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
 
-    if result.returncode:
-        logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
-        assert False, "failed to retrieve public facing k8s IP"
+    node_info = v1.list_node()
 
-    node_info = json.loads(result.stdout)
+    assert node_info.items, "failed to retrieve public facing k8s IP"
+    assert node_info.items[0].status, "failed to retrieve public facing k8s IP"
+    assert node_info.items[0].status.addresses, "failed to retrieve public facing k8s IP"
+    assert node_info.items[0].status.addresses[0].address, "failed to retrieve public facing k8s IP"
 
-    try:
-        return node_info["items"][0]["status"]["addresses"][0]["address"]
-    except KeyError:
-        assert False, "failed to retrieve public facing k8s IP"
+    return node_info.items[0].status.addresses[0].address
 
 
 def get_sans_ips(juju: jubilant.Juju, unit: str, internal: bool) -> str:
@@ -337,7 +333,7 @@ def assert_mongos_tls_enabled(juju: jubilant.Juju, substrate: Substrate, interna
             container="mongos",
             uri=uri,
         ), f"Client can still connect without TLS on {unit_name}"
-        assert check_continuous_writes(juju), "Client is not able to write to database."
+        assert check_continuous_writes(juju, substrate), "Client is not able to write to database."
 
 
 def assert_mongos_tls_disabled(
@@ -470,12 +466,15 @@ def toggle_tls_mongos(
         remove_tls_integrations(juju, MONGOS_APP_NAME, cert_provider_app=certs_app_name)
 
 
-def check_continuous_writes(juju: jubilant.Juju):
+def check_continuous_writes(juju: jubilant.Juju, substrate: Substrate):
     """Checks that continuous writes are working as expected."""
     secret_tls = None
-    for relation_data in juju.show_unit(f"{MONGOS_CLIENT_APPLICATION}/0").relation_info:
-        if relation_data.endpoint == "mongos" and relation_data.related_endpoint == "mongos_proxy":
-            secret_tls = relation_data.app_data.get("secret-tls")
+    endpoint = "mongos" if substrate == Substrate.lxd else "mongodb"
+    relation_id = get_relation_id_for(juju, MONGOS_CLIENT_APPLICATION, endpoint, "mongos_proxy")
+
+    secret_tls = get_application_relation_data(
+        juju, MONGOS_CLIENT_APPLICATION, endpoint, "secret-tls", relation_id=relation_id
+    )
 
     assert secret_tls, "Missing secret-tls in relation databag."
     secret = get_secret_by_uri(juju, secret_tls)

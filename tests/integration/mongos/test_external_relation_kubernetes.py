@@ -216,7 +216,7 @@ def test_all_clients_use_nodeport(juju: jubilant.Juju) -> None:
         juju, app_name=DATA_INTEGRATOR_APP_NAME, rel_name="mongodb", external=True
     )
     assert_app_uri_matches_external_setting(
-        juju, app_name=MONGOS_CLIENT_APPLICATION, rel_name="mongos", external=True
+        juju, app_name=MONGOS_CLIENT_APPLICATION, rel_name="mongodb", external=True
     )
 
 
