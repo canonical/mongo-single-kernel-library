@@ -196,7 +196,7 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             logger.info(f"Creating the {user.username} user roles…")
             mongo.create_role(
                 role_name=user.mongodb_role,
-                privileges=user.privileges,
+                privileges=[user.privileges],
             )
             logger.info(f"Creating the {user.username} user...")
             config = self.state.mongodb_config_for_user(

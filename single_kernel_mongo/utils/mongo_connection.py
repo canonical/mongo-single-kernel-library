@@ -205,24 +205,39 @@ class MongoConnection:
         """Drop user."""
         self.client.admin.command("dropUser", username)
 
-    def create_role(self, role_name: str, privileges: dict, roles: list | None = None) -> None:
-        """Creates a new role.
+    def create_role(
+        self,
+        role_name: str,
+        privileges: list[dict],
+        roles: list | None = None,
+        exist_ok: bool = True,
+    ) -> None:
+        """Creates a new role in the admin database.
 
         Args:
             role_name: name of the role to be added.
-            privileges: privileges to be associated with the role.
+            privileges: MongoDB privilege documents ({resource, actions}) for the role.
             roles: List of roles from which this role inherits privileges.
+            exist_ok: when True an already existing role is not an error.
+
+        Raises:
+            OperationFailure: when MongoDB refuses the role (always when the role
+                already exists and exist_ok is False).
         """
         if roles is None:
             roles = []
         try:
-            self.client.admin.command("createRole", role_name, privileges=[privileges], roles=roles)
+            self.client.admin.command("createRole", role_name, privileges=privileges, roles=roles)
         except OperationFailure as e:
-            if e.code == MongoErrorCodes.ROLE_ALREADY_EXISTS:
+            if exist_ok and e.code == MongoErrorCodes.ROLE_ALREADY_EXISTS:
                 logger.info("Role already exists")
                 return
             logger.error("Cannot add role. error=%r", e)
             raise
+
+    def drop_role(self, role_name: str) -> None:
+        """Drops a role from the admin database."""
+        self.client.admin.command("dropRole", role_name)
 
     def set_replicaset_election_priority(
         self, priority: int | float, ignore_member: str | None = None

@@ -19,6 +19,18 @@ from single_kernel_mongo.utils.mongodb_users import (
 ADMIN_AUTH_SOURCE = {"authSource": "admin"}
 
 
+def roles_for(database: str, roles: set[str]) -> list[DBPrivilege]:
+    """Translates the charm role vocabulary into MongoDB roles on the given database."""
+    default_role = UserRole(
+        [
+            DBPrivilege(role="readWrite", db=database),
+            DBPrivilege(role="enableSharding", db=database),
+        ]
+    )
+    all_roles = REGULAR_ROLES | {"default": default_role}
+    return list(chain.from_iterable(all_roles[role] for role in roles))
+
+
 @dataclass
 class MongoConfiguration:
     """Class for Mongo configurations usable my mongos and mongodb.
@@ -131,14 +143,7 @@ class MongoConfiguration:
     @property
     def supported_roles(self) -> list[DBPrivilege]:
         """The supported roles for this configuration."""
-        default_role = UserRole(
-            [
-                DBPrivilege(role="readWrite", db=self.database),
-                DBPrivilege(role="enableSharding", db=self.database),
-            ]
-        )
-        all_roles = REGULAR_ROLES | {"default": default_role}
-        return list(chain.from_iterable(all_roles[role] for role in self.roles))
+        return roles_for(self.database, self.roles)
 
 
 EMPTY_CONFIGURATION = MongoConfiguration(

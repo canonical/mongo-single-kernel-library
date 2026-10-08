@@ -78,7 +78,7 @@ def test_initialise_user_vm(harness: Harness[MongoTestCharm], mocker, user):
         harness.charm.operator.state, f"{user.username.replace('charmed-', '')}_config"
     )
 
-    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
+    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=[user.privileges])
     mock_create_user.assert_called_with(
         config.username,
         config.password,
@@ -108,7 +108,7 @@ def test_initialise_user_k8s(harness: Harness[MongoTestCharm], mocker, user):
         harness.charm.operator.state, f"{user.username.replace('charmed-', '')}_config"
     )
 
-    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
+    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=[user.privileges])
     mock_create_user.assert_called_with(
         config.username,
         config.password,
