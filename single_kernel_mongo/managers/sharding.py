@@ -766,6 +766,13 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
             logger.info("Deferrable error during mongod restart. %s", e)
             return OperationResult.RETRY_RELEASE
 
+        # The shard has restarted, we can clean up the status.
+        # The rest is on the server side.
+        self.charm.state.statuses.delete(
+            ShardStatuses.ADDING_TO_CLUSTER.value,
+            scope="unit",
+            component=self.name,
+        )
         return OperationResult.RELEASE
 
     def async_shard_restart_on_key_file(self):

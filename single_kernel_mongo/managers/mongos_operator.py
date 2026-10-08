@@ -302,7 +302,7 @@ class MongosOperator(OperatorProtocol, Object):
         # starting `mongos` daemon
         self.state.statuses.add(
             MongosStatuses.MISSING_CONF_SERVER_REL.value,
-            scope="unit",
+            scope="all",
             component=self.name,
         )
 
