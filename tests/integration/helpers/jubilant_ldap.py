@@ -37,6 +37,14 @@ TRAEFIK_CHARM = "traefik-k8s"
 LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
 
+# Requester test charm (tests/integration/applications/client_relations_charm) asking for the
+# LDAP group role as a GROUP entity.
+LDAP_GROUP_REQUESTER = "application"
+LDAP_GROUP_ENDPOINT = "ldap-group"
+# A VM mongos is a subordinate whose `mongos_proxy` endpoint requires `mongos_client`, so the
+# requester reaches it through its `mongos_client` provider endpoint instead.
+LDAP_GROUP_VM_MONGOS_ENDPOINT = "ldap-group-mongos"
+
 logger = logging.getLogger(__name__)
 
 
@@ -189,6 +197,40 @@ def create_mongodb_user_roles(
     assert result.succeeded, "Failed to create role"
 
 
+def drop_mongodb_role(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    role_name: str,
+    mongos: bool = False,
+    tls: bool = False,
+) -> None:
+    """Drops the role role_name, e.g. one made by create_mongodb_user_roles."""
+    _, leader_unit_info = find_leader(juju=juju, app_name=app_name)
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    ip_address = get_ip_from_unit(substrate=substrate, unit_info=leader_unit_info)
+
+    uri = unit_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        ip_address=ip_address,
+        password=password,
+        replica_set=app_name,
+        mongos=mongos,
+    )
+
+    result = execute_on_mongod(
+        juju,
+        substrate,
+        app_name,
+        uri=uri,
+        command=f"db.dropRole('{role_name}')",
+        tls=tls,
+    )
+    assert result.succeeded, "Failed to drop role"
+
+
 def generate_mongodb_ldap_client(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -208,3 +250,61 @@ def generate_mongodb_ldap_client(
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = ",".join([f"{host}:{port}" for host in _hosts])
     return f"mongodb://{quote_plus(username)}:{quote_plus(password)}@{hosts}/{database}?authSource=\\$external&authMechanism=PLAIN"
+
+
+def ldap_group_endpoint(substrate: Substrate, mongos: bool = False) -> str:
+    """The requester endpoint carrying the GROUP request to mongodb or mongos."""
+    if mongos and substrate == Substrate.lxd:
+        return LDAP_GROUP_VM_MONGOS_ENDPOINT
+    return LDAP_GROUP_ENDPOINT
+
+
+def has_ldap_group_role(status: jubilant.Status, group_dn: str) -> bool:
+    """Whether the requester reports the role `group_dn` as created."""
+    units = status.get_units(LDAP_GROUP_REQUESTER).values()
+    return bool(units) and all(
+        unit.workload_status.message == f"ldap group role: {group_dn}" for unit in units
+    )
+
+
+def request_ldap_group_role(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    charm_path: str,
+    app_name: str,
+    group_dn: str = "ou=superheroes,ou=users,dc=glauth,dc=com",
+    permissions: str = "",
+    mongos: bool = False,
+) -> None:
+    """Deploys the requester test charm and asks for the LDAP group role over a relation.
+
+    `charm_path` is the prebuilt .charm from the `client_relation_charm_path` fixture
+    (`tests/integration/conftest.py`), the same artifact the relations tests deploy.
+    The requester relates to `app_name:database`, or to `app_name:mongos_proxy` when `mongos`
+    is set. Returns once the requester received the role named `group_dn`.
+    """
+    config: dict[str, jubilant.ConfigValue] = {
+        "ldap-group-dn": group_dn,
+        "ldap-group-permissions": permissions,
+    }
+    if LDAP_GROUP_REQUESTER not in juju.status().apps:
+        juju.deploy(charm_path, app=LDAP_GROUP_REQUESTER, config=config)
+    else:
+        juju.config(LDAP_GROUP_REQUESTER, config)
+
+    endpoint = "mongos_proxy" if mongos else "database"
+    juju.integrate(
+        f"{LDAP_GROUP_REQUESTER}:{ldap_group_endpoint(substrate, mongos)}",
+        f"{app_name}:{endpoint}",
+    )
+    juju.wait(
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status, LDAP_GROUP_REQUESTER, idle_period=30, unit_count=1
+            )
+            and has_ldap_group_role(status, group_dn)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
