@@ -91,7 +91,7 @@ def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, subs
             "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command"
         )
 
-    getattr(harness.charm.operator.mongo_manager, "initialise_operator_user")()
+    getattr(harness.charm.operator.mongo_manager, "_initialise_operator_user")()
     config = getattr(harness.charm.operator.state, "operator_config")
     cmd = [
         "--quiet",
