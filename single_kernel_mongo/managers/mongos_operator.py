@@ -302,7 +302,7 @@ class MongosOperator(OperatorProtocol, Object):
         # starting `mongos` daemon
         self.state.statuses.add(
             MongosStatuses.MISSING_CONF_SERVER_REL.value,
-            scope="unit",
+            scope="all",
             component=self.name,
         )
 
@@ -336,14 +336,14 @@ class MongosOperator(OperatorProtocol, Object):
 
                 self.state.statuses.add(
                     MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
-                    scope="unit",
+                    scope="all",
                     component=self.name,
                 )
                 return
 
             self.state.statuses.delete(
                 MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
-                scope="unit",
+                scope="all",
                 component=self.name,
             )
             self.update_config_on_k8s()

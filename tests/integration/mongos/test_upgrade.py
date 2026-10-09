@@ -4,25 +4,39 @@
 
 import logging
 
-import pytest
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
+    DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
-    find_unit,
-    get_juju_status,
+    MONGOS_CLIENT_APPLICATION,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import (
+    execute_on_mongod,
+    find_leader,
     get_unit_id,
 )
-from tests.integration.helpers.mongos import build_cluster, deploy_cluster_components
+from tests.integration.helpers.jubilant_mongos import (
+    build_cluster,
+    deploy_cluster_components,
+    generate_mongos_uri,
+)
+from tests.integration.helpers.jubilant_upgrades import (
+    refresh_charm,
+    upgrade_incompatible,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger()
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
@@ -31,8 +45,8 @@ async def test_build_and_deploy(
     mongos_client_application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
         mongos_charm,
@@ -42,45 +56,60 @@ async def test_build_and_deploy(
         channel="8/edge",
         mongos_units=2,
     )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=True)
+    build_cluster(juju, substrate, integrate_with_mongos=True)
 
 
-@pytest.mark.abort_on_fail
-async def test_upgrade(
-    ops_test: OpsTest, substrate: Substrate, mongos_charm: str, mongos_resource: dict[str, str]
+def test_upgrade(
+    juju: jubilant.Juju, substrate: Substrate, mongos_charm: str, mongos_resource: dict[str, str]
 ):
     """Refreshes the charm and wait for it to be active again."""
-    leader_unit = await find_unit(ops_test, leader=True, app_name=MONGOS_APP_NAME)
-    leader_id = get_unit_id(leader_unit.name)
-    mongodb_application = ops_test.model.applications[MONGOS_APP_NAME]
+    leader_unit, _ = find_leader(juju, app_name=MONGOS_APP_NAME)
+    leader_id = get_unit_id(leader_unit)
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
-        mongodb_application.units,
-        key=lambda unit: int(unit.name.split("/")[1]),
+        juju.status().get_units(MONGOS_APP_NAME),
+        key=lambda unit: get_unit_id(unit),
         reverse=True,
     )
-    await refresh_charm(ops_test, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], timeout=1000, idle_period=60)
 
-    if "incompatible" in get_juju_status(ops_test.model.name, MONGOS_APP_NAME):
+    logger.info("Refreshing the application")
+    refresh_charm(juju, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
+
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            MONGOS_APP_NAME,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
+
+    if upgrade_incompatible(juju, substrate, MONGOS_APP_NAME, refresh_order[0]):
         logger.info("Upgrade is blocked due to incompatibility")
 
-        logger.info(f"Continue refresh on unit {refresh_order[0].name}")
+        logger.info(f"Continue refresh on unit {refresh_order[0]}")
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        force_refresh_action = await refresh_order[0].run_action(
+        force_refresh_task = juju.run(
+            refresh_order[0],
             "force-refresh-start",
-            **{
+            {
                 "check-compatibility": False,
                 "run-pre-refresh-checks": False,
                 "check-workload-container": False,
             },
         )
-        force_refresh_response = await force_refresh_action.wait()
-        assert force_refresh_response.results.get("return-code") == 0, "action failed"
+        assert force_refresh_task.return_code == 0, "action failed"
 
-    await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=20)
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            MONGOS_APP_NAME,
+            idle_period=60,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    if "resume-refresh" in mongodb_application.status_message:
+    if "resume-refresh" in juju.status().apps.get(MONGOS_APP_NAME).app_status.message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")
         if substrate == Substrate.lxd:
@@ -88,9 +117,39 @@ async def test_upgrade(
         else:
             unit = leader_unit
 
-        action = await unit.run_action("resume-refresh")
-        await action.wait()
+        try:
+            task = juju.run(unit, "resume-refresh")
+        except jubilant.TaskError as error:
+            task = error.task
         if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
         ):
-            assert action.status == "completed", "resume-refresh failed, expected to succeed."
+            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, MONGOS_APP_NAME, idle_period=30),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    for unit, mongos_unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
+        number = get_unit_id(unit)
+        cmd = f"db.test_collection.insertOne({{number: {number}}} );"
+        uri = generate_mongos_uri(
+            juju,
+            substrate,
+            MONGOS_CLIENT_APPLICATION,
+            auth=True,
+            mongos_unit_status=mongos_unit_status,
+        )
+        check = execute_on_mongod(
+            juju,
+            substrate,
+            app_name=MONGOS_APP_NAME,
+            uri=uri,
+            command=cmd,
+            unit_name=unit,
+            container_name="mongos",
+        )
+        assert check, "mongos user failed to write data"

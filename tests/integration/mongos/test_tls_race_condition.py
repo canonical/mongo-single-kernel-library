@@ -2,39 +2,42 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import pytest
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import MONGOS_APP_NAME, TIMEOUT
-from tests.integration.helpers.mongos import (
+from tests.integration.helpers.constants import (
+    CLUSTER_REL_NAME,
+    CONFIG_SERVER_APP_NAME,
+    MONGOS_APP_NAME,
     MONGOS_CLUSTER_COMPONENTS,
+    TIMEOUT,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.jubilant_mongos import (
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
 )
-from tests.integration.helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
-from tests.integration.helpers.tls import (
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_BASE,
-    TLS_CERTIFICATES_CHANNEL,
+from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     mongos_resource: dict[str, str],
     application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
         mongos_charm,
@@ -42,46 +45,43 @@ async def test_build_and_deploy(
         mongos_resource,
         application_path,
     )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=False)
+    build_cluster(juju, substrate, integrate_with_mongos=False)
+
     config = {"ca-common-name": "Test CA"}
-    await ops_test.model.deploy(
+    juju.deploy(
         TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
         base=TLS_CERTIFICATES_BASE,
         config=config,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, TLS_CERTIFICATES_APP_NAME, idle_period=20
+        ),
         timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_mongos_tls_enabled(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests race condition: mongos charm can integrate with TLS and then the config-server."""
-    await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
-    await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS,
-        idle_period=20,
+    integrate_apps_with_tls(juju, *MONGOS_CLUSTER_COMPONENTS)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, *MONGOS_CLUSTER_COMPONENTS, idle_period=20
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
-        status="active",
     )
-    await integrate_apps_with_tls(ops_test, applications=[MONGOS_APP_NAME])
+    integrate_apps_with_tls(juju, MONGOS_APP_NAME)
 
     # integrate mongos with config-server
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME],
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, MONGOS_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
     )
 
-    await assert_mongos_tls_enabled(ops_test, substrate)
+    assert_mongos_tls_enabled(juju, substrate)
