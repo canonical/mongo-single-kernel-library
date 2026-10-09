@@ -13,20 +13,19 @@ This user is named "backup".
 
 from __future__ import annotations
 
-import itertools
 import json
 import logging
 import re
 import time
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, Any, NewType
 
 import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError, ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
 from data_platform_helpers.advanced_statuses.types import Scope
 from mypy_boto3_s3.service_resource import Bucket
 from ops import Container
@@ -35,7 +34,6 @@ from ops.model import (
     Relation,
 )
 from tenacity import (
-    Retrying,
     before_log,
     retry,
     retry_if_exception_type,
@@ -43,6 +41,7 @@ from tenacity import (
     stop_after_attempt,
     wait_fixed,
 )
+from yaml import safe_dump
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
@@ -60,7 +59,6 @@ from single_kernel_mongo.exceptions import (
     InvalidPBMStatusError,
     InvalidS3CredentialsError,
     ListBackupError,
-    PBMBusyError,
     RestoreError,
     ResyncError,
     SetPBMConfigError,
@@ -69,7 +67,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
-from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
@@ -103,7 +100,6 @@ GCS_PBM_OPTION_MAP = {
 
 
 # Already yaml encoded blackhole config to bootstrap pbm config
-EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +119,7 @@ def _backup_restore_retry_before_sleep(retry_state) -> None:
     )
 
 
-class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
+class BackupManager(Object, BackupConfigManager, AbstractManagerStatus[CharmState]):
     """Manager for the S3 integrator and backups."""
 
     def __init__(
@@ -134,7 +130,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         state: CharmState,
         container: Container | None,
     ) -> None:
-        self.name = "backup"
+        self.name: str = "backup"
         super().__init__(parent=dependent, key=self.name)
         super(Object, self).__init__(
             role=role,
@@ -143,13 +139,13 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             state=state,
             container=container,
         )
-        self.dependent = dependent
+        self.dependent: MongoDBOperator = dependent
         self.charm = dependent.charm
-        self.substrate = substrate
+        self.substrate: Substrates = substrate
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
             role=role, container=container
         )
-        self.state = state
+        self.state: CharmState = state
         self._backup_id: str = ""
 
     @property
@@ -306,21 +302,22 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         If PMB returen any other error, the function will raise BackupError.
         """
         try:
-            output = self.workload.run_bin_command(
+            output_str = self.workload.run_bin_command(
                 "backup",
+                ["--out", "json"],
                 environment=self.environment,
-            )
-            backup_id_match = re.search(
-                r"Starting backup '(?P<backup_id>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)'",
-                output,
-            )
-            return backup_id_match.group("backup_id") if backup_id_match else "N/A"
+            ).strip()
+            output = json.loads(output_str)
+            return output.get("name", "N/A")
         except WorkloadExecError as e:
             error_message = e.stdout
             if "Resync" in error_message:
                 raise ResyncError from e
 
             fail_message = f"Backup failed: {str(e)}"
+            raise BackupError(fail_message)
+        except json.JSONDecodeError:
+            fail_message = f"Backup failed: {output_str}"  # pyright: ignore[reportPossiblyUnboundVariable]
             raise BackupError(fail_message)
 
     def list_backup_action(self) -> str:
@@ -506,41 +503,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
+            file_on_disk = self.dependent.get_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
-            self.configure_and_restart(force=True)
-
-    def resync_config_options(self):  # pragma: nocover
-        """Attempts to resync config options and sets status in case of failure."""
-        # Set environment before starting
-        self.set_environment()
-        self.workload.start()
-
-        # Clear statuses before resync as we want to update it anyway.
-        self.state.statuses.clear(scope="unit", component=self.name)
-
-        # pbm has a flakely resync and it is necessary to wait for no actions to be running before
-        # resync-ing. See: https://jira.percona.com/browse/PBM-1038
-        for attempt in Retrying(
-            stop=stop_after_attempt(20),
-            wait=wait_fixed(5),
-            reraise=True,
-        ):
-            with attempt:
-                match self.backup_state():
-                    case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
-                        raise PBMBusyError
-                    case BackupState.WAITING_TO_SYNC:
-                        raise PBMBusyError
-                    case _:
-                        continue
-
-        # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
-        # 2 seconds for pbm_agent to receive the resync command before verifying.
-        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
-        time.sleep(2)
-        self._wait_pbm_status()
+            should_restart = file_on_disk.strip() != "\n".join(cert_chain_list).strip()
+            self.configure_and_restart(force=should_restart)
 
     def validate_s3_config(self) -> bool:
         """Validates that the S3 config is complete."""
@@ -584,28 +552,14 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             credentials: A dictionary provided by backup event handler.
         """
         # First check if we ever had received a config
-        with MongoConnection(self.state.backup_config) as conn:
-            has_config = conn.client.admin["pbmConfig"].find_one()
-
-        if not has_config:
-            # Clear the current config file.
-            self.clear_pbm_config_file()
-
         config = map_s3_config_to_pbm_config(credentials)
 
         try:
-            self.workload.run_bin_command(
-                "config",
-                list(
-                    itertools.chain(
-                        *[
-                            ("--set", f"{pbm_key}={pbm_value}")
-                            for pbm_key, pbm_value in config.items()
-                        ],
-                    )
-                ),
-                environment=self.environment,
+            _ = self.workload.run_bin_command(
+                "config", ["--file=-"], environment=self.environment, input=safe_dump(config)
             )
+            time.sleep(2)
+            self._wait_pbm_status()
         except WorkloadExecError as err:
             # In case of resync in progress, raise a ResyncError that will set a waiting status.
             if "resync" in err.stderr.lower():
@@ -620,19 +574,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
             )
             raise SetPBMConfigError(err.stderr)
-
-    def clear_pbm_config_file(self) -> None:
-        """Overwrites the PBM config file with the one provided by default."""
-        # Bootstrap the config with blackhole configuration.
-        self.workload.write(
-            self.workload.paths.pbm_config,
-            "# this file is to be left empty. Changes in this file will be ignored.\n"
-            + EMPTY_CONFIG,
-        )
-        self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
-        self.workload.run_bin_command(
-            "config", ["--file", f"{self.workload.paths.pbm_config}"], environment=self.environment
-        )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
         """Parses pbm status for an error message from the current unit.
@@ -804,8 +745,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return
 
     @retry(
-        stop=stop_after_attempt(120),
-        wait=wait_fixed(5),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(10),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
         before=before_log(logger, logging.DEBUG),
@@ -975,8 +916,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 )
 
 
-def map_s3_config_to_pbm_config(credentials: dict[str, str]):
+def map_s3_config_to_pbm_config(credentials: dict[str, str]) -> dict[str, Any]:
     """Simple mapping from s3 integration to current status."""
+    pbm_configs: dict[str, Any] = {}
     if "googleapis" in credentials.get("endpoint", ""):
         logger.debug("Storage type is GCS.")
         pbm_configs = {"storage.type": "gcs"}
@@ -987,8 +929,17 @@ def map_s3_config_to_pbm_config(credentials: dict[str, str]):
         config_map = S3_PBM_OPTION_MAP
 
     for s3_option, s3_value in credentials.items():
-        if s3_option not in config_map:
+        # Create a ref to the dict on which we'll walk
+        tmp_dict = pbm_configs
+        # Skip invalid values
+        if not (path := config_map.get(s3_option)):
             continue
+        # Split the path on the dots
+        parts = path.split(".")
+        # Create all the subdicts
+        for part in parts[:-1]:
+            tmp_dict = tmp_dict.setdefault(part, {})
+        # Set the value
+        tmp_dict[parts[-1]] = s3_value
 
-        pbm_configs[config_map[s3_option]] = s3_value
     return pbm_configs

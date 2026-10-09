@@ -5,10 +5,10 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT
-from ..helpers.mongos import build_cluster, deploy_cluster_components
-from ..helpers.types import Substrate
-from ..helpers.upgrade import refresh_charm
+from tests.integration.helpers.common import MONGOS_APP_NAME, TIMEOUT
+from tests.integration.helpers.mongos import build_cluster, deploy_cluster_components
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 
 @pytest.mark.abort_on_fail

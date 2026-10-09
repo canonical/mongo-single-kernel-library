@@ -93,7 +93,6 @@ def test_ldap_ready_success(
     relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
     harness.add_relation_unit(relation_id, "glauth-k8s/0")
     secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
-
     harness.grant_secret(secret_id, mongodb_name)
 
     harness.update_relation_data(
@@ -102,9 +101,8 @@ def test_ldap_ready_success(
         {
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
-            "bind_password": "password",
-            "bind_password_id": "secret-id",
             "bind_password_secret": secret_id,
+            "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": '["ldaps://ldap.glauth.com"]',
