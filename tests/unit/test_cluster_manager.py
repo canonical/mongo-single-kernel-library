@@ -24,6 +24,11 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseProviderData,
+    RelationStatus,
+)
+from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
     SECRET_CERT_LABEL,
@@ -32,6 +37,8 @@ from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
+
+GROUP_DN = "ou=superheroes,ou=users,dc=glauth,dc=com"
 
 #################
 # Mongo DB Side #
@@ -200,10 +207,12 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     harness.update_relation_data(rel_id, "mongos", {"database": "test_mongos"})
 
     harness.charm.operator.state.unit_peer_data.update({f"relation_{rel_id}_departed": "false"})
+    harness.charm.operator.state.app_peer_data.requested_entity_names = {str(rel_id): GROUP_DN}
 
     manager.cleanup_users(relation)
 
     mocked_reconcile.assert_called_with(relation, relation_departing=True)
+    assert harness.charm.operator.state.app_peer_data.requested_entity_names == {}
 
 
 ###############
@@ -912,3 +921,276 @@ def test_tls_mongos_state_any_incompatible(
 ):
     ### Checks all the possible states for mongos tls state validation.
     assert MongosTLSState.any_incompatible(internal_tls_state | external_tls_state) == expected
+
+
+def _app_statuses(mongos_harness):
+    return mongos_harness.charm.operator.state.statuses.get(
+        scope="app", component=mongos_harness.charm.operator.name
+    ).root
+
+
+def _vm_mongos_with_entity_client(mongos_harness):
+    """A VM mongos leader that forwarded a GROUP request from `client-app`."""
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    mongos_harness.add_relation_unit(cluster_id, "mongodb/0")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+    mongos_harness.update_relation_data(
+        rel_id, "client-app", {"database": "superdb", "entity-type": "GROUP"}
+    )
+    return cluster_id, rel_id
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_mongos_mirrors_cluster_status_to_client(mongos_harness):
+    cluster_id, rel_id = _vm_mongos_with_entity_client(mongos_harness)
+    status = RelationStatus(code=5002, message="MongoDB refused createRole: x", resolution="r")
+
+    mongos_harness.update_relation_data(
+        cluster_id, "mongodb", {"status": json.dumps([status.__dict__])}
+    )
+
+    client_statuses = json.loads(
+        mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)["status"]
+    )
+    assert client_statuses == [status.__dict__]
+    app_statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope="app", component=mongos_harness.charm.operator.name
+    ).root
+    assert any(f"(relation {rel_id})" in s.message for s in app_statuses)
+
+    mongos_harness.update_relation_data(cluster_id, "mongodb", {"status": "[]"})
+
+    assert (
+        json.loads(
+            mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)["status"]
+        )
+        == []
+    )
+    app_statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope="app", component=mongos_harness.charm.operator.name
+    ).root
+    assert not any(f"(relation {rel_id})" in s.message for s in app_statuses)
+
+
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_k8s_router_creates_and_removes_group_role(mongos_harness, mocker):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    manager = mongos_harness.charm.operator.cluster_manager
+    manager.share_credentials_to_clients("relation-1", "pw")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists", return_value=False
+    )
+    create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role"
+    )
+    drop_role = mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_role")
+    mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_user")
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+
+    mongos_harness.update_relation_data(
+        rel_id, "client-app", {"database": "superdb", "entity-type": "GROUP"}
+    )
+
+    assert create_role.call_args.args[0] == f"relation-{rel_id}"
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert "username" not in data
+    assert data["entity-name"] == f"relation-{rel_id}"
+
+    cluster = mongos_harness.model.get_relation(RelationNames.CLUSTER.value)
+    manager.remove_users_for_k8s_routers(cluster)
+
+    drop_role.assert_called_once_with(f"relation-{rel_id}")
+
+
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_k8s_router_restart_creates_pending_group_role(mongos_harness, mocker):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    manager = mongos_harness.charm.operator.cluster_manager
+    manager.share_credentials_to_clients("relation-1", "pw")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists", return_value=False
+    )
+    create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role"
+    )
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+    # The request arrived while the router could not reach the cluster.
+    with mongos_harness.hooks_disabled():
+        mongos_harness.update_relation_data(
+            rel_id, "client-app", {"database": "superdb", "entity-type": "GROUP"}
+        )
+
+    manager.update_users_for_k8s_routers()
+
+    create_role.assert_called_once()
+    assert create_role.call_args.args[0] == f"relation-{rel_id}"
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert data["entity-name"] == f"relation-{rel_id}"
+    assert "username" not in data
+
+
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_k8s_router_reintegration_recreates_named_group_role(mongos_harness, mocker):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    manager = mongos_harness.charm.operator.cluster_manager
+    manager.share_credentials_to_clients("relation-1", "pw")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists", return_value=False
+    )
+    create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role"
+    )
+    drop_role = mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_role")
+    mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_user")
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+    secret_id = mongos_harness.add_model_secret("client-app", {"entity-name": GROUP_DN})
+    mongos_harness.grant_secret(secret_id, mongos_harness.charm.app.name)
+    mongos_harness.update_relation_data(
+        rel_id,
+        "client-app",
+        {"database": "superdb", "entity-type": "GROUP", "requested-entity-secret": secret_id},
+    )
+    assert create_role.call_args.args[0] == GROUP_DN
+    # The requester's library removes its helper secret once the role exists.
+    mongos_harness.revoke_secret(secret_id, mongos_harness.charm.app.name)
+    cluster = mongos_harness.model.get_relation(RelationNames.CLUSTER.value)
+
+    manager.remove_users_for_k8s_routers(cluster)
+    drop_role.assert_called_once_with(GROUP_DN)
+    # Re-integration with a config-server: the router start reconciles client relations.
+    manager.update_users_for_k8s_routers()
+
+    assert create_role.call_count == 2
+    assert create_role.call_args.args[0] == GROUP_DN
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert data["entity-name"] == GROUP_DN
+    assert "status" not in data
+    assert not [
+        s
+        for s in mongos_harness.charm.operator.state.statuses.get(
+            scope="app", component=mongos_harness.charm.operator.name
+        ).root
+        if s.status == "blocked"
+    ]
+    assert mongos_harness.charm.operator.state.app_peer_data.managed_entities == {
+        str(rel_id): GROUP_DN
+    }
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_mongos_mirrors_cluster_status_only_onto_the_entity_client(mongos_harness):
+    cluster_id, rel_id = _vm_mongos_with_entity_client(mongos_harness)
+    plain_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "plain-app")
+    mongos_harness.add_relation_unit(plain_id, "plain-app/0")
+    mongos_harness.update_relation_data(plain_id, "plain-app", {"database": "plaindb"})
+    # A client that has not even sent `database` yet: raising a status there would fail.
+    early_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "early-app")
+    mongos_harness.add_relation_unit(early_id, "early-app/0")
+    status = RelationStatus(code=5002, message="MongoDB refused createRole: x", resolution="r")
+
+    mongos_harness.update_relation_data(
+        cluster_id, "mongodb", {"status": json.dumps([status.__dict__])}
+    )
+
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert json.loads(data["status"]) == [status.__dict__]
+    for other_id in (plain_id, early_id):
+        assert "status" not in mongos_harness.get_relation_data(
+            other_id, mongos_harness.charm.app.name
+        )
+    blocked = [s.message for s in _app_statuses(mongos_harness) if s.status == "blocked"]
+    assert blocked == [f"{status.message} (relation {rel_id})"]
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_mongos_mirrors_nothing_without_a_forwarded_request(mongos_harness):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+    # Seeded without hooks: the request was never forwarded to this config-server.
+    with mongos_harness.hooks_disabled():
+        mongos_harness.update_relation_data(
+            rel_id, "client-app", {"database": "superdb", "entity-type": "GROUP"}
+        )
+    status = RelationStatus(code=5002, message="MongoDB refused createRole: x", resolution="r")
+
+    mongos_harness.update_relation_data(
+        cluster_id, "mongodb", {"status": json.dumps([status.__dict__])}
+    )
+
+    assert "status" not in mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert not [s for s in _app_statuses(mongos_harness) if s.status == "blocked"]
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_mongos_mirrors_nothing_onto_a_client_without_entity_type(mongos_harness):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "plain-app")
+    mongos_harness.add_relation_unit(rel_id, "plain-app/0")
+    mongos_harness.update_relation_data(rel_id, "plain-app", {"database": "plaindb"})
+    # A stale record pointing at a relation that carries no entity request.
+    mongos_harness.charm.operator.state.app_peer_data.client_entity_fields = {
+        ClusterStateKeys.CLIENT_ENTITY_TYPE.value: "GROUP",
+        ClusterStateKeys.CLIENT_ENTITY_RELATION.value: str(rel_id),
+    }
+    status = RelationStatus(code=5002, message="MongoDB refused createRole: x", resolution="r")
+
+    mongos_harness.update_relation_data(
+        cluster_id, "mongodb", {"status": json.dumps([status.__dict__])}
+    )
+
+    assert "status" not in mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert not [s for s in _app_statuses(mongos_harness) if s.status == "blocked"]
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_vm_cluster_broken_clears_mirrored_entity_statuses(mongos_harness, mocker):
+    cluster_id, rel_id = _vm_mongos_with_entity_client(mongos_harness)
+    status = RelationStatus(code=5002, message="MongoDB refused createRole: x", resolution="r")
+    mongos_harness.update_relation_data(
+        cluster_id, "mongodb", {"status": json.dumps([status.__dict__])}
+    )
+    assert json.loads(
+        mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)["status"]
+    ) == [status.__dict__]
+    unrelated = RelationStatus(code=1001, message="not an entity status", resolution="wait")
+    DatabaseProviderData(mongos_harness.model, RelationNames.MONGOS_PROXY.value).raise_status(
+        rel_id, unrelated
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.has_departed_run", return_value=True
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.is_scaling_down", return_value=False
+    )
+    mocker.patch("single_kernel_mongo.managers.mongos_operator.MongosOperator.stop_charm_services")
+
+    mongos_harness.remove_relation(cluster_id)
+
+    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+    assert json.loads(data["status"]) == [unrelated.__dict__]
+    assert not [s for s in _app_statuses(mongos_harness) if s.status == "blocked"]
+    recomputed = mongos_harness.charm.operator.get_statuses(scope="app", recompute=True)
+    assert not [s for s in recomputed if f"(relation {rel_id})" in s.message]
+    # Re-integrating forwards the request again, for the new config-server to judge.
+    new_cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    new_cluster_data = mongos_harness.get_relation_data(
+        new_cluster_id, mongos_harness.charm.app.name
+    )
+    assert new_cluster_data[ClusterStateKeys.CLIENT_ENTITY_RELATION.value] == str(rel_id)

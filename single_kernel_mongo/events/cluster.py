@@ -34,6 +34,8 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DatabaseProviderEventHandlers,
     DatabaseRequestedEvent,
     DatabaseRequirerEventHandlers,
+    StatusRaisedEvent,
+    StatusResolvedEvent,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
@@ -141,6 +143,12 @@ class ClusterMongosEventHandler(Object):
             self.database_requirer_events.on.database_created, self._on_database_created
         )
         self.framework.observe(
+            self.database_requirer_events.on.status_raised, self._on_status_raised
+        )
+        self.framework.observe(
+            self.database_requirer_events.on.status_resolved, self._on_status_resolved
+        )
+        self.framework.observe(
             self.charm.on[self.relation_name.value].relation_changed,
             self._on_relation_changed,
         )
@@ -158,6 +166,15 @@ class ClusterMongosEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
         self.manager.set_relation_created_status()
+        self.manager.forward_client_entity_fields()
+
+    def _on_status_raised(self, event: StatusRaisedEvent) -> None:
+        """The config-server rejected the forwarded entity request."""
+        self.manager.mirror_status(event.status, resolved=False)
+
+    def _on_status_resolved(self, event: StatusResolvedEvent) -> None:
+        """The config-server resolved a status; only happens with the relation."""
+        self.manager.mirror_status(event.status, resolved=True)
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Database Created event handler.

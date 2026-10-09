@@ -131,6 +131,10 @@ def deploy_charm(
 ):
     if revision is not None:
         channel = "8/beta"
+    # Juju rejects `--num-units 0`, and jubilant only omits the flag for its default of 1,
+    # so a subordinate is deployed with the default (it gets its units from its principal).
+    if subordinate:
+        num_units = 1
     if substrate == Substrate.k8s:
         base = base or BASE
         juju.deploy(
@@ -138,7 +142,7 @@ def deploy_charm(
             app=app_name,
             revision=revision,
             resources=(mongod_resource if not channel else None),
-            num_units=0 if subordinate else num_units,
+            num_units=num_units,
             base=base,
             trust=True,
             config=config,
@@ -149,7 +153,7 @@ def deploy_charm(
         juju.deploy(
             charm,
             app=app_name,
-            num_units=0 if subordinate else num_units,
+            num_units=num_units,
             revision=revision,
             config=config,
             channel=channel,

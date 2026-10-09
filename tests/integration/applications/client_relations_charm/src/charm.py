@@ -13,11 +13,13 @@ import logging
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseEndpointsChangedEvent,
+    DatabaseEntityCreatedEvent,
     DatabaseRequires,
+    StatusRaisedEvent,
 )
-from ops.charm import ActionEvent, CharmBase
+from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent
 from ops.main import main
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus
 from pymongo import MongoClient
 
 logger = logging.getLogger(__name__)
@@ -107,8 +109,43 @@ class ApplicationCharm(CharmBase):
             self._on_cluster2_endpoints_changed,
         )
 
+        # GROUP entity (an LDAP group DN) requested over the ldap-group endpoint
+        # (mongodb `database`, mongos-k8s `mongos_proxy`) or, towards a VM mongos subordinate,
+        # over the ldap-group-mongos endpoint (interface mongos_client).
+        self.ldap_group = self._ldap_group_requires("ldap-group")
+        self.ldap_group_mongos = self._ldap_group_requires("ldap-group-mongos")
+
+    def _ldap_group_requires(self, relation_name: str) -> DatabaseRequires:
+        """Requests the GROUP entity configured by the ldap-group-* options on an endpoint."""
+        requires = DatabaseRequires(
+            self,
+            relation_name,
+            str(self.config["ldap-group-database"]),
+            entity_type="GROUP",
+            extra_group_roles=str(self.config["ldap-group-roles"]),
+            entity_permissions=str(self.config["ldap-group-permissions"]) or None,
+            requested_entity_name=str(self.config["ldap-group-dn"]),
+        )
+        self.framework.observe(requires.on.database_entity_created, self._on_ldap_group_created)
+        self.framework.observe(requires.on.status_raised, self._on_ldap_group_status)
+        self.framework.observe(self.on[relation_name].relation_broken, self._on_ldap_group_broken)
+        return requires
+
     def _on_start(self, _) -> None:
         """Only sets an Active status."""
+        self.unit.status = ActiveStatus()
+
+    # LDAP group (GROUP entity) events observers.
+    def _on_ldap_group_created(self, event: DatabaseEntityCreatedEvent) -> None:
+        """Event triggered when the requested GROUP entity (role) was created."""
+        self.unit.status = ActiveStatus(f"ldap group role: {event.entity_name}")
+
+    def _on_ldap_group_status(self, event: StatusRaisedEvent) -> None:
+        """Event triggered when the provider rejects the GROUP request."""
+        self.unit.status = BlockedStatus(f"ldap group rejected: {event.status.message}")
+
+    def _on_ldap_group_broken(self, _: RelationBrokenEvent) -> None:
+        """Clears the group status, so a new request starts from a plain Active status."""
         self.unit.status = ActiveStatus()
 
     def _on_write_releases(self, event: ActionEvent):

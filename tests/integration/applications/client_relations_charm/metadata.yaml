@@ -17,3 +17,13 @@ requires:
   aliased-multiple-database-clusters:
     interface: mongodb_client
     limit: 2
+  ldap-group:
+    interface: mongodb_client
+    limit: 1
+
+provides:
+  # The same GROUP request towards a VM mongos: the subordinate's `mongos_proxy` endpoint
+  # requires `mongos_client`, so the principal provides it (like the mongos client charm).
+  ldap-group-mongos:
+    interface: mongos_client
+    limit: 1

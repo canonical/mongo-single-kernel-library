@@ -1739,6 +1739,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if scope == "app":
             charm_statuses += self.get_password_management_statuses()
+            charm_statuses += self.mongo_manager.entity_statuses()
             return charm_statuses
 
         if not self.state.db_initialised:

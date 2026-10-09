@@ -307,3 +307,11 @@ class IncompatibleMongosTLSError(ClusterTLSError):
 
 class WaitingForACertError(ClusterTLSError):
     """Raised when Mongos is waiting for a certificate."""
+
+
+class EntityRequestError(Exception):
+    """Raised when a mongodb_client entity request cannot be honoured."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason

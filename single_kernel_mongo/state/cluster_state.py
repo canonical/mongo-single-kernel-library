@@ -31,6 +31,12 @@ class ClusterStateKeys(str, Enum):
     USERNAME = "username"
     PASSWORD = "password"
     CLUSTER_ID = "cluster-id"
+    CLIENT_ENTITY_TYPE = "client-entity-type"
+    CLIENT_EXTRA_GROUP_ROLES = "client-extra-group-roles"
+    CLIENT_ENTITY_PERMISSIONS = "client-entity-permissions"
+    CLIENT_ENTITY_NAME = "client-entity-name"
+    CLIENT_ENTITY_RELATION = "client-entity-relation"
+    ENTITY_NAME = "entity-name"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -82,6 +88,18 @@ class ClusterState(AbstractRelationState[Data]):
     def extra_user_roles(self, value: set[str]):
         roles_str = ",".join(value)
         self.update({ClusterStateKeys.EXTRA_USER_ROLES.value: roles_str})
+
+    def set_client_entity_fields(self, fields: dict[str, str]) -> None:
+        """Forwards the client's entity request to the config-server (VM mongos)."""
+        payload: dict[str, str | None] = dict(fields)
+        self.update(payload)
+
+    @property
+    def entity_name(self) -> str | None:
+        """The role name the config-server created for the forwarded entity request."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(ClusterStateKeys.ENTITY_NAME.value, None)
 
     @property
     def internal_ca_secret(self) -> str | None:

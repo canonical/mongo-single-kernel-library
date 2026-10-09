@@ -1,6 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from data_platform_helpers.advanced_statuses.utils import as_status
 from ops.model import MaintenanceStatus, Relation
@@ -13,6 +15,7 @@ from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
 )
+from single_kernel_mongo.config.statuses import EntityStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -20,6 +23,7 @@ from single_kernel_mongo.exceptions import (
     WaitingForCertificatesError,
     WaitingForSecretsError,
 )
+from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import CharmedBackupUser, CharmedOperatorUser
@@ -770,3 +774,156 @@ def test_shard_manager_remove_invalid_relation(
         manager.assert_pass_hook_checks(relation, is_leaving=True)
 
     assert err.value.args[0] == "Config-server never set up, no need to process broken event."
+
+
+###########################################
+# GROUP entities forwarded by a VM mongos #
+###########################################
+
+GROUP_DN = "ou=superheroes,ou=users,dc=glauth,dc=com"
+
+
+def _config_server_with_mongos(harness, mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists",
+        return_value=False,
+    )
+    mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.update_user")
+    create_user = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user"
+    )
+    create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role"
+    )
+    drop_role = mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_role")
+    rel_id = harness.add_relation(RelationNames.CLUSTER.value, "mongos")
+    harness.add_relation_unit(rel_id, "mongos/0")
+    return rel_id, create_user, create_role, drop_role
+
+
+def _request_group_role(harness, rel_id):
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        {
+            "requested-secrets": '["username", "password", "entity-name"]',
+            "database": "superdb",
+            "extra-user-roles": "default",
+            ClusterStateKeys.CLIENT_ENTITY_TYPE.value: "GROUP",
+            ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value: "admin",
+            ClusterStateKeys.CLIENT_ENTITY_NAME.value: GROUP_DN,
+        },
+    )
+
+
+def _cluster_relation_statuses(harness, rel_id):
+    data = harness.get_relation_data(rel_id, harness.charm.app.name)
+    return json.loads(data.get("status", "[]"))
+
+
+def test_config_server_creates_router_user_and_group_role(harness, mocker, mock_fs_interactions):
+    rel_id, create_user, create_role, _ = _config_server_with_mongos(harness, mocker)
+
+    _request_group_role(harness, rel_id)
+
+    assert create_user.call_args.args[0] == f"relation-{rel_id}"
+    create_role.assert_called_once()
+    assert create_role.call_args.args[0] == GROUP_DN
+    assert {"role": "userAdminAnyDatabase", "db": "admin"} in create_role.call_args.args[2]
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {str(rel_id): GROUP_DN}
+    data_interface = harness.charm.operator.cluster_manager.data_interface
+    assert data_interface.fetch_my_relation_field(rel_id, "entity-name") == GROUP_DN
+    assert _cluster_relation_statuses(harness, rel_id) == []
+
+
+def test_config_server_rejects_invalid_forwarded_request(harness, mocker, mock_fs_interactions):
+    rel_id, create_user, create_role, _ = _config_server_with_mongos(harness, mocker)
+
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        {
+            "requested-secrets": '["username", "password"]',
+            "database": "superdb",
+            ClusterStateKeys.CLIENT_ENTITY_TYPE.value: "USER",
+        },
+    )
+
+    create_role.assert_not_called()
+    assert create_user.call_args.args[0] == f"relation-{rel_id}"  # the router user is still created
+    statuses = _cluster_relation_statuses(harness, rel_id)
+    assert len(statuses) == 1
+    assert statuses[0]["code"] == EntityStatuses.INVALID_REQUEST_CODE
+    message = "invalid or unsupported request: entity-type 'USER' is not supported, only GROUP"
+    assert statuses[0]["message"] == message
+    recomputed = harness.charm.operator.get_statuses(scope="app", recompute=True)
+    assert EntityStatuses.rejected(message, rel_id) in recomputed
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {}
+
+
+def test_config_server_ignores_forwarded_permissions_change(harness, mocker, mock_fs_interactions):
+    rel_id, _, create_role, drop_role = _config_server_with_mongos(harness, mocker)
+    _request_group_role(harness, rel_id)
+    connection = mocker.patch("single_kernel_mongo.managers.mongo.MongoConnection")
+    mongo = connection.return_value.__enter__.return_value
+    mongo.user_exists.return_value = True  # the router user was created above
+
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        {
+            ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value: json.dumps(
+                [{"resource_name": "superdb", "resource_type": "db", "privileges": ["find"]}]
+            )
+        },
+    )
+
+    create_role.assert_called_once()
+    drop_role.assert_not_called()
+    # Only the router user is looked at again; nothing touches the recorded role.
+    assert {name for name, _, _ in mongo.mock_calls} == {"user_exists", "update_user"}
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {str(rel_id): GROUP_DN}
+    assert _cluster_relation_statuses(harness, rel_id) == []
+    app_statuses = harness.charm.operator.state.statuses.get(
+        scope="app", component=harness.charm.operator.name
+    ).root
+    assert [s for s in app_statuses if s.short_message == "Entity request rejected."] == []
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)  # on K8s the routers remove their own users
+def test_config_server_drops_group_role_with_cluster_relation(
+    harness, mocker, mock_fs_interactions
+):
+    rel_id, _, _, drop_role = _config_server_with_mongos(harness, mocker)
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        {
+            "requested-secrets": '["username", "password"]',
+            "database": "superdb",
+            ClusterStateKeys.CLIENT_ENTITY_TYPE.value: "GROUP",
+        },
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.has_departed_run", return_value=True
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.is_scaling_down", return_value=False
+    )
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {
+        str(rel_id): f"relation-{rel_id}"
+    }
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists",
+        return_value=True,
+    )
+    drop_user = mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_user")
+
+    harness.remove_relation(rel_id)
+
+    drop_role.assert_called_once_with(f"relation-{rel_id}")
+    drop_user.assert_called_once_with(f"relation-{rel_id}")  # together with the router user
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {}

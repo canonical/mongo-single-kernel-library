@@ -22,7 +22,10 @@ from single_kernel_mongo.exceptions import (
     FailedToGetHostsError,
     UpgradeInProgressError,
 )
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import DatabaseProvides
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseEntityPermissionsChangedEvent,
+    DatabaseProvides,
+)
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
@@ -57,6 +60,13 @@ class DatabaseEventsHandler(Object):
         self.framework.observe(
             self.database_provides.on.database_requested, self._on_relation_event
         )
+        self.framework.observe(
+            self.database_provides.on.database_entity_requested, self._on_relation_event
+        )
+        self.framework.observe(
+            self.database_provides.on.database_entity_permissions_changed,
+            self._on_entity_permissions_changed,
+        )
 
     def _on_relation_event(self, event: RelationEvent):
         """Handle relation joined events.
@@ -68,11 +78,8 @@ class DatabaseEventsHandler(Object):
         """
         relation_departing = False
         relation_changed = False
-        if (
-            self.dependent.substrate == Substrates.VM
-            and self.relation_name == RelationNames.MONGOS_PROXY
-        ):
-            self.dependent.update_proxy_connection(event.relation)  # type: ignore[attr-defined]
+        if self._is_vm_mongos_proxy:
+            self._on_vm_mongos_proxy_event(event)
             return
 
         try:
@@ -119,6 +126,46 @@ class DatabaseEventsHandler(Object):
             logger.error("Deferring _on_relation_event since: error=%r", e)
             event.defer()
             return
+        if relation_departing:
+            self.manager.forget_entity_request(event.relation)
+
+    @property
+    def _is_vm_mongos_proxy(self) -> bool:
+        """VM mongos is a subordinate: the config-server serves its client's request."""
+        return (
+            self.dependent.substrate == Substrates.VM
+            and self.relation_name == RelationNames.MONGOS_PROXY
+        )
+
+    def _on_vm_mongos_proxy_event(self, event: RelationEvent) -> None:
+        """VM mongos is a subordinate: it forwards its client's request to the config-server."""
+        self.dependent.update_proxy_connection(event.relation)  # type: ignore[attr-defined]
+        if isinstance(event, RelationBrokenEvent) and self.charm.unit.is_leader():
+            self.manager.delete_rejected_statuses(event.relation)
+
+    def _on_entity_permissions_changed(self, event: DatabaseEntityPermissionsChangedEvent) -> None:
+        """Entity permissions cannot change after creation; report it (spec 3.3).
+
+        Behind the same checks as `_on_relation_event`. A VM mongos stores the request for
+        forwarding as soon as it arrives, so it judges a change at once as well.
+        """
+        if self._is_vm_mongos_proxy:
+            if not self.charm.unit.is_leader():
+                return
+            self.manager.reject_entity_change(event.relation)
+            return
+        try:
+            if not self.pass_hook_checks(event):
+                logger.info(f"Skipping {type(event)}: Hook checks did not pass")
+                return
+        except UpgradeInProgressError:
+            logger.warning(
+                "Changing relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            logger.info(f"Deferring {type(event)}: Hook checks did not pass")
+            event.defer()
+            return
+        self.manager.reject_entity_change(event.relation)
 
     # Checks:
     def pass_hook_checks(self, event: RelationEvent) -> bool:

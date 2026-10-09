@@ -34,6 +34,9 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseEntityPermissionsChangedEvent,
+)
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     CharmedBackupUser,
@@ -2136,3 +2139,72 @@ def test_get_relation_feasible_status(
 
     computed_status = harness.charm.operator.get_relation_feasible_status(rel_name.value)
     assert computed_status == status
+
+
+def test_entity_requested_on_non_leader_does_nothing(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(False)
+    harness.charm.operator.state.db_initialised = True
+    create_role = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_role"
+    )
+    raise_status = mocker.patch(
+        "single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces.DatabaseProviderData.raise_status"
+    )
+
+    rel_id = harness.add_relation("database", "client-app")
+    harness.add_relation_unit(rel_id, "client-app/0")
+    harness.update_relation_data(rel_id, "client-app", {"database": "db", "entity-type": "USER"})
+
+    create_role.assert_not_called()
+    raise_status.assert_not_called()
+
+
+PERMISSIONS = '[{"resource_name": "db", "resource_type": "db", "privileges": ["find"]}]'
+
+
+def _entity_relation_on_leader(harness: Harness[MongoTestCharm], mocker) -> int:
+    # The request goes through the hooks so that the library records it; nothing is created.
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs")
+    rel_id = harness.add_relation("database", "client-app")
+    harness.add_relation_unit(rel_id, "client-app/0")
+    harness.update_relation_data(rel_id, "client-app", {"database": "db", "entity-type": "GROUP"})
+    return rel_id
+
+
+@pytest.mark.parametrize(
+    ("role", "db_initialised"),
+    ((MongoDBRoles.REPLICATION, False), (MongoDBRoles.SHARD, True)),
+)
+def test_entity_permissions_change_skipped_when_hook_checks_fail(
+    harness: Harness[MongoTestCharm], mocker, role: MongoDBRoles, db_initialised: bool
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state.db_initialised = db_initialised
+    rel_id = _entity_relation_on_leader(harness, mocker)
+
+    harness.update_relation_data(rel_id, "client-app", {"entity-permissions": PERMISSIONS})
+
+    assert "status" not in harness.get_relation_data(rel_id, harness.charm.app.name)
+    app_statuses = harness.charm.operator.state.statuses.get(
+        scope="app", component=harness.charm.operator.name
+    ).root
+    assert not [s for s in app_statuses if f"(relation {rel_id})" in s.message]
+
+
+def test_entity_permissions_change_deferred_during_refresh(
+    harness: Harness[MongoTestCharm], mocker
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.db_initialised = True
+    rel_id = _entity_relation_on_leader(harness, mocker)
+    harness.charm.operator.refresh.in_progress = True
+    reject = mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reject_entity_change")
+    defer = mocker.patch("ops.framework.EventBase.defer", autospec=True)
+
+    harness.update_relation_data(rel_id, "client-app", {"entity-permissions": PERMISSIONS})
+
+    reject.assert_not_called()
+    deferred = [type(call.args[0]) for call in defer.call_args_list]
+    assert DatabaseEntityPermissionsChangedEvent in deferred

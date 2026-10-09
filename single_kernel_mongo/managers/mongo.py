@@ -29,30 +29,36 @@ from pymongo.errors import (
     OperationFailure,
     PyMongoError,
     ServerSelectionTimeoutError,
+    WriteConcernError,
 )
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
-from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
+from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses, EntityStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
+    EntityRequestError,
     FailedToElectNewPrimaryError,
     MissingCredentialsError,
     SetPasswordError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
+    RelationStatus,
 )
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from single_kernel_mongo.utils.entities import entity_field_names, parse_entity_request
 from single_kernel_mongo.utils.mongo_config import (
     EMPTY_CONFIGURATION,
     MongoConfiguration,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
     AuthRestrictions,
@@ -88,6 +94,7 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
     ) -> None:
         super().__init__(parent=dependent, key="managers")
         self.name: str = "mongo"
+        self.dependent = dependent
         self.charm: AbstractMongoCharm[MongoConfigModel, OperatorProtocol] = dependent.charm
         self.workload: MainWorkloadType = workload
         self.state: CharmState = state
@@ -196,7 +203,7 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             logger.info(f"Creating the {user.username} user roles…")
             mongo.create_role(
                 role_name=user.mongodb_role,
-                privileges=user.privileges,
+                privileges=[user.privileges],
             )
             logger.info(f"Creating the {user.username} user...")
             config = self.state.mongodb_config_for_user(
@@ -309,6 +316,12 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
+        if self._is_entity_relation(relation, data_interface):
+            self._reconcile_entity(relation, data_interface)
+            # On the cluster relation the router user is still needed below.
+            if relation.name != RelationNames.CLUSTER.value:
+                return
+
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
 
@@ -360,6 +373,11 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             self.model,
             relation.name,
         )
+        if (
+            self._is_entity_relation(relation, data_interface)
+            and relation.name != RelationNames.CLUSTER.value
+        ):
+            return
 
         username = f"relation-{relation.id}"
         password = data_interface.fetch_my_relation_field(relation.id, "password")
@@ -396,6 +414,8 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             PyMongoError
         """
+        self._remove_entity(relation)
+        self.delete_rejected_statuses(relation)
         username = f"relation-{relation.id}"
         managed_users = self.state.app_peer_data.managed_users
         mongo_config = self.state.mongo_config
@@ -428,6 +448,142 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             managed_users.remove(username)
         self.state.app_peer_data.managed_users = managed_users
 
+    # BEGIN: entities (GROUP roles requested over mongodb_client)
+
+    def _is_entity_relation(self, relation: Relation, data_interface: DatabaseProviderData) -> bool:
+        """Whether the relation carries an entity request (any entity-type value)."""
+        key = entity_field_names(relation)["entity-type"]
+        return data_interface.fetch_relation_field(relation.id, key) is not None
+
+    def _reconcile_entity(self, relation: Relation, data_interface: DatabaseProviderData) -> None:
+        """Creates the requested role once, or rejects the request.
+
+        A rejected request stays rejected until the relation is removed (spec 3.3).
+        """
+        managed_entities = self.state.app_peer_data.managed_entities
+        if str(relation.id) in managed_entities:
+            return
+        statuses = (data_interface.get_statuses(relation.id) or {}).values()
+        if any(status.is_fatal for status in statuses):
+            return
+
+        requested_names = self.state.app_peer_data.requested_entity_names
+        try:
+            request = parse_entity_request(
+                self.model, data_interface, relation, name=requested_names.get(str(relation.id))
+            )
+        except EntityRequestError as e:
+            self._reject(relation, data_interface, EntityStatuses.invalid_request(e.reason))
+            return
+        if requested_names.get(str(relation.id)) != request.name:
+            requested_names[str(relation.id)] = request.name
+            self.state.app_peer_data.requested_entity_names = requested_names
+
+        try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                logger.info("Create relation role: %s for relation %s", request.name, relation.id)
+                mongo.create_role(
+                    request.name, request.privileges(), request.roles(), exist_ok=False
+                )
+        except WriteConcernError as e:
+            # The primary applied createRole; only the replication acknowledgement failed.
+            logger.warning(
+                "Relation role %s created with a write concern error: %r", request.name, e
+            )
+        except OperationFailure as e:
+            if e.code in (MongoErrorCodes.UNAUTHORIZED, MongoErrorCodes.AUTHENTICATION_FAILED):
+                # The charm's own credentials failed, not the request: the handler defers.
+                raise
+            errmsg = (e.details or {}).get("errmsg", str(e))
+            self._reject(relation, data_interface, EntityStatuses.mongodb_refused(errmsg))
+            return
+
+        managed_entities[str(relation.id)] = request.name
+        self.state.app_peer_data.managed_entities = managed_entities
+        data_interface.update_relation_data(relation.id, {"entity-name": request.name})
+
+    def _reject(
+        self, relation: Relation, data_interface: DatabaseProviderData, status: RelationStatus
+    ) -> None:
+        """Raises the status on the relation and the matching Blocked status on the charm."""
+        logger.error("Entity request on relation %s rejected: %s", relation.id, status.message)
+        data_interface.raise_status(relation.id, status)
+        self.state.statuses.add(
+            EntityStatuses.rejected(status.message, relation.id),
+            scope="app",
+            component=self.dependent.name,
+        )
+
+    def reject_entity(self, relation: Relation, reason: str) -> None:
+        """Rejects the entity request of this relation with a 5001 status."""
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        self._reject(relation, data_interface, EntityStatuses.invalid_request(reason))
+
+    def reject_entity_change(self, relation: Relation) -> None:
+        """Handles entity-permissions changing after creation: unsupported."""
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        if not self._is_entity_relation(relation, data_interface):
+            logger.info(
+                "entity-permissions changed on relation %s without entity-type, ignoring.",
+                relation.id,
+            )
+            return
+        self.reject_entity(relation, "changes to entity-permissions are not supported")
+
+    def _remove_entity(self, relation: Relation) -> None:
+        """Drops the role created for this relation, if any."""
+        managed_entities = self.state.app_peer_data.managed_entities
+        name = managed_entities.pop(str(relation.id), None)
+        if name is None:
+            return
+        with MongoConnection(self.state.mongo_config) as mongo:
+            logger.info("Remove relation role: %s", name)
+            try:
+                mongo.drop_role(name)
+            except OperationFailure as e:
+                # A retried relation-broken hook finds the role already dropped.
+                if e.code != MongoErrorCodes.ROLE_NOT_FOUND:
+                    raise
+                logger.info("Relation role %s already removed", name)
+        self.state.app_peer_data.managed_entities = managed_entities
+
+    def delete_rejected_statuses(self, relation: Relation) -> None:
+        """Deletes the Blocked statuses of a rejected request whose relation data is going away.
+
+        Without this they would linger until the next status recompute.
+        """
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        for status in (data_interface.get_statuses(relation.id) or {}).values():
+            if status.is_fatal:
+                self.state.statuses.delete(
+                    EntityStatuses.rejected(status.message, relation.id),
+                    scope="app",
+                    component=self.dependent.name,
+                )
+
+    def forget_entity_request(self, relation: Relation) -> None:
+        """Forgets the role name requested on a relation that is gone for good."""
+        requested_names = self.state.app_peer_data.requested_entity_names
+        if requested_names.pop(str(relation.id), None) is None:
+            return
+        self.state.app_peer_data.requested_entity_names = requested_names
+
+    def entity_statuses(self) -> list[StatusObject]:
+        """One Blocked status per fatal relation status raised on a client relation."""
+        statuses: list[StatusObject] = []
+        relation_names = [self.state.client_relation_name]
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            relation_names.append(RelationNames.CLUSTER.value)
+        for relation_name in relation_names:
+            data_interface = DatabaseProviderData(self.model, relation_name)
+            for relation in self.model.relations[relation_name]:
+                for status in (data_interface.get_statuses(relation.id) or {}).values():
+                    if status.is_fatal:
+                        statuses.append(EntityStatuses.rejected(status.message, relation.id))
+        return statuses
+
+    # END: entities
+
     def update_app_relation_data(self, relation: Relation) -> None:
         """Helper function to update this application relation data."""
         if not self.charm.unit.is_leader():
@@ -442,6 +598,8 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             logger.debug("Not updating client databag, role is config-server")
             return
         data_interface = DatabaseProviderData(self.model, relation.name)
+        if self._is_entity_relation(relation, data_interface):
+            return
         if not data_interface.fetch_relation_field(relation.id, "database"):
             return
         username = data_interface.fetch_my_relation_field(relation.id, "username")
@@ -466,6 +624,8 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
     def update_app_relation_data_for_config(self, relation: Relation, config: MongoConfiguration):
         """Updates the data for a given config."""
         data_interface = DatabaseProviderData(self.model, relation.name)
+        if self._is_entity_relation(relation, data_interface):
+            return
         endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
         uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         database = data_interface.fetch_my_relation_field(relation.id, "database")
