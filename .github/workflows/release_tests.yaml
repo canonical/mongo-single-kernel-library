@@ -110,8 +110,11 @@ jobs:
               # Example: "test_charm.py | amd64"
               name = f"{task} | {architecture}"
 
-              mongodb_revision = mongodb_revisions[architecture]
-              mongos_revision = mongos_revisions[architecture]
+              mongodb_revision = mongodb_revisions.get(architecture, None)
+              mongos_revision = mongos_revisions.get(architecture, None)
+              # Allows to run only on one architecture.
+              if not mongodb_revision or not mongos_revision:
+                continue
               # ":" character not valid in GitHub Actions artifact
               name_in_artifact = f"{task.replace('/', '-')}-{architecture}-mongodb-{mongodb_revision}-mongos-{mongos_revision}"
               jobs.append({
