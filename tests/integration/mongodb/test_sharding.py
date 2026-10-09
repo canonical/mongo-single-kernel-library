@@ -19,6 +19,7 @@ from tests.integration.helpers.constants import (
     SHARD_REL_NAME,
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
+    SMALL_K8S_STORAGE,
     TIMEOUT,
 )
 from tests.integration.helpers.jubilant_common import (
@@ -34,9 +35,6 @@ from tests.integration.helpers.jubilant_sharding import (
     verify_data_mongodb,
     verify_sharding_cluster_ip_source_allowlists,
     write_data_to_mongodb,
-)
-from tests.integration.helpers.sharding import (
-    SMALL_K8S_STORAGE,
 )
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,

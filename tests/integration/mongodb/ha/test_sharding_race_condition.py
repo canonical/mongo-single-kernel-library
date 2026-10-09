@@ -2,18 +2,9 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import pytest
-from pymongo import MongoClient
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import (
-    deploy_charm,
-    find_unit,
-    generate_mongodb_client,
-    get_address_of_unit,
-    get_unit_id,
-)
-from tests.integration.helpers.sharding import (
+from tests.integration.helpers.constants import (
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     SHARD_ONE_APP_NAME,
@@ -21,75 +12,81 @@ from tests.integration.helpers.sharding import (
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
     SMALL_K8S_STORAGE,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    fast_forward,
+)
+from tests.integration.helpers.jubilant_sharding import (
+    build_mongos_client,
     has_correct_shards,
 )
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
 RC_TIMEOUT = 60 * 30
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource,
+    mongod_resource: dict[str, str],
 ) -> None:
-    """Build and deploy 2 config servers, one shard and one mongos."""
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
-        app_name=CONFIG_SERVER_APP_NAME,
+    """Deploys a config-sever, and 3 shards."""
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
         mongod_resource=mongod_resource,
-        num_units=1,
+        app_name=CONFIG_SERVER_APP_NAME,
+        num_units=3,
         config={"role": "config-server"},
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_ONE_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_TWO_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_THREE_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
         storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_immediate_relate(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_immediate_relate(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests the immediate integration of cluster components works without error."""
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
@@ -97,30 +94,20 @@ async def test_immediate_relate(ops_test: OpsTest, substrate: Substrate) -> None
     # This test mainly fails on GH runners due to to low timeout (still 30 mins) +
     # update-status-hook-interval to be too high.
     # Safe to use here because `wait_for_idle` cannot raise an error.
-    async with ops_test.fast_forward("3m"):
-        await ops_test.model.wait_for_idle(
-            apps=[
+    with fast_forward(juju, "3m"):
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status,
                 CONFIG_SERVER_APP_NAME,
                 SHARD_ONE_APP_NAME,
                 SHARD_TWO_APP_NAME,
                 SHARD_THREE_APP_NAME,
-            ],
-            idle_period=20,
-            status="active",
+                idle_period=30,
+            ),
             timeout=RC_TIMEOUT,
-            raise_on_error=False,
         )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-
-    leader_host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
-
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[leader_host]
-    )
-    mongos_client = MongoClient(mongos_uri, directConnection=True)
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
     assert has_correct_shards(
