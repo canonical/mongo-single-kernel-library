@@ -2,18 +2,12 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 from logging import getLogger
 
-import pytest
-from juju.model import Model
-from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying
-from tenacity.stop import stop_after_delay
-from tenacity.wait import wait_fixed
+import jubilant
 
-from tests.integration.helpers.backups import S3_APP_NAME, count_logical_backups
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
+    BASE,
     CONTINUOUS_WRITE_APPLICATION,
     CONTINUOUS_WRITE_APPLICATION_BIS,
     DATA_INTEGRATOR_APP_NAME,
@@ -21,21 +15,33 @@ from tests.integration.helpers.common import (
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     READER_APPLICATION,
+    S3_APP_NAME,
     TIMEOUT,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     UNIT_IDS,
+)
+from tests.integration.helpers.continuous_writes_helpers import (
     count_writes,
+    start_continuous_reads,
+    start_continuous_writes,
+    stop_continuous_reads,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_backups import (
+    configure_s3,
+    create_and_verify_backup,
+)
+from tests.integration.helpers.jubilant_common import (
     deploy_application,
     deploy_charm,
     execute_on_mongod,
-    find_unit,
-    get_app_name,
-    relate_mongodb_and_application,
-    start_continous_writes,
-    start_continuous_reads,
-    stop_continous_writes,
-    stop_continuous_reads,
+    existing_app,
+    find_leader,
+    relate_application,
 )
-from tests.integration.helpers.ldap import (
+from tests.integration.helpers.jubilant_ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -45,11 +51,12 @@ from tests.integration.helpers.ldap import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from tests.integration.helpers.tls import (
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_BASE,
-    TLS_CERTIFICATES_CHANNEL,
+from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -59,15 +66,15 @@ SECOND_DB_NAME = f"{DEFAULT_DATABASE_NAME}_bis"
 SECOND_COLL_NAME = f"{DEFAULT_COLLECTION_NAME}_bis"
 
 
-@pytest.mark.abort_on_fail
-async def test_deploy_apps(
-    ops_test: OpsTest,
+def test_deploy_apps(
+    juju: jubilant.Juju,
+    substrate: Substrate,
     mongodb_charm_name: str,
     application_path: str,
-    substrate: Substrate,
     mongodb_revision: int,
     mongodb_base_app_name: str,
-    kubernetes_model: Model,
+    mongodb_charm_channel: str | None,
+    juju_k8s_model: jubilant.Juju,
 ):
     """Deploy MongoDB with the right revision.
 
@@ -76,82 +83,88 @@ async def test_deploy_apps(
     """
     tls_config = {"ca-common-name": "MongoDB release CA"}
 
-    assert ops_test.model
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    await asyncio.gather(
-        deploy_charm(
-            ops_test=ops_test,
-            revision=mongodb_revision,
-            charm=mongodb_charm_name,
-            substrate=substrate,
-            app_name=mongodb_base_app_name,
-            num_units=len(UNIT_IDS),
-        ),
-        deploy_application(
-            ops_test, application_path=application_path, app_name=CONTINUOUS_WRITE_APPLICATION
-        ),
-        ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME,
-            channel=TLS_CERTIFICATES_CHANNEL,
-            config=tls_config,
-            base=TLS_CERTIFICATES_BASE,
-        ),
-        ops_test.model.deploy(
-            DATA_INTEGRATOR_APP_NAME,
-            channel="latest/stable",
-            series="noble",
-            config={"database-name": "test-database"},
-        ),
+    deploy_charm(
+        juju=juju,
+        revision=mongodb_revision,
+        charm=mongodb_charm_name,
+        substrate=substrate,
+        app_name=mongodb_base_app_name,
+        channel=mongodb_charm_channel,
+        num_units=len(UNIT_IDS),
+    )
+    deploy_application(
+        juju, application_path=application_path, app_name=CONTINUOUS_WRITE_APPLICATION
+    )
+    juju.deploy(
+        TLS_CERTIFICATES_APP_NAME,
+        channel=TLS_CERTIFICATES_CHANNEL,
+        base=TLS_CERTIFICATES_BASE,
+        config=tls_config,
+    )
+    juju.deploy(
+        DATA_INTEGRATOR_APP_NAME,
+        channel="latest/stable",
+        base=BASE,
+        config={"database-name": "test-database"},
     )
 
-    await deploy_glauth(ops_test, kubernetes_model)
+    deploy_glauth(juju_k8s_model)
 
     # Consume the offers exposed by glauth
-    await consume_glauth_offers(ops_test, kubernetes_model)
+    consume_glauth_offers(juju, juju_k8s_model)
 
     # Apply the LDIF file on glauth-utils to create users and groups
-    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
+    apply_ldif(juju_k8s_model, "ldap_entries.ldif")
 
-    await ops_test.model.wait_for_idle(
-        apps=[mongodb_base_app_name, TLS_CERTIFICATES_APP_NAME],
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, mongodb_base_app_name, TLS_CERTIFICATES_APP_NAME, idle_period=20
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        status="active",
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_integrate_with_tls(
-    ops_test: OpsTest,
+def test_integrate_with_tls(
+    juju: jubilant.Juju,
 ):
     """Tests that we can integrate with TLS, and then add a writer and start writing."""
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
-    await integrate_apps_with_tls(ops_test, applications=[app_name])
+    integrate_apps_with_tls(juju, app_name)
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name, TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000, idle_period=60
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, TLS_CERTIFICATES_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
     )
 
-    await relate_mongodb_and_application(ops_test, app_name, CONTINUOUS_WRITE_APPLICATION)
-    await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    relate_application(juju, app_name, CONTINUOUS_WRITE_APPLICATION)
+    start_continuous_writes(
+        juju,
+        CONTINUOUS_WRITE_APPLICATION,
+        db_name=DEFAULT_DATABASE_NAME,
+        coll_name=DEFAULT_COLLECTION_NAME,
+    )
 
 
-@pytest.mark.abort_on_fail
-async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
+def test_integrate_with_ldap(juju: jubilant.Juju, substrate: Substrate):
     """Tests that we can integrate with LDAP without losing data."""
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
 
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
-    await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
+    juju.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+    juju.integrate(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
+        timeout=TIMEOUT,
     )
     # Create the roles on MongoDB
-    await create_mongodb_user_roles(
-        ops_test,
+    create_mongodb_user_roles(
+        juju,
         substrate,
         app_name=app_name,
         role_name="ou=superheroes,ou=users,dc=glauth,dc=com",
@@ -159,59 +172,56 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
         tls=True,
     )
 
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
-
-@pytest.mark.abort_on_fail
-async def test_integrate_second_client(ops_test: OpsTest, application_path: str):
+def test_integrate_second_client(juju: jubilant.Juju, application_path: str):
     """Tests that we can integrate with a second client, and we also start writing on that client.
 
     The client is a continuous write application.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    await deploy_application(
-        ops_test,
+    deploy_application(
+        juju,
         application_path=application_path,
         app_name=CONTINUOUS_WRITE_APPLICATION_BIS,
         database_name=SECOND_DB_NAME,
     )
-    await relate_mongodb_and_application(ops_test, app_name, CONTINUOUS_WRITE_APPLICATION_BIS)
-    await start_continous_writes(
-        ops_test,
+    relate_application(juju, app_name, CONTINUOUS_WRITE_APPLICATION_BIS)
+    start_continuous_writes(
+        juju,
         CONTINUOUS_WRITE_APPLICATION_BIS,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
+def test_integrate_third_client(juju: jubilant.Juju, application_path: str):
     """Tests that we can integrate with a third client, which will only read data.
 
     The client is a continuous write application.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    await deploy_application(
-        ops_test,
+    deploy_application(
+        juju,
         application_path=application_path,
         app_name=READER_APPLICATION,
         database_name=DEFAULT_DATABASE_NAME,
     )
-    await relate_mongodb_and_application(ops_test, app_name, READER_APPLICATION)
+    relate_application(juju, app_name, READER_APPLICATION)
 
-    await start_continuous_reads(
-        ops_test,
+    start_continuous_reads(
+        juju,
         READER_APPLICATION,
         db_name=DEFAULT_DATABASE_NAME,
         coll_name=DEFAULT_COLLECTION_NAME,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_integrate_with_s3(
-    ops_test: OpsTest,
+def test_integrate_with_s3(
+    juju: jubilant.Juju,
     storage_credentials: dict[str, str],
     storage_config: dict[str, str],
 ):
@@ -219,49 +229,33 @@ async def test_integrate_with_s3(
 
     This test ensures that the backup is created and finished.
     """
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
 
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
-
-    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
-
-    # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(storage_config)
-    action = await s3_integrator_unit.run_action(
-        action_name="sync-s3-credentials", **storage_credentials
-    )
-    await action.wait()
-
-    await ops_test.model.integrate(S3_APP_NAME, app_name)
-
-    await ops_test.model.wait_for_idle(
-        apps=[S3_APP_NAME, app_name], status="active", timeout=TIMEOUT
+    juju.deploy(S3_APP_NAME, channel="2/stable")
+    juju.wait(
+        lambda status: are_agents_idle(status, S3_APP_NAME, idle_period=20),
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    action = await leader_unit.run_action(action_name="create-backup")
-    backup_result = await action.wait()
+    configure_s3(juju, S3_APP_NAME, storage_config, storage_credentials)
+    juju.integrate(S3_APP_NAME, app_name)
 
-    logger.info(f"Create backup result {backup_result.results=}")
-    assert "backup started" in backup_result.results["backup-status"], "backup didn't start"
-    try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
-            with attempt:
-                backups = await count_logical_backups(leader_unit)
-                assert backups == 1
-    except RetryError:
-        assert backups == 1, "Backup not created."
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
+        timeout=TIMEOUT,
+    )
 
-    # Wait for status to go back to idle.
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+    create_and_verify_backup(juju, app_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
+        timeout=TIMEOUT,
+    )
 
 
-@pytest.mark.abort_on_fail
-async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
+def tests_restore_backup(juju: jubilant.Juju, substrate: Substrate):
     """Tests that we can restore a backup.
 
     This test starts by stopping the writes applications, and counting the number of writes
@@ -269,25 +263,39 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     Then it restores the backup, counts the number of writes,
     and checks that it is lower than what we had, proving that the backup was restored successfully.
     """
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
 
-    first_reported_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
-    second_reported_writes = await stop_continous_writes(
-        ops_test,
+    first_reported_writes = stop_continuous_writes(
+        juju,
+        CONTINUOUS_WRITE_APPLICATION,
+        db_name=DEFAULT_DATABASE_NAME,
+        coll_name=DEFAULT_COLLECTION_NAME,
+    )
+    second_reported_writes = stop_continuous_writes(
+        juju,
         CONTINUOUS_WRITE_APPLICATION_BIS,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
     )
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_unit, leader_status = find_leader(juju, app_name=app_name)
     # count total writes
-    first_number_writes = await count_writes(ops_test, substrate, app_name, leader_unit, tls=True)
-    second_number_writes = await count_writes(
-        ops_test,
+    first_number_writes = count_writes(
+        juju,
         substrate,
         app_name,
         leader_unit,
+        leader_status,
+        db_name=DEFAULT_DATABASE_NAME,
+        coll_name=DEFAULT_COLLECTION_NAME,
+        tls=True,
+    )
+    second_number_writes = count_writes(
+        juju,
+        substrate,
+        app_name,
+        leader_unit,
+        leader_status,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
         tls=True,
@@ -296,29 +304,39 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     assert second_number_writes == second_reported_writes
 
     # find most recent backup id and restore
-    action = await leader_unit.run_action(action_name="list-backups")
-    list_result = await action.wait()
-    list_result = list_result.results["backups"]
+    task = juju.run(leader_unit, action="list-backups")
+    list_result = task.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
-
     backup_id = most_recent_backup.split()[0]
+    restore_task = juju.run(leader_unit, action="restore", params={"backup-id": backup_id})
+    logger.info(f"Restore backup result {restore_task.results=}")
+    assert restore_task.results["restore-status"] == "restore started", "restore not successful"
 
-    action = await leader_unit.run_action(action_name="restore", **{"backup-id": backup_id})
-    restore = await action.wait()
-    logger.info(f"Restore backup result {restore.results=}")
-    assert restore.results["restore-status"] == "restore started", "restore not successful"
-
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.wait_for_idle(apps=[app_name], status="active", idle_period=15)
-
-    first_number_writes_after_restore = await count_writes(
-        ops_test, substrate, app_name, leader_unit, tls=True
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=15,
+        ),
+        timeout=TIMEOUT,
     )
-    second_number_writes_after_restore = await count_writes(
-        ops_test,
+
+    first_number_writes_after_restore = count_writes(
+        juju,
         substrate,
         app_name,
         leader_unit,
+        leader_status,
+        db_name=DEFAULT_DATABASE_NAME,
+        coll_name=DEFAULT_COLLECTION_NAME,
+        tls=True,
+    )
+    second_number_writes_after_restore = count_writes(
+        juju,
+        substrate,
+        app_name,
+        leader_unit,
+        leader_status,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
         tls=True,
@@ -328,18 +346,17 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     assert second_number_writes_after_restore < second_number_writes
 
 
-@pytest.mark.abort_on_fail
-async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
+def test_ldap_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     """Checks that the LDAP user can write to the DB.
 
     This checks both authentication and authorisation.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
 
     # We create a client which should be able to write
-    uri = await generate_mongodb_ldap_client(
-        ops_test,
+    uri = generate_mongodb_ldap_client(
+        juju,
         substrate,
         app_name,
         database=DEFAULT_DATABASE_NAME,
@@ -347,22 +364,21 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
         password="dogood",
     )
 
-    result = await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "db.test.insertOne({number: 1})", tls=True
+    result = execute_on_mongod(
+        juju, substrate, app_name, uri, "db.test.insertOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to insert value with LDAP client"
 
-    result = await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "db.test.findOne({number: 1})", tls=True
+    result = execute_on_mongod(
+        juju, substrate, app_name, uri, "db.test.findOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
-async def test_valid_reads(ops_test: OpsTest):
+def test_valid_reads(juju: jubilant.Juju):
     """Checks the reads at the end of the tests."""
-    reads, failed_reads = await stop_continuous_reads(
-        ops_test,
+    reads, failed_reads = stop_continuous_reads(
+        juju,
         READER_APPLICATION,
         db_name=DEFAULT_DATABASE_NAME,
         coll_name=DEFAULT_COLLECTION_NAME,
@@ -372,19 +388,26 @@ async def test_valid_reads(ops_test: OpsTest):
     assert len(failed_reads) < 50
 
 
-@pytest.mark.abort_on_fail
-async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
+def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     """Teardown of the whole offers and relations."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
     assert app_name
 
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
+    # Removing the second relation should go into active
+    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+    # We remove the cert relation, it should go into blocked state
+    juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            app_name,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
-    )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
     # Remove the offers and tear down deployment
-    await teardown_offers(ops_test, kubernetes_model)
+    teardown_offers(juju, juju_k8s_model)

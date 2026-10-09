@@ -83,6 +83,12 @@ def architecture() -> str:
 
 
 @pytest.fixture(scope="session")
+def mongodb_charm_channel(request: pytest.FixtureRequest) -> str | None:
+    """Revision for the correct arch."""
+    return request.config.option.mongodb_charm_channel
+
+
+@pytest.fixture(scope="session")
 def mongodb_revision(request: pytest.FixtureRequest) -> int:
     """Revision for the correct arch."""
     return int(request.config.option.mongodb_revision)
