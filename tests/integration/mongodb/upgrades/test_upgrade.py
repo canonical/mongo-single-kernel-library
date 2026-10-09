@@ -165,9 +165,7 @@ def test_preflight_check(juju: jubilant.Juju) -> None:
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+            status, app_name, idle_period=20, unit_count=len(UNIT_IDS)
         ),
-        timeout=DEPLOYMENT_TIMEOUT,
-        delay=5,
-        successes=3,
+        timeout=TIMEOUT,
     )
