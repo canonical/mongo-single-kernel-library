@@ -142,11 +142,9 @@ def test_rollback(
     logger.info("Wait for the charm to be rolled back")
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+            status, app_name, idle_period=120, unit_count=len(UNIT_IDS)
         ),
         timeout=DEPLOYMENT_TIMEOUT,
-        delay=5,
-        successes=3,
     )
 
     for unit in juju.status().get_units(app_name):
