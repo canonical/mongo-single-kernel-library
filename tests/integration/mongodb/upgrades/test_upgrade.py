@@ -109,7 +109,7 @@ def test_upgrade(
         lambda status: are_agents_idle(
             status,
             app_name,
-            idle_period=60,
+            idle_period=30,
         ),
         timeout=TIMEOUT,
     )
@@ -134,7 +134,7 @@ def test_upgrade(
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, app_name, idle_period=120, unit_count=len(UNIT_IDS)
+            status, app_name, idle_period=60, unit_count=len(UNIT_IDS)
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
