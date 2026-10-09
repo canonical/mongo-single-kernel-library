@@ -104,7 +104,7 @@ class MongoDBUpgradesManager:
         """Returns true if all nodes in the MongoDB replica set are healthy."""
         with MongoConnection(mongodb_config) as mongod:
             rs_status = mongod.client.admin.command("replSetGetStatus")
-            return mongod.is_any_unreachable(rs_status) and not mongod.is_any_sync(rs_status)
+            return not (mongod.is_any_unreachable(rs_status) or mongod.is_any_sync(rs_status))
 
     def get_cluster_mongos(self) -> MongoConfiguration:
         """Return a mongos configuration for the sharded cluster."""
