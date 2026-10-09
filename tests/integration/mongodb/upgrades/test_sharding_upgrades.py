@@ -9,6 +9,7 @@ from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONTINUOUS_WRITE_APPLICATION,
+    DEPLOYMENT_TIMEOUT,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_COLL_NAME,
     SHARD_ONE_DB_NAME,
@@ -89,9 +90,9 @@ def test_upgrade(
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            idle_period=30,
+            idle_period=120,
         ),
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     shard_one_expected_writes = stop_continuous_writes(

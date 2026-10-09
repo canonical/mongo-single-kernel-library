@@ -134,7 +134,7 @@ def test_upgrade(
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+            status, app_name, idle_period=120, unit_count=len(UNIT_IDS)
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -151,6 +151,13 @@ def test_preflight_check(juju: jubilant.Juju) -> None:
     assert app_name
 
     leader_name, _ = find_leader(juju, app_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=20, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+    )
     logger.info("Calling pre-refresh-check")
     task = juju.run(leader_name, "pre-refresh-check")
 
