@@ -119,7 +119,7 @@ def test_rollback(
         lambda status: are_agents_idle(
             status,
             app_name,
-            idle_period=60,
+            idle_period=30,
         ),
         timeout=TIMEOUT,
     )
