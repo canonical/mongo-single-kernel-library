@@ -357,9 +357,7 @@ class KubernetesWorkload(WorkloadBase):
             ) from e
         except TimeoutError as e:
             logger.debug("cmd failed - cmd=%s, Pebble client polling timeout.", masked_cmd)
-            raise WorkloadExecError(
-                masked_cmd, -1, "Pebble client polling timeout.", None
-            ) from e
+            raise WorkloadExecError(masked_cmd, -1, "Pebble client polling timeout.", None) from e
 
     @override
     def run_bin_command(
