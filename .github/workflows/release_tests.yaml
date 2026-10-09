@@ -18,6 +18,12 @@ on:
           Either lxd or k8s.
         required: true
         type: string
+      mongodb_charm_channel:
+        description: |
+          The MongoDB/Mongos charm channel to use.
+        required: false
+        type: string
+        default: 8/edge
   workflow_dispatch:
     inputs:
       mongodb-revisions:
@@ -37,6 +43,12 @@ on:
           Either lxd or k8s
         required: true
         type: string
+      mongodb_charm_channel:
+        description: |
+          The MongoDB/Mongos charm channel to use.
+        required: false
+        type: string
+        default: 8/edge
 
 name: Release testing
 jobs:
@@ -159,6 +171,7 @@ jobs:
         # https://github.com/canonical/charmcraft/issues/2130 fixed
         run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
         env:
+          MONGODB_CHARM_CHANNEL: ${{ matrix.job.mongodb_charm_channel }}
           MONGODB_REVISION: ${{ matrix.job.mongodb_revision }}
           MONGOS_REVISION: ${{ matrix.job.mongos_revision }}
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
