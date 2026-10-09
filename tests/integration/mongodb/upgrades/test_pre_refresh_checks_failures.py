@@ -4,121 +4,154 @@
 
 import logging
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.backups import S3_APP_NAME, S3_ENDPOINT, CloudConfigs
-from tests.integration.helpers.common import (
+from tests.integration.helpers.constants import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
+    S3_APP_NAME,
+    S3_ENDPOINT,
     TIMEOUT,
+    UNIT_IDS,
+)
+from tests.integration.helpers.jubilant_backups import configure_s3
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    find_unit,
-    get_app_name,
-    is_relation_joined,
+    ensure_app_number_units,
+    existing_app,
+    find_leader,
+    find_non_leader,
+    get_mongodb_hostname_for_unit,
+    get_password,
     unit_hostname,
 )
-from tests.integration.helpers.ha import (
+from tests.integration.helpers.jubilant_ha import (
     cut_network_from_unit,
-    restore_network_for_unit,
-    wait_until_unit_in_status,
+    mongodb_unit_in_status,
+    restore_network_to_unit,
 )
-from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
+from tests.integration.helpers.types import CloudConfigs, Substrate
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
+) -> None:
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
-
-    await deploy_charm(
-        ops_test,
-        mongodb_charm_name,
-        substrate,
-        app_name=base_app_name,
-        mongod_resource={},  # unused
-        channel="8/edge",
-    )
+    app_name = existing_app(juju)
+    if app_name:
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
+    else:
+        app_name = base_app_name
+        deploy_charm(
+            juju=juju,
+            charm=mongodb_charm,
+            substrate=substrate,
+            mongod_resource=mongod_resource,
+            app_name=base_app_name,
+            num_units=len(UNIT_IDS),
+        )
 
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
+    juju.deploy(S3_APP_NAME, channel="2/stable")
 
-    await ops_test.model.wait_for_idle(
-        apps=[base_app_name],
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=30),
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=20,
-        raise_on_error=False,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_preflight_check_fails_during_backup(
-    ops_test: OpsTest, substrate: Substrate, cloud_configs: CloudConfigs
-):
+def test_preflight_check_fails_during_backup(juju: jubilant.Juju, cloud_configs: CloudConfigs):
     """Verifies that the preflight check fails during a backup."""
-    app_name = await get_app_name(ops_test)
-    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
+    app_name = existing_app(juju)
+    assert app_name
     configuration_parameters, credentials = cloud_configs["AWS"]
 
+    configure_s3(juju, S3_APP_NAME, configuration_parameters, credentials)
+
     # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **credentials)
-    await action.wait()
 
     # after applying correct config options and creds the applications should both be active
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active", timeout=TIMEOUT)
 
-    await ops_test.model.integrate(S3_APP_NAME, app_name)
-    await ops_test.model.block_until(
-        lambda: is_relation_joined(ops_test, S3_ENDPOINT, S3_ENDPOINT) is True,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, S3_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
     )
 
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+    juju.integrate(S3_APP_NAME, app_name)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, S3_APP_NAME, idle_period=20
+        ),
+        timeout=TIMEOUT,
+    )
 
     # verify backup is started
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    action = await leader_unit.run_action(action_name="create-backup")
-    await action.wait()
+    leader_unit, _ = find_leader(juju, app_name)
+    juju.run(leader_unit, "create-backup")
 
     logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
-    assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
+    with pytest.raises(jubilant.TaskError) as error:
+        juju.run(leader_unit, "pre-refresh-check")
+    assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}"
+    juju.remove_relation(f"{app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}")
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
+        timeout=TIMEOUT,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
 
-@pytest.mark.abort_on_fail
-async def test_preflight_check_failure(ops_test: OpsTest, substrate: Substrate, chaos_mesh) -> None:
+def test_preflight_check_failure(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh
+) -> None:
     """Verifies that the preflight check can run successfully."""
-    app_name = await get_app_name(ops_test)
-    unit = await find_unit(ops_test, leader=False, app_name=app_name)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    machine_name = await unit_hostname(ops_test, unit.name)
-    cut_network_from_unit(ops_test, substrate, machine_name)
+    app_name = existing_app(juju)
+    assert app_name
+    assert juju.model
+    leader_name, _ = find_leader(juju, app_name)
+    non_leader_name, non_leader_status = find_non_leader(juju, app_name)
 
-    await wait_until_unit_in_status(
-        ops_test, substrate, unit, leader_unit, "(not reachable/healthy)", app_name
+    machine_name = unit_hostname(juju, non_leader_name)
+    mongodb_non_leader_hostname = get_mongodb_hostname_for_unit(
+        juju, substrate, non_leader_name, non_leader_status
+    )
+    password = get_password(juju, app_name, username=CHARMED_OPERATOR_USERNAME)
+    cut_network_from_unit(substrate, juju.model, machine_name, ip_change=True)
+
+    juju.wait(
+        lambda status: mongodb_unit_in_status(
+            status,
+            substrate,
+            unit_to_check=non_leader_name,
+            unit_to_check_hostname=mongodb_non_leader_hostname,
+            expected_status="(not reachable/healthy)",
+            username=CHARMED_OPERATOR_USERNAME,
+            password=password,
+        ),
+        timeout=TIMEOUT,
     )
 
     logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
-    assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
+    with pytest.raises(jubilant.TaskError) as error:
+        # Pre refresh check can take a lot of time.
+        juju.run(leader_name, "pre-refresh-check", wait=120)
+    assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
-    restore_network_for_unit(ops_test, substrate, machine_name)
+    restore_network_to_unit(substrate, juju.model, machine_name)
 
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
+        timeout=TIMEOUT,
     )

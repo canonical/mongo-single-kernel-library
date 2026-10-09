@@ -230,6 +230,30 @@ def none_has_status(
     return True
 
 
+def app_has_extended_status(
+    juju: jubilant.Juju, app_name: str, expected_status: StatusObject
+) -> bool:
+    """Checks that the app has the correct status output from status details."""
+    leader_unit = f"{app_name}/leader"
+
+    try:
+        status_detail = juju.run(leader_unit, "status-detail")
+    except jubilant.CLIError:
+        logger.warning("Failed to run `status-detail` on %s", leader_unit)
+        return False
+
+    try:
+        output = json.loads(status_detail.results["json-output"]["app"])
+        return any(
+            item["Status"].lower() == expected_status.status
+            and item["Message"] == expected_status.message
+            for item in output
+        )
+    except (KeyError, json.JSONDecodeError):
+        logger.warning("Invalid output in `status-detail` on %s", leader_unit)
+        return False
+
+
 def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: str) -> bool:
     """This checks that no unit is waiting for restart, based on the unit statuses.
 
@@ -241,4 +265,20 @@ def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: s
         app_name=app_name,
         expected_status="waiting",
         message="Waiting for MongoDB restart.",
+    )
+
+
+def unit_in_status(
+    status: jubilant.Status, app_name: str, unit_name: str, expected_status: StatusObject
+) -> bool:
+    """Checks that the given unit is in the correct status."""
+    unit_status = status.get_units(app_name).get(unit_name)
+
+    if not unit_status:
+        logger.warning("Missing unit %s to check status", unit_name)
+        return False
+
+    return (
+        does_message_match(unit_status.workload_status.message, expected_status)
+        and unit_status.workload_status.current == expected_status.status
     )

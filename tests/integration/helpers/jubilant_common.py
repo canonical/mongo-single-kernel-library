@@ -138,7 +138,7 @@ def deploy_charm(
             app=app_name,
             revision=revision,
             resources=(mongod_resource if not channel else None),
-            num_units=0 if subordinate else num_units,
+            num_units=num_units,
             base=base,
             trust=True,
             config=config,
@@ -149,7 +149,7 @@ def deploy_charm(
         juju.deploy(
             charm,
             app=app_name,
-            num_units=0 if subordinate else num_units,
+            num_units=1 if subordinate else num_units,
             revision=revision,
             config=config,
             channel=channel,
@@ -236,8 +236,15 @@ def split_unit_id_and_app_name(unit_name: str) -> tuple[int, str]:
 
 
 def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
+    """Gets the name and status of the leader unit."""
     units = juju.status().get_units(app_name)
     return next((name, unit) for name, unit in units.items() if unit.leader)
+
+
+def find_non_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
+    """Gets the name and status of the first non leader unit."""
+    units = juju.status().get_units(app_name)
+    return next((name, unit) for name, unit in units.items() if not unit.leader)
 
 
 def get_secret_uri_by_owner(

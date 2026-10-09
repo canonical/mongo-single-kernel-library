@@ -430,6 +430,15 @@ class ConfigServerStatuses(Enum):
         )
 
     @staticmethod
+    def waiting_to_add_shard(shard: str) -> StatusObject:
+        """Returns a waiting to add shard status."""
+        return StatusObject(
+            status="waiting",
+            message=f"Waiting to add {shard} to config-server.",
+            short_message="Waiting to add shard.",
+        )
+
+    @staticmethod
     def draining_shard(shard: str) -> StatusObject:
         """Returns draining shard status based on shard."""
         return StatusObject(
