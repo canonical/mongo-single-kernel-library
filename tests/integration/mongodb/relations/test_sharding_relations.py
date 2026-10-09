@@ -280,7 +280,7 @@ def test_replication_shard_relation(juju: jubilant.Juju):
     )
 
 
-def test_replication_mongos_relation(juju: jubilant.Juju, substrate: Substrate) -> None:
+def test_replication_mongos_relation(juju: jubilant.Juju) -> None:
     """Verifies connecting a replica to a mongos router fails."""
     # attempt to add a replication deployment as a shard to the config server.
     juju.integrate(
@@ -351,7 +351,7 @@ def test_shard_mongos_relation(juju: jubilant.Juju) -> None:
     )
 
 
-def test_shard_s3_relation(juju: jubilant.Juju, substrate: Substrate) -> None:
+def test_shard_s3_relation(juju: jubilant.Juju) -> None:
     """Verifies integrating a shard to s3-integrator fails."""
     # attempt to add a replication deployment as a shard to the config server.
     juju.integrate(

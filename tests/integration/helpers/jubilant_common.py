@@ -798,7 +798,7 @@ def get_connection_string(
 def get_relation_username_password(
     juju: jubilant.Juju, app_name: str, relation_name: str
 ) -> tuple[str, str]:
-    """Gets both usename and password stored in a relation."""
+    """Gets both username and password stored in a relation."""
     secret_uri = get_application_relation_data(juju, app_name, relation_name, "secret-user")
     assert secret_uri, "No secret URI found"
 
