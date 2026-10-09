@@ -13,6 +13,7 @@ from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+    check_app_status,
     stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
@@ -108,6 +109,9 @@ async def test_rollback_on_shard_and_config_server(
         )
         for app_name in (SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME)
     }
+    config_server_waiting_message = (
+        f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built."
+    )
 
     # Wait for statuses to settle down
     await asyncio.gather(
@@ -123,11 +127,11 @@ async def test_rollback_on_shard_and_config_server(
             SHARD_TWO_APP_NAME,
             status=shard_revision_messages[SHARD_TWO_APP_NAME],
         ),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="waiting",
+            message=config_server_waiting_message,
         ),
     )
 
@@ -148,11 +152,11 @@ async def test_rollback_on_shard_and_config_server(
             status=shard_revision_messages[SHARD_TWO_APP_NAME],
         ),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="waiting",
+            message=config_server_waiting_message,
         ),
     )
 
