@@ -124,6 +124,13 @@ def test_build_and_deploy(
             SHARD_ONE_APP_NAME,
             TLS_CERTIFICATES_APP_NAME,
             idle_period=20,
+            unit_count={
+                APPLICATION_APP_NAME: 1,
+                CONFIG_SERVER_APP_NAME: 1,
+                CONFIG_SERVER_TWO_APP_NAME: 1,
+                SHARD_ONE_APP_NAME: 1,
+                TLS_CERTIFICATES_APP_NAME: 1,
+            },
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,

@@ -135,32 +135,42 @@ def test_app_relation_metadata_change(juju: jubilant.Juju, substrate: Substrate)
     app_name = existing_app(juju, test_deployments=[ANOTHER_DATABASE_APP_NAME])
     assert app_name
 
-    try:
-        verify_application_data(
-            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
-        )
-    except RetryError:
-        assert False, "Hosts are not correct in application data."
+    assert verify_application_data(
+        juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
+    ), "Hosts are not correct in application data."
 
     # verify application metadata is correct after adding units.
-    ensure_app_number_units(juju, substrate, app_name, required_units=4)
+    ensure_app_number_units(juju, substrate, app_name, required_units=4, wait=False)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=20, unit_count=4
+        ),
+        timeout=TIMEOUT,
+    )
 
-    try:
-        verify_application_data(
-            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
-        )
-    except RetryError:
-        assert False, "Hosts not updated in application data after adding units."
+    assert verify_application_data(
+        juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
+    ), "Hosts not updated in application data after adding units."
 
     # verify application metadata is correct after adding units.
-    ensure_app_number_units(juju, substrate, app_name, required_units=2)
+    ensure_app_number_units(juju, substrate, app_name, required_units=3, wait=False)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=20, unit_count=3
+        ),
+        timeout=TIMEOUT,
+    )
+    ensure_app_number_units(juju, substrate, app_name, required_units=2, wait=False)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=20, unit_count=2
+        ),
+        timeout=TIMEOUT,
+    )
 
-    try:
-        verify_application_data(
-            juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
-        )
-    except RetryError:
-        assert False, "Hosts not updated in application data after removing units."
+    assert verify_application_data(
+        juju, substrate, APPLICATION_APP_NAME, app_name, FIRST_DATABASE_RELATION_NAME
+    ), "Hosts not updated in application data after removing units."
 
     # verify primary is present in hosts provided to application
     # sleep for twice the median election time
