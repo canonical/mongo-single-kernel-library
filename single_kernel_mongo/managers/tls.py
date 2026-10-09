@@ -12,13 +12,14 @@ from __future__ import annotations
 import json
 import logging
 import socket
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, final
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -41,6 +42,7 @@ from single_kernel_mongo.state.tls_state import (
     WAIT_CERT_UPDATE,
 )
 from single_kernel_mongo.utils.helpers import parse_tls_file
+from single_kernel_mongo.utils.network_helpers import k8s_fqdn
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -58,6 +60,7 @@ class Sans(TypedDict):
 logger = logging.getLogger(__name__)
 
 
+@final
 class TLSManager:
     """Manager for building necessary files for mongodb."""
 
@@ -134,6 +137,16 @@ class TLSManager:
             A list representing the hostnames of the MongoDB unit.
         """
         unit_id = self.charm.unit.name.split("/")[1]
+
+        dns_list = {
+            f"{self.charm.app.name}-{unit_id}",
+            socket.getfqdn(),
+            "localhost",
+        }
+
+        if self.substrate == Substrates.K8S:
+            dns_list.add(k8s_fqdn(self.state.unit_peer_data.unit_service_name))
+            dns_list.add(self.state.unit_peer_data.unit_service_name)
 
         sans = Sans(
             sans_dns=[

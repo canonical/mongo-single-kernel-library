@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from ...helpers.backups import (
+from tests.integration.helpers.backups import (
     NEW_CLUSTER,
     S3_APP_NAME,
     S3_ENDPOINT,
@@ -19,7 +19,7 @@ from ...helpers.backups import (
     insert_unwanted_data,
     set_credentials,
 )
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     UNIT_IDS,
@@ -34,7 +34,7 @@ from ...helpers.common import (
     is_relation_joined,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -191,7 +191,9 @@ async def test_multi_backup(ops_test: OpsTest, continuous_writes_to_db, cloud_co
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
 
     # create first backup once ready
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(
+        apps=[db_app_name], status="active", idle_period=15, timeout=TIMEOUT
+    )
 
     action = await leader_unit.run_action(action_name="create-backup")
     first_backup = await action.wait()
@@ -238,9 +240,7 @@ async def test_multi_backup(ops_test: OpsTest, continuous_writes_to_db, cloud_co
     configuration_parameters, _ = cloud_configs["AWS"]
 
     await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify that backups was made on the AWS bucket
     try:
@@ -293,9 +293,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify all writes are present
     try:
@@ -355,13 +353,11 @@ async def test_restore_new_cluster(
         num_units=len(UNIT_IDS),
     )
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            apps=[new_cluster_app_name],
-            status="active",
-            idle_period=15,
-            timeout=DEPLOYMENT_TIMEOUT,
-        ),
+    ops_test.model.wait_for_idle(
+        apps=[new_cluster_app_name],
+        status="active",
+        idle_period=15,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     db_unit = await find_unit(ops_test, leader=True, app_name=new_cluster_app_name)
@@ -377,9 +373,7 @@ async def test_restore_new_cluster(
     )
 
     # wait for new cluster to sync
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[new_cluster_app_name], status="active", idle_period=15),
-    )
+    ops_test.model.wait_for_idle(apps=[new_cluster_app_name], status="active", idle_period=15)
 
     # verify that the listed backups from the old cluster are not listed as failed.
     assert await count_failed_backups(db_unit) == 0, "Backups from old cluster are listed as failed"
@@ -421,9 +415,7 @@ async def test_update_backup_password(ops_test: OpsTest) -> None:
     db_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
 
     # wait for charm to be idle before setting password
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     parameters = {"username": "backup"}
     action = await db_unit.run_action("set-password", **parameters)

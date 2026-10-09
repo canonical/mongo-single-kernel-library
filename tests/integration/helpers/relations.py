@@ -9,12 +9,12 @@ from tenacity import (
     wait_fixed,
 )
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     execute_on_mongod,
     generate_mongodb_client,
     get_application_relation_data,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 REPLICATION_APP_NAME = "replication"
 APPLICATION_APP_NAME = "application"

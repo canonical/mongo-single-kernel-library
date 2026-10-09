@@ -1,3 +1,4 @@
+import socket
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import SNAP
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 CONFIG = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/config.yaml").read_text()))
 ACTIONS = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/actions.yaml").read_text()))
@@ -201,11 +203,48 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
 def mongodb_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
         return "10.0.0.10"
-    return "mongodb-k8s-0.mongodb-k8s-endpoints"
+    return f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
         return "10.0.0.11"
-    return "mongodb-k8s-1.mongodb-k8s-endpoints"
+    return f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+
+
+def mock_addrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return [
+        (
+            socket.AF_INET6,
+            socket.SOCK_STREAM,
+            6,
+            f"{host}.{MODEL_NAME}.svc.{CLUSTER_NAME}",
+            ("10.1.90.155", 0),
+        )
+    ]
+
+
+def mock_getfqdn(name=""):
+    return f"{name}.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+
+
+@pytest.fixture(autouse=True)
+def patched_addrinfo(mocker, substrate: Substrate):
+    if substrate == "microk8s":
+        with mocker.patch("socket.getaddrinfo", side_effect=mock_addrinfo) as addrinfo:
+            yield addrinfo
+    else:
+        yield
+
+
+@pytest.fixture(autouse=True)
+def patched_getfqdn(mocker, substrate: Substrate):
+    if substrate == "microk8s":
+        with mocker.patch(
+            "socket.getfqdn",
+            side_effect=mock_getfqdn,
+        ) as getfqdn:
+            yield getfqdn
+    else:
+        yield

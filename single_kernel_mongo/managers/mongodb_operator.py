@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, final
 
+from charmlibs import sysctl
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import (
     CrossAppVersionChecker,
@@ -19,7 +20,7 @@ from data_platform_helpers.version_check import (
 from ops.framework import Object
 from ops.model import Container, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
-from tenacity import Retrying, stop_after_attempt, wait_fixed
+from tenacity import Retrying, before_sleep_log, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -63,6 +64,7 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DatabaseRequestedHasNotRunYetError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
     InvalidConfigRoleError,
@@ -79,7 +81,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.backups import BackupManager
 from single_kernel_mongo.managers.cluster import ClusterProvider
 from single_kernel_mongo.managers.config import (
@@ -270,7 +271,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # END: Define config managers
 
     @property
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (
             self,
@@ -331,6 +332,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.charm.unit.is_leader():
             self.state.statuses.clear(scope="app", component=self.name)
+
+        # Update the roles and information on mongos and shards
+        self.config_server_manager.update_mongos_hosts()
+        self.shard_manager.reconcile_shard_state()
 
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
@@ -557,10 +562,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
+            # Remove the units that we don't need anymore
+            self.mongo_manager.process_unremoved_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_RECONFIG.value,
+                scope="unit",
+                component=self.mongo_manager.name,
             )
             raise
 
@@ -668,6 +677,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 stop=stop_after_attempt(600),
                 wait=wait_fixed(1),
                 reraise=True,
+                before_sleep=before_sleep_log(logger, logging.INFO),
             ):
                 with attempt:
                     # remove_replset_member retries for 60 seconds
@@ -1023,19 +1033,24 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_charm_admin_users()
         logger.info("Manage client relation users")
-        if self.state.is_role(MongoDBRoles.REPLICATION):
-            for relation in self.state.client_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            for relation in self.state.cluster_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        try:
+            if self.state.is_role(MongoDBRoles.REPLICATION):
+                for relation in self.state.client_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                for relation in self.state.cluster_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info(
+                "Database requested has not run yet. Users and DBs will be reconciled later."
+            )
 
         self.state.app_peer_data.db_initialised = True
 
     @property
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
-        return self.state.planned_units == 0 and len(self.state.peers_units) == 0
+        return self.state.planned_units == 0
 
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""

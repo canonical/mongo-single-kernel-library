@@ -5,14 +5,14 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     MONGOS_APP_NAME,
     check_status_detail,
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     assert_all_unit_node_ports_are_unavailable,
     assert_all_unit_node_ports_available,
@@ -20,14 +20,14 @@ from ..helpers.mongos import (
     get_port_from_node_port,
     is_external_mongos_client_reachable,
 )
-from ..helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
