@@ -303,11 +303,9 @@ def test_restore_backup_6_to_7(
         lambda status: are_apps_active_and_agents_idle(
             status,
             CONFIG_SERVER_SEVEN,
-            SHARD_ONE_SEVEN,
-            SHARD_TWO_SEVEN,
             idle_period=20,
         ),
-        timeout=DEPLOYMENT_TIMEOUT,
+        timeout=TIMEOUT,
     )
 
     set_fcv(juju, substrate, CONFIG_SERVER_SEVEN, "7.0", "operator")
@@ -426,11 +424,9 @@ def test_restore_backup_7_to_8(
         lambda status: are_apps_active_and_agents_idle(
             status,
             CONFIG_SERVER_EIGHT,
-            SHARD_ONE_EIGHT,
-            SHARD_TWO_EIGHT,
             idle_period=20,
         ),
-        timeout=DEPLOYMENT_TIMEOUT,
+        timeout=TIMEOUT,
     )
 
     set_fcv(juju, substrate, CONFIG_SERVER_EIGHT, "8.0", CHARMED_OPERATOR_USERNAME)
