@@ -348,17 +348,17 @@ class KubernetesWorkload(WorkloadBase):
                 masked_cmd,
                 e.code,
                 f"{e.status}: {e.message}",
-                e.stderr,
+                None,
             ) from e
         except ConnectionError as e:
             logger.debug("cmd failed - cmd=%s, Pebble client can't connect to socket.", masked_cmd)
             raise WorkloadExecError(
-                masked_cmd, -1, "Pebble client can't connect to the socket.", e.stderr
+                masked_cmd, -1, "Pebble client can't connect to the socket.", None
             ) from e
         except TimeoutError as e:
             logger.debug("cmd failed - cmd=%s, Pebble client polling timeout.", masked_cmd)
             raise WorkloadExecError(
-                masked_cmd, -1, "Pebble client polling timeout.", e.stderr
+                masked_cmd, -1, "Pebble client polling timeout.", None
             ) from e
 
     @override
