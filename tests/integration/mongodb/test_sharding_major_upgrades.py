@@ -25,7 +25,7 @@ from tests.integration.helpers.jubilant_common import (
     deploy_application,
     deploy_charm,
     find_leader,
-    get_ip_from_unit,
+    get_mongodb_hostnames_for_app,
     get_password,
     mongos_uri,
     set_password,
@@ -142,14 +142,11 @@ def test_deploy_mongodb_6(
     add_rel8_internal_users(juju, substrate, CONFIG_SERVER_SIX)
 
     # configure write app to use mongos uri
-    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_SIX)
-    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+    hosts = get_mongodb_hostnames_for_app(juju, substrate=substrate, app_name=CONFIG_SERVER_SIX)
 
-    password = get_password(
-        juju=juju, app_name=CONFIG_SERVER_SIX, username=CHARMED_OPERATOR_USERNAME
-    )
+    password = get_password(juju=juju, app_name=CONFIG_SERVER_SIX, username="operator")
 
-    _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
+    _mongos_uri = mongos_uri("operator", password, ip_addresses=list(hosts))
     juju.config(application_name, {"mongos-uri": _mongos_uri})
 
     start_continuous_writes(juju, client_app_name=application_name)
