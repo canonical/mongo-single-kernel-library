@@ -178,9 +178,9 @@ class ShardEventHandler(Object):
         try:
             self.manager.drain_shard_from_cluster(event.relation)
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-        except DeferrableFailedHookChecksError as e:
-            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (DeferrableFailedHookChecksError, WorkloadServiceError) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
             self.manager.state.statuses.set(
                 ShardStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="unit",
