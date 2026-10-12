@@ -9,13 +9,13 @@ from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONTINUOUS_WRITE_APPLICATION,
+    MEDIUM_K8S_STORAGE,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_COLL_NAME,
     SHARD_ONE_DB_NAME,
     SHARD_TWO_APP_NAME,
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
-    SMALL_K8S_STORAGE,
     TIMEOUT,
 )
 from tests.integration.helpers.continuous_writes_helpers import stop_continuous_writes
@@ -55,7 +55,7 @@ def test_build_and_deploy(
         {},
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
-        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
+        storage=MEDIUM_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
 
     integrate_sharding_components(juju)

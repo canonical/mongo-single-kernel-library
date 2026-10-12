@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "200M"}
+MEDIUM_K8S_STORAGE = {"data": "2G", "logs": "2G", "archive": "10M", "temp": "200M"}
 UNIT_IDS = [0, 1, 2]
 MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
 MONGODB_ROCK_CONF_DIR = "/etc/mongod"
