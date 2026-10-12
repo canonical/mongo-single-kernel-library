@@ -334,11 +334,11 @@ class MongoConnection:
     def get_databases(self) -> set[str]:
         """Return list of all non-default databases."""
         databases: list[str] = self.client.list_database_names()
-        return {db for db in databases if db not in SystemDBS}
+        return {db for db in databases if db not in SystemDBS}  # type: ignore[operator]
 
     def drop_database(self, database: str):
         """Drop a non-default database."""
-        if database in SystemDBS:
+        if database in SystemDBS:  # type: ignore[operator]
             logger.info(f"Not dropping system DB {database}.")
             return
         self.client.drop_database(database)
