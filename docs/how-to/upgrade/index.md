@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Refresh and upgrade Charmed MongoDB to a new revision using juju refresh for minor versions and cluster migration for major versions."
+---
+
 (how-to-upgrade)=
 # How to upgrade
 

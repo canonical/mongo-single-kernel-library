@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy a Charmed MongoDB replica set or sharded cluster with the Terraform Juju Provider."
+---
+
 (via-terraform)=
 # How to deploy via Terraform
 

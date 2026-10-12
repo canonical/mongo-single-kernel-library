@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Manage private keys for MongoDB via Juju secrets when TLS encryption is enabled."
+---
+
 (manage-private-keys)=
 # How to manage private keys
 

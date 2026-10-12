@@ -1,7 +1,13 @@
+---
+myst:
+  html_meta:
+    description: "Deploy Charmed MongoDB VM with Juju storage pools to configure archive, data, logs, and temp storage volumes on supported clouds."
+---
+
 (manage-persistent-storage)=
 # How to manage persistent storage (VM only)
 
-MongoDB K8s automatically manages persistent storage using the Kubernetes persistent volumes. This guide explains how to manage persistent storage only for VM charmed MongoDB.
+MongoDB K8s automatically manages persistent storage using the Kubernetes persistent volumes. This guide explains how to manage persistent storage only for VM Charmed MongoDB.
 
 Like many other databases, MongoDB stores its state on disk. In a default deployment the file system attached to 
 charmed MongoDB will be removed when charmed MongoDB is removed. The content of the MongoDB database
@@ -42,14 +48,14 @@ Example output:
 
 ```shell
 Name             Provider  Attributes
-loop             loop      
-lxd              lxd       
+loop             loop
+lxd              lxd
 lxd-btrfs        lxd       driver=btrfs lxd-pool=juju-btrfs
 lxd-zfs          lxd       driver=zfs lxd-pool=juju-zfs zfs.pool_name=juju-lxd
 mongodb-storage  lxd       volume-type=standard
-rootfs           rootfs    
-tmpfs            tmpfs 
-```     
+rootfs           rootfs
+tmpfs            tmpfs
+```
 
 Details about how to manage storage pools with Juju can be found [in this guide](https://documentation.ubuntu.com/juju/latest/howto/manage-storage-pools).
 
@@ -69,19 +75,19 @@ You can track the progress by executing:
 juju status --storage --watch=1s
 ```
 
-When the application is ready, `juju status --storage` will show something similar to the sample output below: 
+When the application is ready, `juju status --storage` will show something similar to the sample output below:
 
 ```shell
 Model             Controller    Cloud/Region         Version  SLA          Timestamp
 pers-storage-lxd  overlord-lxd  localhost/localhost  3.6.11   unsupported  11:28:46Z
 
 App      Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
-mongodb  8.0.10   active      3  mongodb  8/edge   239  no       
+mongodb  8.0.10   active      3  mongodb  8/edge   239  no
 
 Unit        Workload  Agent  Machine  Public address  Ports      Message
 mongodb/0*  active    idle   0        10.32.4.182     27017/tcp  Primary.
-mongodb/1   active    idle   1        10.32.4.192     27017/tcp  
-mongodb/2   active    idle   2        10.32.4.189     27017/tcp  
+mongodb/1   active    idle   1        10.32.4.192     27017/tcp
+mongodb/2   active    idle   2        10.32.4.189     27017/tcp
 
 Machine  State    Address      Inst id        Base          AZ       Message
 0        started  10.32.4.182  juju-6a883e-0  ubuntu@24.04  machine  Running
@@ -89,19 +95,19 @@ Machine  State    Address      Inst id        Base          AZ       Message
 2        started  10.32.4.189  juju-6a883e-2  ubuntu@24.04  machine  Running
 
 Storage Unit  Storage ID  Type        Pool             Mountpoint                                        Size     Status    Message
-mongodb/0     archive/0   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached  
-mongodb/0     data/1      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached  
-mongodb/0     logs/2      filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached  
-mongodb/0     temp/3      filesystem  rootfs           /tmp                                              1.7 TiB  attached  
-mongodb/1     archive/4   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached  
-mongodb/1     data/5      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached  
-mongodb/1     logs/6      filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached  
-mongodb/1     temp/7      filesystem  rootfs           /tmp                                              1.7 TiB  attached  
-mongodb/2     archive/8   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached  
-mongodb/2     data/9      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached  
-mongodb/2     logs/10     filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached  
-mongodb/2     temp/11     filesystem  rootfs           /tmp                                              1.7 TiB  attached  
+mongodb/0     archive/0   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached
+mongodb/0     data/1      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached
+mongodb/0     logs/2      filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached
+mongodb/0     temp/3      filesystem  rootfs           /tmp                                              1.7 TiB  attached
+mongodb/1     archive/4   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached
+mongodb/1     data/5      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached
+mongodb/1     logs/6      filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached
+mongodb/1     temp/7      filesystem  rootfs           /tmp                                              1.7 TiB  attached
+mongodb/2     archive/8   filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/archive          8.0 GiB  attached
+mongodb/2     data/9      filesystem  mongodb-storage  /var/snap/charmed-mongodb/common/var/lib/mongodb  8.0 GiB  attached
+mongodb/2     logs/10     filesystem  rootfs           /var/snap/charmed-mongodb/common/var/log/mongodb  1.7 TiB  attached
+mongodb/2     temp/11     filesystem  rootfs           /tmp                                              1.7 TiB  attached
 ```
 
-As you can see, volumes from the `mongodb-storage` pool have been attached as the `data` and `archive` volume mounts, 
+As you can see, volumes from the `mongodb-storage` pool have been attached as the `data` and `archive` volume mounts,
 whereas for the `logs` and `temp` volume mounts, non-persistent storage from `rootfs` has been used. The `logs` and the `temp` storage will be removed when the respective unit gets removed, while the `data` storage will persist.

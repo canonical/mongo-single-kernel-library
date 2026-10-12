@@ -1,5 +1,10 @@
-(configure-gcs)=
+---
+myst:
+  html_meta:
+    description: "Configure the gcs-integrator charm for Google Cloud Storage to enable Charmed MongoDB backups."
+---
 
+(configure-gcs)=
 # How to configure GCS storage
 
 [Google Cloud Storage](https://cloud.google.com/storage) can be configured for Charmed MongoDB replica sets and sharded clusters with the [`gcs-integrator` charm](https://charmhub.io/gcs-integrator).

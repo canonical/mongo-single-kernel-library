@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Refresh and upgrade Charmed MongoDB to a new revision in the same channel using juju refresh."
+---
+
 (minor-version-upgrade)=
 # How to perform a minor version upgrade
 
@@ -5,7 +11,7 @@ Charmed MongoDB supports in-place upgrades via [`juju refresh`](https://document
 
 This type of upgrade can only be done between revisions of the same major version.
 
-*e.g.* revision 241 in `8/stable` --> revision 282 in `8/stable`.   
+*e.g.* revision 241 in `8/stable` --> revision 282 in `8/stable`.
 
 ## Guides
 

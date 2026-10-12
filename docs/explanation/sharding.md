@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Architecture behind sharded clusters in Charmed MongoDB, including the roles of components like config-server, shard, and mongos."
+---
+
 (sharding)=
 # Sharding
 

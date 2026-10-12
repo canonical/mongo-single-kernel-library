@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Reference on software and performance tests for Charmed MongoDB 8"
+---
+
 (charm-testing)=
 # Charm testing
 
@@ -9,7 +15,7 @@ See [CONTRIBUTING.md](https://github.com/canonical/mongo-single-kernel-library/b
 
 ## Integration tests
 
-Integration test coverage is quite rich in MongoDB charms. When it comes to complex features and HA (High Availability), each test serves as an integration as well as a smoke test with continuous writes routines being perpetually ran in parallel of whatever operation the test is involved in. 
+Integration test coverage is quite rich in MongoDB charms. When it comes to complex features and HA (High Availability), each test serves as an integration as well as a smoke test with continuous writes routines being perpetually ran in parallel of whatever operation the test is involved in.
 
 These continuous writes ensure the availability of the service under different conditions. These tests make use of the following fixture:
 -  `continuous_writes_to_db`: creates a replicated collection and continuously stores data into it.

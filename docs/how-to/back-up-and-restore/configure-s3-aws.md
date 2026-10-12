@@ -1,5 +1,10 @@
-(configure-s3-aws)=
+---
+myst:
+  html_meta:
+    description: "Configure the s3-integrator charm for AWS S3 to enable Charmed MongoDB backups, including credentials, bucket setup, and application integration."
+---
 
+(configure-s3-aws)=
 # How to configure S3 storage on AWS
 
 [Amazon S3](https://aws.amazon.com/s3/) storage can be configured for Charmed MongoDB replica sets and sharded clusters with the [`s3-integrator` charm](https://charmhub.io/s3-integrator).

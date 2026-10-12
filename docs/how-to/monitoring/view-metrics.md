@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Obtain metrics via the built-in metrics endpoint or connect Charmed MongoDB with COS Lite (Grafana, Prometheus, Loki)."
+---
+
 (view-metrics)=
 # How to view metrics
 

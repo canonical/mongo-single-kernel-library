@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Security maintenance and lifecycle policy for Charmed MongoDB, including security updates and end of life policies."
+---
+
 (security-maintenance)=
 # Security maintenance
 

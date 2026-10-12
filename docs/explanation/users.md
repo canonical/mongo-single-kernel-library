@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Internal users managed by Charmed MongoDB and their respective roles in managing the database, COS, backups, and log rotation."
+---
+
 (users)=
 # Internal users
 

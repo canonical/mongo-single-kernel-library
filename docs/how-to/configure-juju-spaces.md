@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy Charmed MongoDB using Juju network spaces to control network binding and isolate traffic between application components."
+---
+
 (configure-juju-spaces)=
 # How to configure Juju spaces
 

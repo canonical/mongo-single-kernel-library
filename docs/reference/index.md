@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Technical reference pages for Charmed MongoDB release notes, software and hardware requirements, and testing"
+---
+
 (reference)=
 # Reference
 

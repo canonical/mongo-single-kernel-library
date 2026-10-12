@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Integrate Charmed MongoDB with other Juju charms or client applications, and manage user credentials."
+---
+
 (manage-client-connections)=
 # How to manage a client connection
 

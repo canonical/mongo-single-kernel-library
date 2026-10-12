@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Restore a Charmed MongoDB backup from S3 storage with the restore Juju action."
+---
+
 # How to restore a backup
 
 This is a guide on how to perform a basic restore of a local backup of your Charmed MongoDB replica set or sharded cluster.

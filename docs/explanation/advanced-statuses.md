@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Advanced charm statuses for precise troubleshooting and component-specific information"
+---
+
 (advanced-statuses)=
 # Advanced statuses
 

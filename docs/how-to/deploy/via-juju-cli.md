@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    description: "Deploy a Charmed MongoDB replica set or sharded cluster via Juju CLI on VM or Kubernetes."
+---
+
 (via-juju-cli)=
 # How to deploy via the Juju CLI
 

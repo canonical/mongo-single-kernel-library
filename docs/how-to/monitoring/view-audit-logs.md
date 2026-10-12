@@ -1,9 +1,15 @@
+---
+myst:
+  html_meta:
+    description: "View console logs with syslog or connect Charmed MongoDB with COS Lite (Grafana, Prometheus, Loki) for observability via cross-model offers and Juju integrations."
+---
+
 (view-audit-logs)=
 # How to view audit logs
 
 You can view [audit logs](https://www.mongodb.com/docs/manual/core/auditing/) in two ways:
 * [via `syslog`](view-logs-with-syslog) - built-in console logging
-* [via Grafana](view-logs-with-grafana) - requires COS integration 
+* [via Grafana](view-logs-with-grafana) - requires COS integration
 
 (view-logs-with-syslog)=
 ## View logs with `syslog`
@@ -16,13 +22,13 @@ First, `ssh` to the relevant unit. For example:
 
 ```shell
 juju ssh mongodb/leader
-``` 
+```
 
 In the unit's shell, run:
 
 ```shell
-tail -f /var/log/syslog 
-``` 
+tail -f /var/log/syslog
+```
 
 The console will now display audit log messages, for example:
 
@@ -38,12 +44,14 @@ First, `ssh` to the relevant unit. For example:
 
 ```shell
 juju ssh --container=mongod mongodb-k8s/0
-``` 
+```
+
 In the unit's shell, run:
 
 ```shell
 tail -f /var/log/mongodb/audit.log
-``` 
+```
+
 The console will now display audit log messages, for example:
 
 ```text
@@ -51,6 +59,7 @@ Jan 26 13:22:56 juju-f6ba89-2 mongod: { "atype" : "updateOperation", "ts" : { "$
 ```
 ````
 `````
+
 (view-logs-with-grafana)=
 ## View logs with Grafana
 

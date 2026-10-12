@@ -1,3 +1,10 @@
+---
+myst:
+  html_meta:
+    description: "Decomission Charmed MongoDB securely to avoid exposure of sensitive data such as credentials, user data, or operational metadata."
+---
+
+
 (decommission)=
 # How to decommission your deployment
 
