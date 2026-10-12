@@ -2,41 +2,49 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import jubilant
 import pytest
+from pymongo import MongoClient
 from pymongo.errors import OperationFailure
-from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers.common import (
-    DATA_INTEGRATOR_APP_NAME,
-    MONGOS_APP_NAME,
-    TIMEOUT,
-    deploy_charm,
-    get_direct_mongo_client,
-    get_relation_username_password,
-)
-from tests.integration.helpers.sharding import (
+from tests.integration.helpers.constants import (
+    BASE,
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
+    DATA_INTEGRATOR_APP_NAME,
+    MONGOS_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
-    count_users,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    find_leader,
+    get_ip_from_unit,
+    get_relation_username_password,
+    mongos_uri,
+)
+from tests.integration.helpers.jubilant_sharding import build_mongos_client, count_users
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
 )
 from tests.integration.helpers.types import Substrate
 
 
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
-    substrate: Substrate,
-    mongod_resource,
-    mongos_resource,
+    mongod_resource: dict[str, str],
+    mongos_resource: dict[str, str],
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=CONFIG_SERVER_APP_NAME,
@@ -44,8 +52,8 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "config-server"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=SHARD_ONE_APP_NAME,
@@ -53,72 +61,72 @@ async def test_build_and_deploy(
         num_units=1,
         config={"role": "shard"},
     )
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongos_charm,
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=(1 if substrate == Substrate.k8s else 0),
+        num_units=1,
     )
-    await ops_test.model.deploy(
+    juju.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="noble",
+        base=BASE,
         config={"extra-user-roles": "admin", "database-name": "test-database"},
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_connect_to_cluster_creates_user(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_connect_to_cluster_creates_user(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies that when the cluster is formed a new user is created."""
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, idle_period=20
+        ),
         timeout=TIMEOUT,
-        status="active",
+        delay=5,
+        successes=3,
     )
 
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{MONGOS_APP_NAME}",
         f"{DATA_INTEGRATOR_APP_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
             DATA_INTEGRATOR_APP_NAME,
             MONGOS_APP_NAME,
-            SHARD_ONE_APP_NAME,
             CONFIG_SERVER_APP_NAME,
-        ],
-        idle_period=20,
-        raise_on_blocked=False,
+            SHARD_ONE_APP_NAME,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
     )
 
-    mongos_client = await get_direct_mongo_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True
-    )
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
     num_users = count_users(mongos_client)
 
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{MONGOS_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, MONGOS_APP_NAME],
-        idle_period=20,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            MONGOS_APP_NAME,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
-        status="active",
     )
 
     num_users_after_integration = count_users(mongos_client)
@@ -127,54 +135,43 @@ async def test_connect_to_cluster_creates_user(ops_test: OpsTest, substrate: Sub
         num_users_after_integration > num_users
     ), "Cluster did not create new users after integration."
 
-    (username, password) = await get_relation_username_password(
-        ops_test, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
+    (username, password) = get_relation_username_password(
+        juju, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
     )
-    mongos_user_client = await get_direct_mongo_client(
-        ops_test,
-        substrate,
-        app_name=CONFIG_SERVER_APP_NAME,
-        mongos=True,
-        username=username,
-        password=password,
-    )
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+
+    _mongos_uri = mongos_uri(username, password, ip_addresses=[host])
+    mongos_user_client = MongoClient(_mongos_uri, directConnection=True)
 
     mongos_user_client.admin.command("dbStats")
 
 
-@pytest.mark.abort_on_fail
-async def test_disconnect_from_cluster_removes_user(
-    ops_test: OpsTest, substrate: Substrate
-) -> None:
+def test_disconnect_from_cluster_removes_user(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies that when the cluster is formed a the user is removed."""
     # generate URI for new mongos user
-    (username, password) = await get_relation_username_password(
-        ops_test, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
+    (username, password) = get_relation_username_password(
+        juju, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
     )
-    mongos_user_client = await get_direct_mongo_client(
-        ops_test,
-        substrate,
-        app_name=CONFIG_SERVER_APP_NAME,
-        mongos=True,
-        username=username,
-        password=password,
-    )
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+
+    _mongos_uri = mongos_uri(username, password, ip_addresses=[host])
+    mongos_user_client = MongoClient(_mongos_uri, directConnection=True)
 
     # generate URI for operator mongos user (i.e. admin)
-    mongos_client = await get_direct_mongo_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True
-    )
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
     num_users = count_users(mongos_client)
 
-    await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{MONGOS_APP_NAME}:cluster",
         f"{CONFIG_SERVER_APP_NAME}:cluster",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME],
-        idle_period=30,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status, CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME, idle_period=30
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
     )
 
     for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10), reraise=True):

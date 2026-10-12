@@ -69,6 +69,7 @@ SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
 SHARD_THREE_APP_NAME = "shard-three"
 CONFIG_SERVER_APP_NAME = "config-server"
+CONFIG_SERVER_TWO_APP_NAME = "config-server-two"
 CLUSTER_APPS = [
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -77,6 +78,7 @@ CLUSTER_APPS = [
 ]
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
 CONFIG_SERVER_REL_NAME = "config-server"
+CLUSTER_REL_NAME = "cluster"
 SHARD_APPS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
 
 SHARD_DEFAULT_COLL_NAME = "test_collection"
@@ -98,3 +100,8 @@ RELEASES = {
     "jammy": {"release_name": "Jammy Jelly", "version": 22.04, "LTS": False},
 }
 DB_PROCESS = "mongod"
+
+REPLICATION_APP_NAME = "replication"
+APPLICATION_APP_NAME = "application"
+FIRST_DATABASE_RELATION_NAME = "first-database"
+SECOND_DATABASE_RELATION_NAME = "second-database"
