@@ -5,6 +5,7 @@
 import json
 import logging
 import math
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from typing import NamedTuple
@@ -16,15 +17,15 @@ from bson.json_util import dumps as bson_dumps
 from jubilant._juju import ConstraintValue
 from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
+from tenacity import RetryError, Retrying, wait_fixed
+from tenacity.stop import stop_after_delay
 
 from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     CommandResult,
     ProcessError,
     SecretNotFoundError,
-    external_cert_path,
     find_json,
-    mongodb_config_path,
     mongosh,
 )
 from tests.integration.helpers.constants import (
@@ -34,6 +35,8 @@ from tests.integration.helpers.constants import (
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     MONGODB_EXPORTER_PORT,
+    MONGODB_ROCK_CONF_DIR,
+    MONGODB_SNAP_CONF_DIR,
     MONGOS_PORT,
     TEST_DOCUMENTS,
     TIMEOUT,
@@ -45,6 +48,29 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+
+def mongodb_base_path(substrate: Substrate) -> str:
+    if substrate == Substrate.lxd:
+        return MONGODB_SNAP_CONF_DIR
+    return MONGODB_ROCK_CONF_DIR
+
+
+def mongodb_config_path(substrate: Substrate) -> str:
+    """Return the path to the mongod configuration file."""
+    return f"{mongodb_base_path(substrate)}/mongod.conf"
+
+
+def external_cert_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/external-ca.crt"
+
+
+def external_pem_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/external-cert.pem"
+
+
+def internal_cert_path(substrate: Substrate):
+    return f"{mongodb_base_path(substrate)}/internal-ca.crt"
 
 
 @contextmanager
@@ -96,7 +122,7 @@ def deploy_charm(
     mongod_resource: dict[str, str] | None = None,
     channel: str | None = None,
     revision: int | None = None,
-    config: dict[str, str] | None = None,
+    config: dict[str, jubilant.ConfigValue] | None = None,
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
     base: str | None = None,
@@ -131,6 +157,18 @@ def deploy_charm(
             constraints=constraints,
             bind=bind,
         )
+
+
+def get_highest_unit(juju: jubilant.Juju, app_name: str) -> str | None:
+    """Retrieves the most recently added unit to the MongoDB application."""
+    max_ordinal = -1
+    for unit in juju.status().get_units(app_name):
+        unit_id = get_unit_id(unit)
+        if unit_id >= max_ordinal:
+            max_ordinal = unit_id
+    if max_ordinal == -1:
+        return None
+    return f"{app_name}/{max_ordinal}"
 
 
 def remove_number_units(
@@ -202,13 +240,44 @@ def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
     return next((name, unit) for name, unit in units.items() if unit.leader)
 
 
+def get_secret_uri_by_owner(
+    juju: jubilant.Juju, app_or_unit: str | None = None, label: str | None = None
+) -> str:
+    """Retrieve secret ID for an app or unit."""
+    owner = ""
+
+    if app_or_unit:
+        prefix = "unit" if "/" in app_or_unit else "application"
+        owner = f"{prefix}-{app_or_unit}"
+        if prefix == "unit":
+            owner = owner.replace("/", "-")
+
+    secrets = juju.secrets(owner=owner)
+
+    if not label:
+        return secrets[0].uri
+
+    for secret in secrets:
+        if secret.label == label:
+            return secret.uri
+
+    raise Exception(f"No secret matching {owner=} and {label=} found.")
+
+
 def get_secret_by_label(juju: jubilant.Juju, label: str) -> dict[str, str]:
+    """Retrieve secret content by label."""
     for secret in juju.secrets():
         if label == secret.label:
             revealed_secret = juju.show_secret(secret.uri, reveal=True)
             return revealed_secret.content
 
     raise SecretNotFoundError(f"Secret with label {label} not found")
+
+
+def get_secret_by_uri(juju: jubilant.Juju, uri: str) -> dict[str, str]:
+    """Retrieve secret content by uri."""
+    revealed_secret = juju.show_secret(uri, reveal=True)
+    return revealed_secret.content
 
 
 def get_password(juju: jubilant.Juju, app_name: str, username: str):
@@ -226,6 +295,27 @@ def get_ips_for_app(juju: jubilant.Juju, substrate: Substrate, app_name: str) ->
     return {
         get_ip_from_unit(substrate, unit_info)
         for unit_info in juju.status().get_units(app_name).values()
+    }
+
+
+def get_mongodb_hostname_for_unit(
+    juju: jubilant.Juju, substrate: Substrate, unit_name: str, unit_status: UnitStatus
+):
+    """Get the hostname for a unit in mongodb."""
+    app_name = get_app_name_from_unit(unit_name)
+    if substrate == Substrate.lxd:
+        return get_ip_from_unit(substrate, unit_status)
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+
+
+def get_mongodb_hostnames_for_app(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str
+) -> set[str]:
+    if substrate == Substrate.lxd:
+        return get_ips_for_app(juju, substrate, app_name)
+    return {
+        f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{juju.model}.svc.cluster.local"
+        for unit_name in juju.status().get_units(app_name)
     }
 
 
@@ -284,6 +374,33 @@ def read_remote_file(
     )
 
 
+def delete_file_on_remote(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    file_path: str,
+    container: str = "mongod",
+) -> None:
+    """Deletes a file on a remote unit."""
+    command = f"rm -f {file_path}"
+    try:
+        run_command_on_server(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            command=command,
+            container=container,
+        )
+    except jubilant.CLIError as e:
+        logger.error(e.stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            e.cmd,
+            e.returncode,
+            e.stderr,
+        )
+
+
 def _uri(
     username: str,
     password: str,
@@ -293,6 +410,8 @@ def _uri(
 ) -> str:
     port = MONGOS_PORT if mongos else MONGOD_PORT
     _hosts = ",".join(f"{host}:{port}" for host in hosts)
+    if mongos:
+        return f"mongodb://{username}:{password}@{_hosts}/admin"
     if replica_set:
         return f"mongodb://{username}:{password}@{_hosts}/admin?replicaSet={replica_set}"
     return f"mongodb://{username}:{password}@{_hosts}/admin"
@@ -381,6 +500,24 @@ def count_primaries(juju: jubilant.Juju, substrate: Substrate, app_name: str) ->
     return number_of_primaries
 
 
+def mongod_ready(juju: jubilant.Juju, unit_ip: str, app_name: str) -> bool:
+    """Verifies replica is running and available."""
+    password = get_password(juju, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
+    uri = unit_uri(username=CHARMED_OPERATOR_USERNAME, password=password, ip_address=unit_ip)
+    client = MongoClient(uri, directConnection=True)
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+            with attempt:
+                # The ping command is cheap and does not require auth.
+                client.admin.command("ping")
+    except RetryError:
+        return False
+    finally:
+        client.close()
+
+    return True
+
+
 def set_password(
     juju: jubilant.Juju,
     app_name: str,
@@ -415,6 +552,20 @@ def set_password(
     )
 
 
+def add_juju_secret(
+    juju: jubilant.Juju, app_name: str, secret_label: str, data: dict[str, str]
+) -> str:
+    """Add a new juju secret."""
+    # pass arguments as list
+
+    secret_uri = juju.add_secret(name=secret_label, content=data)
+
+    # grant using the secret URI
+    juju.grant_secret(identifier=secret_uri, app=app_name)
+
+    return secret_uri
+
+
 def execute_on_mongod(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -422,6 +573,7 @@ def execute_on_mongod(
     uri: str,
     command: str,
     tls: bool = False,
+    unit_name: str | None = None,
     stringify: bool = True,
     expecting_output: bool = True,
     container_name: str = "mongod",
@@ -436,15 +588,15 @@ def execute_on_mongod(
     else:
         formatted_string = f'"{uri}" --quiet --eval "{command}" {tls_string}'
 
-    unit_name = f"{app_name}/leader"
-    cmd = [mongosh(substrate), formatted_string]
+    unit_name = unit_name or f"{app_name}/leader"
+    cmd = f"{mongosh(substrate)} {formatted_string}"
 
     try:
-        stdout = juju.ssh(unit_name, *cmd, container=container_name)
+        stdout = run_command_on_server(juju, substrate, unit_name, cmd, container_name)
         ret_code = 0
         stderr = ""
     except jubilant.CLIError as e:
-        logger.error("Failed to execute command '%s': %s, %s", command, e.stderr, e.stdout)
+        logger.error("Failed to execute command '%s': %s, %s", cmd, e.stderr, e.stdout)
         stdout = e.stdout
         stderr = e.stderr
         ret_code = e.returncode
@@ -556,6 +708,108 @@ def relate_application(
     )
 
 
+def get_relation_id_for(
+    juju: jubilant.Juju,
+    app_name: str,
+    local_endpoint: str,
+    remote_endpoint: str,
+) -> int:
+    leader_name, _ = find_leader(juju, app_name)
+    unit_info = juju.show_unit(leader_name)
+
+    for relation_info in unit_info.relation_info:
+        if (
+            relation_info.endpoint == local_endpoint
+            and relation_info.related_endpoint == remote_endpoint
+        ):
+            return relation_info.relation_id
+
+    raise Exception("No relation found.")
+
+
+def get_application_relation_data(
+    juju: jubilant.Juju,
+    app_name: str,
+    relation_name: str,
+    key: str,
+    relation_id: int | None = None,
+    relation_alias: str | None = None,
+) -> str | None:
+    """Get relation data for an application.
+
+    Args:
+        juju: The juju client
+        app_name: The name of the application
+        relation_name: name of the relation to get connection data from
+        key: key of data to be retrieved
+        relation_id: id of the relation to get connection data from
+        relation_alias: alias of the relation (like a connection name)
+            to get connection data from
+    Returns:
+        the data that was requested or None
+            if no data in the relation
+    Raises:
+        ValueError if it's not possible to get application unit data
+            or if there is no data for the particular relation endpoint
+            and/or alias.
+    """
+    leader_name, _ = find_leader(juju, app_name)
+    unit_info = juju.show_unit(leader_name)
+
+    # Filter the data based on the relation name.
+    relation_data = [info for info in unit_info.relation_info if info.endpoint == relation_name]
+
+    if relation_id:
+        # Filter the data based on the relation id.
+        relation_data = [v for v in relation_data if v.relation_id == relation_id]
+
+    if relation_alias:
+        # Filter the data based on the cluster/relation alias.
+        relation_data = [
+            v
+            for v in relation_data
+            if json.loads(v.app_data.get("data", "{}")).get("alias") == relation_alias
+        ]
+
+    if len(relation_data) == 0:
+        raise ValueError(
+            f"no relation data could be grabbed on relation with endpoint {relation_name} and alias {relation_alias}"
+        )
+
+    return relation_data[0].app_data.get(key)
+
+
+def get_connection_string(
+    juju: jubilant.Juju,
+    app_name: str,
+    relation_name: str,
+    relation_id: int | None = None,
+    relation_alias: str | None = None,
+) -> str:
+    secret_uri = get_application_relation_data(
+        juju, app_name, relation_name, "secret-user", relation_id, relation_alias
+    )
+    assert secret_uri, "No secret URI found"
+
+    first_relation_user_data = get_secret_by_uri(juju, secret_uri)
+    return first_relation_user_data.get("uris", "")
+
+
+def get_relation_username_password(
+    juju: jubilant.Juju, app_name: str, relation_name: str
+) -> tuple[str, str]:
+    """Gets both username and password stored in a relation."""
+    secret_uri = get_application_relation_data(juju, app_name, relation_name, "secret-user")
+    assert secret_uri, "No secret URI found"
+
+    relation_user_data = get_secret_by_uri(juju, secret_uri)
+    username = relation_user_data.get("username")
+    password = relation_user_data.get("password")
+    if not username or not password:
+        raise Exception(f"Missing username or password for {app_name=} and {relation_name=}.")
+    return (username, password)
+
+
 def scp_file_preserve_ctime(
     juju: jubilant.Juju, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> str:
@@ -584,6 +838,26 @@ def scp_file_preserve_ctime(
         fd.write(stdout.strip())
 
     return f"{filename}"
+
+
+def get_file_content(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+) -> str:
+    """Read the content of the cert file stored in the unit."""
+    file_copy_path = scp_file_preserve_ctime(
+        juju, substrate, unit_name, filepath, container=container
+    )
+    with open(file_copy_path) as f:
+        file_content = f.read()
+
+    # cleanup the file
+    os.remove(file_copy_path)
+
+    return file_content
 
 
 def check_if_test_documents_stored(
@@ -691,7 +965,10 @@ def verify_cluster_ip_source_allowlist(
     additional_addresses: set[str] | None = None,
     excluded_addresses: set[str] | None = None,
 ) -> None:
-    """Verify each mongod allows every current replica-set member address."""
+    """Verify VM mongod allowlists contain every current replica-set member address."""
+    if substrate == Substrate.k8s:
+        return
+
     replica_set_addresses = get_ips_for_app(juju, substrate, app_name)
     expected_addresses = replica_set_addresses | (additional_addresses or set())
     config_path = mongodb_config_path(substrate)
@@ -711,3 +988,12 @@ def verify_cluster_ip_source_allowlist(
             f"Removed IP addresses {sorted(unexpected_addresses)} are still present in "
             f"{unit_name}'s clusterIpSourceAllowlist: {sorted(allowlist)}"
         )
+
+
+def get_status_detail(juju: jubilant.Juju, unit_name: str) -> dict[str, list[dict[str, str]]]:
+    """Gets the status detail dictionary."""
+    action = juju.run(unit=unit_name, action="status-detail")
+    return {
+        "unit": json.loads(action.results["json-output"]["unit"]),
+        "app": json.loads(action.results["json-output"]["app"]),
+    }

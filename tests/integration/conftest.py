@@ -4,8 +4,8 @@
 import base64
 import dataclasses
 import json
-import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import time
@@ -23,7 +23,9 @@ import jubilant
 import pytest
 import tomli
 import tomli_w
+from mypy_boto3_s3.service_resource import Bucket
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 from yaml import safe_load
 
 from tests.integration.helpers.architecture import architecture as _architecture
@@ -40,6 +42,24 @@ from tests.integration.helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
+from tests.integration.helpers.constants import CHARMED_OPERATOR_USERNAME
+from tests.integration.helpers.continuous_writes_helpers import (
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_application as jubilant_deploy_app,
+)
+from tests.integration.helpers.jubilant_common import (
+    existing_app,
+    find_leader,
+    get_ip_from_unit,
+    get_password,
+    mongos_uri,
+)
+from tests.integration.helpers.jubilant_common import relate_application as jubilant_relate_app
+from tests.integration.helpers.jubilant_sharding import build_mongos_client
 from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -54,6 +74,8 @@ from tests.integration.helpers.sharding import (
 from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
+
+MICROK8S_CLOUD_NAME = "mk8s"
 
 
 @pytest.fixture(scope="session")
@@ -264,6 +286,25 @@ async def add_continuous_writes_to_shards(
 
 
 @pytest.fixture
+def jubilant_continuous_writes_to_db(juju: jubilant.Juju, application_path: str):
+    """Continuously write for the duration of the duration of the test."""
+    db_app_name = existing_app(juju)
+    assert db_app_name
+
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+        jubilant_relate_app(juju, db_app_name, app_name)
+
+    start_continuous_writes(juju, app_name)
+    yield
+    stop_continuous_writes(juju, app_name)
+    clear_continuous_writes(juju, app_name)
+
+
+@pytest.fixture
 async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
     """This fixture builds a mongodb charm that will fail the upgrade.
 
@@ -453,7 +494,6 @@ def microceph() -> ConnectionInformation:
 
 
 _BUCKET = "testbucket"
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -490,7 +530,9 @@ def storage_credentials(microceph: ConnectionInformation) -> dict[str, str]:
 
 
 @pytest.fixture(scope="function")
-def s3_bucket(storage_credentials, storage_config) -> None:
+def s3_bucket(
+    storage_credentials: dict[str, str], storage_config: dict[str, str]
+) -> Generator[Bucket]:
     """Provide a storage bucket on the deployed microceph instance."""
     session = boto3.Session(
         aws_access_key_id=storage_credentials["access-key"],
@@ -498,7 +540,7 @@ def s3_bucket(storage_credentials, storage_config) -> None:
         region_name=storage_config["region"] if storage_config["region"] else None,
     )
     s3 = session.resource("s3", endpoint_url=storage_config["endpoint"], verify="cert.pem")
-    bucket = s3.Bucket(storage_config["bucket"])
+    bucket: Bucket = s3.Bucket(storage_config["bucket"])
     yield bucket
 
 
@@ -563,3 +605,190 @@ def juju(architecture: str) -> Generator[jubilant.Juju, Any, None]:
     juju.wait_timeout = 1000
     juju.cli("set-model-constraints", f"arch={architecture}")
     yield juju
+
+
+@pytest.fixture(scope="module")
+def lxd_cloud(juju: jubilant.Juju, substrate: Substrate) -> Generator[str]:
+    """Gets the LXD cloud registered on the client."""
+    if substrate == Substrate.k8s:
+        yield ""
+        return
+
+    clouds = json.loads(juju.cli("clouds", "--format", "json", include_model=False))
+    for cloud, details in clouds.items():
+        if "lxd" == details.get("type"):
+            logger.info(f"Identified LXD cloud: {cloud}")
+            yield cloud
+
+
+@pytest.fixture(scope="module")
+def lxd_controller(lxd_cloud: str, juju: jubilant.Juju, substrate: Substrate) -> Generator[str]:
+    """Gets the LXD controller registered on the client for the LXD cloud."""
+    if substrate == Substrate.k8s:
+        yield ""
+        return
+
+    controllers = json.loads(juju.cli("controllers", "--format", "json", include_model=False))
+    for controller, details in controllers.get("controllers").items():
+        if lxd_cloud == details.get("cloud"):
+            logger.info(f"Identified LXD controller: {controller}")
+            yield controller
+
+
+@pytest.fixture(scope="module")
+def k8s_cloud(lxd_controller: str, juju: jubilant.Juju) -> Generator[str]:
+    """Provision a microk8s cloud, if a k8s cloud isn't already present, and return the name."""
+    # Ask the controller that will host the model, not the client: the client list also carries
+    # clouds the controller cannot use, such as the built-in `microk8s`, and picking one of those
+    # makes `add-model` fail with "cloud not found".
+    cloud_args = ["clouds", "--format", "json"]
+    if lxd_controller:
+        cloud_args += ["--controller", lxd_controller]
+    clouds = json.loads(juju.cli(*cloud_args, include_model=False))
+    for cloud, details in clouds.items():
+        if "k8s" == details.get("type"):
+            logger.info(f"Identified existing k8s cloud: {cloud}")
+            yield cloud
+            return
+
+    try:
+        subprocess.run(["sudo", "snap", "install", "--classic", "microk8s"], check=True)
+        subprocess.run(["sudo", "snap", "install", "--classic", "kubectl"], check=True)
+        subprocess.run(["sudo", "microk8s", "enable", "dns"], check=True)
+        subprocess.run(["sudo", "microk8s", "enable", "hostpath-storage"], check=True)
+        subprocess.run(
+            ["sudo", "microk8s", "enable", "metallb:10.64.140.43-10.64.140.49"],
+            check=True,
+        )
+
+        # Configure kubectl now
+        subprocess.run(["mkdir", "-p", str(pathlib.Path.home() / ".kube")], check=True)
+        kubeconfig = subprocess.check_output(["sudo", "microk8s", "config"])
+        with open(str(pathlib.Path.home() / ".kube" / "config"), "w") as f:
+            f.write(kubeconfig.decode())
+        for attempt in Retrying(stop=stop_after_delay(150), wait=wait_fixed(15)):
+            with attempt:
+                if (
+                    len(
+                        subprocess.check_output(
+                            "kubectl get po -A  --field-selector=status.phase!=Running",
+                            shell=True,
+                            stderr=subprocess.DEVNULL,
+                        ).decode()
+                    )
+                    != 0
+                ):  # We got sth different from "No resources found." in stderr
+                    raise Exception()
+
+        # add this microk8s as a juju k8s cloud, by explicitly providing its config
+        # this is done to bypass the issue with juju 3.9 necessitating strictly confined microk8s
+        config = kubeconfig.decode()
+        juju.cli(
+            "add-k8s",
+            MICROK8S_CLOUD_NAME,
+            "--client",
+            "--controller",
+            lxd_controller,
+            stdin=config,
+            include_model=False,
+        )
+
+    except subprocess.CalledProcessError as e:
+        pytest.exit(str(e))
+
+    yield MICROK8S_CLOUD_NAME
+
+    models = json.loads(juju.cli("models", "--format", "json", include_model=False))
+    for model in models["models"]:
+        if MICROK8S_CLOUD_NAME == model.get("cloud"):
+            logger.info(f"Destroying model {model.get('name')}...")
+            juju.destroy_model(model=model.get("name"), destroy_storage=True, force=True)
+
+    juju.cli(
+        "remove-k8s",
+        "--client",
+        MICROK8S_CLOUD_NAME,
+        "--controller",
+        lxd_controller,
+        include_model=False,
+    )
+    subprocess.run(["sudo", "snap", "remove", "--purge", "microk8s"], check=True)
+    subprocess.run(["sudo", "snap", "remove", "--purge", "kubectl"], check=True)
+
+
+@pytest.fixture(scope="module")
+def juju_k8s_model(
+    architecture: str, k8s_cloud: str, lxd_controller: str
+) -> Generator[jubilant.Juju]:
+    with jubilant.temp_model(cloud=k8s_cloud, controller=lxd_controller) as juju_k8s:
+        juju_k8s.wait_timeout = 1000
+        juju_k8s.cli("set-model-constraints", f"arch={architecture}")
+        yield juju_k8s
+
+
+@pytest.fixture
+def jubilant_add_writes_to_db(juju: jubilant.Juju, application_path: str):
+    """Adds writes to DB before test starts and clears writes at the end of the test."""
+    db_app_name = existing_app(juju)
+    assert db_app_name
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+        jubilant_relate_app(juju, db_app_name, app_name)
+
+    start_continuous_writes(juju, app_name)
+    time.sleep(20)
+    stop_continuous_writes(juju, app_name)
+    yield
+    clear_continuous_writes(juju, app_name)
+
+
+@pytest.fixture
+def jubilant_add_writes_to_shard(juju: jubilant.Juju, substrate: Substrate, application_path: str):
+    """Adds writes to DB before test starts and clears writes at the end of the test."""
+    app_name = existing_app(juju, charm_name=CONTINUOUS_WRITE_APPLICATION)
+
+    if app_name is None:
+        app_name = CONTINUOUS_WRITE_APPLICATION
+        jubilant_deploy_app(juju, application_path=application_path, app_name=app_name)
+
+    # configure write app to use mongos uri
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
+
+    password = get_password(
+        juju=juju, app_name=CONFIG_SERVER_APP_NAME, username=CHARMED_OPERATOR_USERNAME
+    )
+
+    _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
+    juju.config(app_name, {"mongos-uri": _mongos_uri})
+
+    start_continuous_writes(
+        juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    time.sleep(20)
+    stop_continuous_writes(juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
+
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
+
+    mongos_client.admin.command("movePrimary", SHARD_ONE_DB_NAME, to=SHARD_ONE_APP_NAME)
+
+    write_data_to_mongodb(
+        mongos_client,
+        db_name=SHARD_TWO_DB_NAME,
+        coll_name=SHARD_TWO_COLL_NAME,
+        content={"horse-breed": "unicorn", "real": True},
+    )
+
+    mongos_client.admin.command("movePrimary", SHARD_TWO_DB_NAME, to=SHARD_TWO_APP_NAME)
+
+    mongos_client.close()
+
+    yield
+
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
+    remove_db_writes(mongos_client, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
+    remove_db_writes(mongos_client, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
+    mongos_client.close()

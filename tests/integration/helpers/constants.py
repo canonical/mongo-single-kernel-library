@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "200M"}
 UNIT_IDS = [0, 1, 2]
 MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
 MONGODB_ROCK_CONF_DIR = "/etc/mongod"
@@ -52,12 +53,15 @@ TEST_DOCUMENTS = """[
 
 MONGOS_APP_NAME = "mongos"
 
+SNAP_MONGOD_SERVICE = "snap.charmed-mongodb.mongod.service"
+SNAP_MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_CERTIFICATES_CHANNEL = "1/stable"
 TLS_CERTIFICATES_BASE = "ubuntu@24.04"
 PEER_TLS_RELATION_NAME = "peer-certificates"
 CLIENT_TLS_RELATION_NAME = "client-certificates"
+DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
 # Sharding constants
 
@@ -65,6 +69,7 @@ SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
 SHARD_THREE_APP_NAME = "shard-three"
 CONFIG_SERVER_APP_NAME = "config-server"
+CONFIG_SERVER_TWO_APP_NAME = "config-server-two"
 CLUSTER_APPS = [
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -73,4 +78,30 @@ CLUSTER_APPS = [
 ]
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
 CONFIG_SERVER_REL_NAME = "config-server"
+CLUSTER_REL_NAME = "cluster"
+SHARD_APPS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
+
+SHARD_DEFAULT_COLL_NAME = "test_collection"
+SHARD_ONE_DB_NAME = "continuous_writes_database"
+SHARD_ONE_COLL_NAME = "test_collection"
+SHARD_TWO_DB_NAME = "new-db-2"
+SHARD_TWO_COLL_NAME = "test_collection"
+
 SHARD_REL_NAME = "sharding"
+S3_APP_NAME = "s3-integrator"
+S3_ENDPOINT = "s3-credentials"
+GCS_APP_NAME = "gcs-integrator"
+GCS_ENDPOINT = "gcs-credentials"
+
+NEW_CLUSTER = "new-mongodb"
+
+RELEASES = {
+    "focal": {"release_name": "Focal Fossa", "version": 20.04, "LTS": True},
+    "jammy": {"release_name": "Jammy Jelly", "version": 22.04, "LTS": False},
+}
+DB_PROCESS = "mongod"
+
+REPLICATION_APP_NAME = "replication"
+APPLICATION_APP_NAME = "application"
+FIRST_DATABASE_RELATION_NAME = "first-database"
+SECOND_DATABASE_RELATION_NAME = "second-database"

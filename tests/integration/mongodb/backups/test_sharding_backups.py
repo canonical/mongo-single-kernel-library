@@ -2,56 +2,60 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import pytest
-from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from logging import getLogger
 
-from tests.integration.helpers.backups import (
-    S3_APP_NAME,
-    S3_ENDPOINT,
-    count_logical_backups,
-    get_backup_list,
-    set_credentials,
-)
-from tests.integration.helpers.common import (
+import jubilant
+import pytest
+
+from tests.integration.helpers.constants import (
     CHARMED_BACKUP_USERNAME,
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    find_unit,
-    get_password,
-    set_password,
-)
-from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
+    DEPLOYMENT_TIMEOUT,
+    S3_APP_NAME,
+    S3_ENDPOINT,
     SHARD_APPS,
     SHARD_ONE_APP_NAME,
     SHARD_ONE_DB_NAME,
     SHARD_TWO_APP_NAME,
     SHARD_TWO_DB_NAME,
+    TIMEOUT,
+)
+from tests.integration.helpers.jubilant_backups import (
     add_and_verify_unwanted_writes,
-    deploy_cluster_components,
+    configure_s3,
+    create_and_verify_backup,
+    get_backup_list,
     get_cluster_writes_count,
-    integrate_sharding_components,
     verify_writes_restored,
 )
-from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.jubilant_common import (
+    find_leader,
+    get_password,
+    set_password,
+)
+from tests.integration.helpers.jubilant_sharding import (
+    deploy_cluster_components,
+    integrate_sharding_components,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
+from tests.integration.helpers.types import CloudConfigs, Substrate
+
+logger = getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     mongodb_charm: str,
     substrate: Substrate,
     mongod_resource: dict[str, str],
 ) -> None:
     """Build and deploy one unit of MongoDB."""
-    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
-    await ops_test.model.set_config({"image-stream": "daily"})
-    # it is possible for users to provide their own cluster for testing. Hence check if there
-    # is a pre-existing cluster.
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
@@ -62,160 +66,152 @@ async def test_build_and_deploy(
         },
     )
 
-    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
+    # deploy the s3 integrator charm
+    juju.deploy(S3_APP_NAME, channel="2/stable")
 
-    await ops_test.model.wait_for_idle(
-        apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_set_credentials_in_cluster(ops_test: OpsTest, cloud_configs) -> None:
+def test_set_credentials_in_cluster(juju: jubilant.Juju, cloud_configs: CloudConfigs) -> None:
     """Tests that sharded cluster can be configured for s3 configurations."""
-    await set_credentials(ops_test, cloud_configs, app_name=S3_APP_NAME, cloud="AWS")
+    configuration_parameters, credentials = cloud_configs["AWS"]
+    configure_s3(
+        juju,
+        app_name=S3_APP_NAME,
+        config=configuration_parameters,
+        credentials=credentials,
+    )
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
+    )
 
-    configuration_parameters, _ = cloud_configs["AWS"]
-
-    # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active", timeout=TIMEOUT)
-
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{S3_APP_NAME}:{S3_ENDPOINT}",
         f"{CONFIG_SERVER_APP_NAME}:{S3_ENDPOINT}",
     )
-    await integrate_sharding_components(ops_test)
+    integrate_sharding_components(juju)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            S3_APP_NAME,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_create_and_list_backups_in_cluster(ops_test: OpsTest) -> None:
+def test_create_and_list_backups_in_cluster(juju: jubilant.Juju) -> None:
     """Tests that sharded cluster can successfully create and list backups."""
     # verify backup list works
-    backups = await get_backup_list(ops_test, app_name=CONFIG_SERVER_APP_NAME)
+    backups = get_backup_list(juju, app_name=CONFIG_SERVER_APP_NAME)
     assert backups, "backups not outputted"
 
     # verify backup is started
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    action = await leader_unit.run_action(action_name="create-backup")
-    backup_result = await action.wait()
-    assert "backup started" in backup_result.results["backup-status"], "backup didn't start"
-
-    # verify backup is present in the list of backups
-    # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
-    # backup can take a lot of time so this function returns once the command was successfully
-    # sent to pbm. Therefore we should retry listing the backup several times
-    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            backups = await count_logical_backups(leader_unit)
-            assert backups == 1
+    create_and_verify_backup(juju, CONFIG_SERVER_APP_NAME)
 
 
-@pytest.mark.abort_on_fail
-async def test_shards_cannot_run_backup_actions(ops_test: OpsTest) -> None:
-    shard_unit = await find_unit(ops_test, leader=True, app_name=SHARD_ONE_APP_NAME)
-    action = await shard_unit.run_action(action_name="create-backup")
-    attempted_backup = await action.wait()
-    assert attempted_backup.status == "failed", "shard ran create-backup command."
+def test_shards_cannot_run_backup_actions(juju: jubilant.Juju) -> None:
+    shard_unit, _ = find_leader(juju, app_name=SHARD_ONE_APP_NAME)
 
-    action = await shard_unit.run_action(action_name="list-backups")
-    attempted_backup = await action.wait()
-    assert attempted_backup.status == "failed", "shard ran list-backup command."
+    with pytest.raises(jubilant.TaskError) as error:
+        juju.run(shard_unit, "create-backup")
+    assert error.value.task.status == "failed", "shard ran create-backup command, it shouldn't."
 
-    action = await shard_unit.run_action(action_name="restore")
-    attempted_backup = await action.wait()
-    assert attempted_backup.status == "failed", "shard ran list-backup command."
+    with pytest.raises(jubilant.TaskError) as error:
+        juju.run(shard_unit, "list-backups")
+    assert error.value.task.status == "failed", "shard ran list-backup command, it shouldn't."
+
+    with pytest.raises(jubilant.TaskError) as error:
+        juju.run(shard_unit, "restore")
+    assert error.value.task.status == "failed", "shard ran restore command, it shouldn't."
 
 
-@pytest.mark.abort_on_fail
-async def test_rotate_backup_password(ops_test: OpsTest) -> None:
+def test_rotate_backup_password(juju: jubilant.Juju) -> None:
     """Tests that sharded cluster can successfully create and list backups."""
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=20,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=15,
+        ),
         timeout=TIMEOUT,
-        status="active",
     )
-    new_password = "new-password"
+    new_password = "new-password"  # nosec: B105
 
-    shard_backup_password = await get_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
+    shard_backup_password = get_password(
+        juju, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
     )
     assert (
         shard_backup_password != new_password
     ), "shard-one is incorrectly already set to the new password."
 
-    shard_backup_password = await get_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
+    shard_backup_password = get_password(
+        juju, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
     )
     assert (
         shard_backup_password != new_password
     ), "shard-two is incorrectly already set to the new password."
 
-    await set_password(
-        ops_test,
+    set_password(
+        juju,
         username=CHARMED_BACKUP_USERNAME,
         password=new_password,
         app_name=CONFIG_SERVER_APP_NAME,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=20,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=20,
+        ),
         timeout=TIMEOUT,
-        status="active",
     )
-    config_svr_backup_password = await get_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=CONFIG_SERVER_APP_NAME
+    config_svr_backup_password = get_password(
+        juju, username=CHARMED_BACKUP_USERNAME, app_name=CONFIG_SERVER_APP_NAME
     )
 
     assert (
         config_svr_backup_password == new_password
-    ), "Application config-srver did not rotate password"
+    ), "Application config-server did not rotate password"
 
-    shard_backup_password = await get_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
+    shard_backup_password = get_password(
+        juju, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
     )
     assert shard_backup_password == new_password, "Application shard-one did not rotate password"
 
-    shard_backup_password = await get_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
+    shard_backup_password = get_password(
+        juju, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
     )
     assert shard_backup_password == new_password, "Application shard-two did not rotate password"
 
     # verify backup actions work after password rotation
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    action = await leader_unit.run_action(action_name="create-backup")
-    backup_result = await action.wait()
-    assert (
-        "backup started" in backup_result.results["backup-status"]
-    ), "backup didn't start after password rotation"
-
-    # verify backup is present in the list of backups
-    # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
-    # backup can take a lot of time so this function returns once the command was successfully
-    # sent to pbm. Therefore we should retry listing the backup several times
-    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            backups = await count_logical_backups(leader_unit)
-            assert backups == 2, "Backup not created after password rotation."
+    create_and_verify_backup(juju, app_name=CONFIG_SERVER_APP_NAME)
 
 
-@pytest.mark.abort_on_fail
-async def test_restore_backup(ops_test: OpsTest, substrate: Substrate, add_writes_to_shard) -> None:
+def test_restore_backup(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_add_writes_to_shard
+) -> None:
     """Tests that sharded Charmed MongoDB cluster supports restores."""
     # count total writes
-    cluster_writes = await get_cluster_writes_count(
-        ops_test,
+    cluster_writes = get_cluster_writes_count(
+        juju,
         substrate,
         shard_app_names=SHARD_APPS,
         db_names=[SHARD_ONE_DB_NAME, SHARD_TWO_DB_NAME],
@@ -230,40 +226,37 @@ async def test_restore_backup(ops_test: OpsTest, substrate: Substrate, add_write
         == cluster_writes["total_writes"]
     ), "writes not synced"
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    prev_backups = await count_logical_backups(leader_unit)
+    create_and_verify_backup(juju, CONFIG_SERVER_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=20
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
-    action = await leader_unit.run_action(action_name="create-backup")
-    first_backup = await action.wait()
-    assert first_backup.status == "completed", "First backup not started."
-
-    # verify that backup was made on the bucket
-    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            backups = await count_logical_backups(leader_unit)
-            assert backups == prev_backups + 1, "Backup not created."
-
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=20
-    )
-
+    leader_unit, leader_unit_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
     # add writes to be cleared after restoring the backup.
-    await add_and_verify_unwanted_writes(ops_test, substrate, leader_unit, cluster_writes)
+    add_and_verify_unwanted_writes(juju, substrate, leader_unit_status, cluster_writes)
 
     # find most recent backup id and restore
-    list_result = await get_backup_list(ops_test, app_name=CONFIG_SERVER_APP_NAME)
+    task = juju.run(leader_unit, action="list-backups")
+    list_result = task.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
     backup_id = most_recent_backup.split()[0]
-    action = await leader_unit.run_action(action_name="restore", **{"backup-id": backup_id})
-    restore = await action.wait()
-    assert restore.results["restore-status"] == "restore started", "restore not successful"
+    restore_task = juju.run(leader_unit, action="restore", params={"backup-id": backup_id})
+    logger.info(f"Restore backup result {restore_task.results=}")
+    assert restore_task.results["restore-status"] == "restore started", "restore not successful"
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=20
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            idle_period=20,
+        ),
+        timeout=TIMEOUT,
     )
 
-    await verify_writes_restored(ops_test, substrate, cluster_writes)
+    verify_writes_restored(juju, substrate, cluster_writes)

@@ -84,23 +84,15 @@ async def verify_sharding_cluster_ip_source_allowlists(
     shard_apps: set[str],
     related_shard_apps: set[str],
 ) -> None:
-    """Verify cluster allowlists for the config server and every deployed shard.
-
-    For k8s, the config server and shards only verify that its peers are in the allowlist.
-    For VM, the config server and shards verify that all other cluster components are in
-    the allowlist.
-    """
+    """Verify VM cluster allowlists for the config server and every deployed shard."""
+    if substrate == Substrate.k8s:
+        return
 
     async def application_addresses(app_name: str) -> set[str]:
         return {
             await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
             for unit in ops_test.model.applications[app_name].units
         }
-
-    if substrate == Substrate.k8s:
-        for app_name in shard_apps | {config_server_app}:
-            await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
-        return
 
     config_server_addresses = await application_addresses(config_server_app)
     related_shard_addresses = set()

@@ -205,8 +205,6 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             NonDeferrableFailedHookChecksError, DeferrableFailedHookChecksError
         """
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if status := self.dependent.get_relation_feasible_status(self.relation_name):
@@ -319,9 +317,6 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
-
-        if scope == "app":
-            return []
 
         if self.skip_config_server_status():
             return charm_statuses[scope]
@@ -571,8 +566,6 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
     def assert_pass_sanity_hook_checks(self, is_leaving: bool) -> None:
         """Returns True if all the sanity hook checks for sharding pass."""
-        if not self.state.is_role(MongoDBRoles.SHARD):
-            raise NonDeferrableFailedHookChecksError("is only executed by shards")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:

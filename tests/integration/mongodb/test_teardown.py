@@ -7,10 +7,12 @@ import logging
 import jubilant
 import pytest
 
+from tests.integration.helpers.common import CONTINUOUS_WRITE_APPLICATION
 from tests.integration.helpers.constants import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
 )
+from tests.integration.helpers.continuous_writes_helpers import verify_writes
 from tests.integration.helpers.jubilant_common import (
     count_primaries,
     deploy_charm,
@@ -18,7 +20,10 @@ from tests.integration.helpers.jubilant_common import (
     existing_app,
     fast_forward,
 )
-from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+)
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -41,7 +46,6 @@ def scale_and_verify(juju: jubilant.Juju, substrate: Substrate, app_name: str, c
     assert count_primaries(juju, substrate, app_name) == 1, "Replica set has no primary."
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.juju_setup
 def test_build_and_deploy(
     juju: jubilant.Juju,
@@ -75,12 +79,21 @@ def test_build_and_deploy(
     )
 
 
-def test_long_scale_up_scale_down_units(juju: jubilant.Juju, substrate: Substrate):
+def test_long_scale_up_scale_down_units(
+    juju: jubilant.Juju, substrate: Substrate, jubilant_continuous_writes_to_db
+):
     """Scale up and down the application and verify the replica set is healthy."""
-    scales = [2, -1, -1, 2, -2, 3, -3]
+    scales = [2, -1, -1, 2, -2, 3, -4]
 
     app_name = existing_app(juju)
     assert app_name
 
     for count in scales:
         scale_and_verify(juju, substrate, app_name=app_name, count=count)
+
+    juju.wait(
+        lambda status: are_agents_idle(
+            status, app_name, CONTINUOUS_WRITE_APPLICATION, idle_period=20
+        )
+    )
+    verify_writes(juju, substrate, app_name, CONTINUOUS_WRITE_APPLICATION)

@@ -764,6 +764,8 @@ class CharmState(Object, AbstractStatusesState):
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
+        if self.substrate == Substrates.K8S:
+            return []
         peer_client_sources = cidrs(self.peer_network().bind_addresses)
         peer_client_sources.extend(self.peer_database_addresses)
         peer_client_sources.extend(self.related_cluster_hosts)

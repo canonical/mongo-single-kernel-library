@@ -7,8 +7,8 @@ import logging
 import os
 import subprocess
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
 DEFAULT_LXD_NETWORK = "lxdbr0"
 RAW_DNSMASQ = """dhcp-option=3
@@ -106,14 +106,14 @@ def lxd():
 
 
 @pytest.fixture(scope="module")
-async def lxd_spaces(ops_test: OpsTest) -> None:
-    await ops_test.juju("reload-spaces")
-    await ops_test.juju("add-space", "client", "10.0.0.1/24")
-    await ops_test.juju("add-space", "peers", "10.10.10.1/24")
-    await ops_test.juju("add-space", "isolated", "10.20.20.1/24")
-    await ops_test.juju("add-space", "sharding", "10.30.0.1/24")
-    await ops_test.juju("add-space", "cluster", "10.40.0.1/24")
-    await ops_test.juju("add-space", "config-server", "10.50.0.1/24")
+def lxd_spaces(juju: jubilant.Juju) -> None:
+    juju.cli("reload-spaces")
+    juju.cli("add-space", "client", "10.0.0.1/24")
+    juju.cli("add-space", "peers", "10.10.10.1/24")
+    juju.cli("add-space", "isolated", "10.20.20.1/24")
+    juju.cli("add-space", "sharding", "10.30.0.1/24")
+    juju.cli("add-space", "cluster", "10.40.0.1/24")
+    juju.cli("add-space", "config-server", "10.50.0.1/24")
 
 
 @pytest.hookimpl()

@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -17,7 +18,7 @@ def does_status_match(
     model_status: jubilant.Status,
     expected_unit_statuses: dict[str, list[StatusObject]] | None = None,
     expected_app_statuses: dict[str, list[StatusObject]] | None = None,
-    num_units: dict[str, int] | None = None,
+    num_units: dict[str, int | None] | None = None,
 ) -> bool:
     """Check that current app and/or unit status matches expectation for given apps.
 
@@ -53,6 +54,7 @@ def _does_unit_workload_status_match(
         all(
             any(
                 does_message_match(unit_status.workload_status.message, status)
+                and unit_status.workload_status.current == status.status
                 for status in expected_status
             )
             for unit_status in model_status.get_units(app).values()
@@ -73,6 +75,7 @@ def _does_app_status_match(
     return all(
         any(
             does_message_match(model_status.apps.get(app).app_status.message, status)
+            and model_status.apps.get(app).app_status.current == status.status
             for status in expected_status
         )
         for app, expected_status in expected_statuses.items()
@@ -83,6 +86,8 @@ def does_message_match(expected_status_message: str, status: StatusObject) -> bo
     """Check if the status message matches the expected message."""
     try:
         juju_status = StatusBase.from_name(status.status, status.message)
+        if expected_status_message == "":
+            return juju_status.message == "" or (not status.short_message)
         return (
             expected_status_message == juju_status.message
             or expected_status_message.startswith(juju_status.message)
@@ -100,7 +105,7 @@ def are_apps_active_and_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that all given apps are active, their agents idle (optional idle interval too).
 
@@ -127,7 +132,7 @@ def are_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that agents of all given apps are idle (optional idle interval too).
 
@@ -197,4 +202,43 @@ def verify_unit_count(
 
     return all(
         count == len(status.get_units(app)) for app, count in _unit_count.items() if count >= 0
+    )
+
+
+def none_has_status(
+    status: jubilant.Status, juju: jubilant.Juju, app_name: str, expected_status: str, message: str
+) -> bool:
+    """Checks that no unit has a specific status in its status-detail output."""
+    relation_data: dict[str, dict[str, str]] = {}
+    for unit in status.get_units(app_name):
+        for relation in juju.show_unit(unit).relation_info:
+            if relation.endpoint == "status-peers":
+                relation_data[unit] = relation.local_unit.data
+                break
+
+    for data in relation_data.values():
+        for value in data.values():
+            try:
+                status_list = json.loads(value)
+                if any(
+                    _status["status"] == expected_status and _status["message"] == message
+                    for _status in status_list
+                ):
+                    return False
+            except json.JSONDecodeError:
+                continue
+    return True
+
+
+def none_is_restarting(status: jubilant.Status, juju: jubilant.Juju, app_name: str) -> bool:
+    """This checks that no unit is waiting for restart, based on the unit statuses.
+
+    This might be a bit flaky but we don't really have a better solution until jubilant.
+    """
+    return none_has_status(
+        status=status,
+        juju=juju,
+        app_name=app_name,
+        expected_status="waiting",
+        message="Waiting for MongoDB restart.",
     )

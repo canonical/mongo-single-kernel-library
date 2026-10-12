@@ -9,3 +9,7 @@ class Substrate(StrEnum):
 
     lxd = "lxd"
     k8s = "k8s"
+
+
+CloudConfiguration = tuple[dict[str, str], dict[str, str]]
+CloudConfigs = dict[str, CloudConfiguration]
