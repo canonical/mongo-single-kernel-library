@@ -809,7 +809,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
     @override
-    def update_status(self) -> None:
+    def update_status(self) -> None:  # noqa: C901
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
@@ -842,6 +842,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Failed to add shard")
             except NotDrainedError:
                 logger.warning("Still draining shard.")
+            except WorkloadServiceError:
+                logger.warning("Workload service error.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""

@@ -20,12 +20,14 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     UnknownCertificateAvailableError,
     UnknownCertificateExpiringError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
     TLSCertificatesRequiresV3,
 )
+from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -124,7 +126,10 @@ class TLSEventsHandler(Object):
             TLSStatuses.DISABLING_TLS.value,
             scope="unit",
         )
-        self.manager.disable_certificates_for_unit()
+        try:
+            self.manager.disable_certificates_for_unit()
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -171,6 +176,8 @@ class TLSEventsHandler(Object):
                 return
 
             self.manager.enable_certificates_for_unit()
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return

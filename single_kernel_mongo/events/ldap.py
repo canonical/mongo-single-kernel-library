@@ -23,6 +23,7 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     UnableToBindError,
     WaitingForLdapDataError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
     CertificateAvailableEvent,
@@ -149,7 +150,10 @@ class LDAPEventHandler(Object):
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
-        self.manager.remove_ldap_certificates()
+        try:
+            self.manager.remove_ldap_certificates()
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
         """Custom ops revent to trigger restart of leader with a single source of truth."""
