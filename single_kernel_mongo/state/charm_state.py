@@ -374,7 +374,7 @@ class CharmState(Object, AbstractStatusesState):
         """The Requirer Data interface for the cluster relation (config-server side)."""
         return DatabaseProviderData(
             self.model,
-            RelationNames.CLUSTER,
+            RelationNames.CLUSTER.value,
         )
 
     @property
@@ -382,7 +382,7 @@ class CharmState(Object, AbstractStatusesState):
         """The Requirer Data interface for the cluster relation (mongos side)."""
         return DatabaseRequirerData(
             self.model,
-            RelationNames.CLUSTER,
+            RelationNames.CLUSTER.value,
             database_name=self.app_peer_data.database,
             extra_user_roles=",".join(sorted(self.app_peer_data.extra_user_roles)),
             additional_secret_fields=[
