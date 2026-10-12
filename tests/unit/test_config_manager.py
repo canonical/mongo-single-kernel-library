@@ -417,7 +417,7 @@ def test_mongos_config_manager(mocker):
         "systemLog": {
             "logRotate": "reopen",
             "logAppend": True,
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongos.log",
             "destination": "file",
         },
     }
@@ -426,7 +426,7 @@ def test_mongos_config_manager(mocker):
         "auditLog": {
             "destination": "file",
             "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongos_audit.log",
         }
     }
     assert auth_parameter == {
@@ -455,13 +455,13 @@ def test_mongos_config_manager(mocker):
         "systemLog": {
             "logRotate": "reopen",
             "logAppend": True,
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongos.log",
             "destination": "file",
         },
         "auditLog": {
             "destination": "file",
             "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongos_audit.log",
         },
         "sharding": {"configDB": "mongodb://config-server-url"},
     }

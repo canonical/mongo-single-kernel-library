@@ -10,7 +10,7 @@ right observability stack.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, final
 
 from ops.framework import Object
 
@@ -19,6 +19,7 @@ from single_kernel_mongo.config.models import OBSERVABILITY_CONFIG
 from single_kernel_mongo.config.relations import (
     ExternalProviderRelations,
 )
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from single_kernel_mongo.lib.charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 
 
+@final
 class ObservabilityManager(Object):
     """Include the right observability stack."""
 
@@ -75,13 +77,26 @@ class ObservabilityManager(Object):
             )
             self.loki_push = LogProxyConsumer(
                 self.charm,
-                log_files=[
-                    f"{self.dependent.workload.paths.log_file}",
-                    f"{self.dependent.workload.paths.audit_file}",
-                ],
+                log_files=self.log_files(),
                 relation_name=ExternalProviderRelations.LOGGING.value,
                 container_name=self.dependent.role.name,
             )
+
+    def log_files(self) -> list[str]:
+        """The logs files that should be consumed."""
+        mongos_log_files = [
+            f"{self.dependent.workload.paths.mongos_log_file}",
+            f"{self.dependent.workload.paths.mongos_audit_file}",
+        ]
+        mongod_log_files = [
+            f"{self.dependent.workload.paths.mongos_log_file}",
+            f"{self.dependent.workload.paths.mongos_audit_file}",
+        ]
+        if self.state.is_role(MongoDBRoles.MONGOS):
+            return mongos_log_files
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return mongod_log_files + mongos_log_files
+        return mongod_log_files
 
     def vault_metrics(self) -> dict[str, Any]:
         """The metrics specific to vault."""

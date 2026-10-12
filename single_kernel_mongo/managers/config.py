@@ -372,6 +372,10 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     """The common configuration manager for both MongoDB and Mongos."""
 
     auth: bool
+    # Each service (mongod, mongos)  has its own log file.
+    log_file: Path
+    # Each service (mongod, mongos) has its own audit file.
+    audit_file: Path
 
     @override
     def build_parameters(self) -> list[list[str]]:
@@ -450,7 +454,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             "systemLog": {
                 "logRotate": "reopen",
                 "logAppend": True,
-                "path": f"{self.workload.paths.log_file}",
+                "path": f"{self.log_file}",
                 "destination": "file",
             },
         }
@@ -462,7 +466,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             "auditLog": {
                 "destination": AuditLogConfig.destination,
                 "format": AuditLogConfig.format,
-                "path": f"{self.workload.paths.audit_file}",
+                "path": f"{self.audit_file}",
             }
         }
 
@@ -527,6 +531,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         ...
 
 
+@final
 class MongoDBConfigManager(MongoConfigManager):
     """MongoDB Specifics config manager."""
 
@@ -535,6 +540,8 @@ class MongoDBConfigManager(MongoConfigManager):
         self.workload = workload
         self.config = config
         self.file = self.workload.paths.config_file
+        self.log_file = self.workload.paths.log_file
+        self.audit_file = self.workload.paths.audit_file
         self.auth = True
 
     @property
@@ -692,6 +699,7 @@ class MongoDBConfigManager(MongoConfigManager):
         )
 
 
+@final
 class MongosConfigManager(MongoConfigManager):
     """Mongos Specifics config manager."""
 
@@ -701,6 +709,8 @@ class MongosConfigManager(MongoConfigManager):
         self.config = config
         self.auth = False
         self.file = self.workload.paths.mongos_config_file
+        self.log_file = self.workload.paths.mongos_log_file
+        self.audit_file = self.workload.paths.mongos_audit_file
 
     @property
     def config_server_db_parameter(self) -> dict[str, Any]:

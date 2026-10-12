@@ -176,7 +176,7 @@ def test_pre_upgrade_check_failure(
         assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     # restore network after test
-    restore_network_to_unit(substrate, substrate, machine_name)
+    restore_network_to_unit(substrate, juju.model, machine_name)
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
             status,

@@ -15,6 +15,24 @@
         {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'server'})"
     endscript
 }
+{{logs_directory}}/mongos.log
+{
+    rotate {{max_rotations}}
+    size {{max_log_size}}
+    missingok
+    notifempty
+    create 0600 {{mongo_user}} {{mongo_user}}
+    compress
+    delaycompress
+    nomail
+    nocopytruncate
+    sharedscripts
+    postrotate
+        uri={{get_uri}}
+        mongos_uri="$(echo ${uri} | sed 's/27017/27018/')"
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'server'})"
+    endscript
+}
 {{logs_directory}}/audit.log
 {
     rotate {{max_rotations}}
@@ -30,6 +48,24 @@
     postrotate
         uri={{get_uri}}
         {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'audit'})"
+    endscript
+}
+{{logs_directory}}/audit_mongos.log
+{
+    rotate {{max_rotations}}
+    size {{max_log_size}}
+    missingok
+    notifempty
+    create 0600 {{mongo_user}} {{mongo_user}}
+    compress
+    delaycompress
+    nomail
+    nocopytruncate
+    sharedscripts
+    postrotate
+        uri={{get_uri}}
+        mongos_uri="$(echo ${uri} | sed 's/27017/27018/')"
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'server'})"
     endscript
 }
 {{pbm_logs}}/pbm-agent.json
