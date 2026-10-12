@@ -88,7 +88,6 @@ def assert_successful_run_upgrade_sequence(
 ) -> None:
     """Runs the upgrade sequence on a given app."""
     leader_name, _ = find_leader(juju, app_name)
-    leader_id = get_unit_id(leader_name)
 
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
@@ -146,12 +145,14 @@ def assert_successful_run_upgrade_sequence(
         else:
             unit = leader_name
 
-        task = juju.run(unit, "resume-refresh")
+        try:
+            task = juju.run(unit, "resume-refresh")
+        except jubilant.TaskError as err:
+            task = err.task
 
-        if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
-        ):
-            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+        assert task.results["result"].startswith(
+            "Refresh resumed."
+        ), "resume-refresh failed, expected to succeed."
 
     with fast_forward(juju, update_interval="60s"):
         juju.wait(

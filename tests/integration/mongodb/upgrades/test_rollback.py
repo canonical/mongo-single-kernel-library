@@ -62,7 +62,6 @@ def test_rollback(
     assert app_name
 
     leader_name, _ = find_leader(juju, app_name)
-    leader_id = get_unit_id(leader_name)
 
     resources = mongod_resource if substrate == Substrate.k8s else None
 
@@ -132,12 +131,14 @@ def test_rollback(
         else:
             unit = leader_name
 
-        task = juju.run(unit, "resume-refresh")
+        try:
+            task = juju.run(unit, "resume-refresh")
+        except jubilant.TaskError as err:
+            task = err.task
 
-        if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
-        ):
-            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+        assert task.results["result"].startswith(
+            "Refresh resumed."
+        ), "resume-refresh failed, expected to succeed."
 
     logger.info("Wait for the charm to be rolled back")
     juju.wait(

@@ -85,7 +85,6 @@ def test_rollback_on_config_server(
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_leader, _ = find_leader(juju, CONFIG_SERVER_APP_NAME)
-    leader_id = get_unit_id(config_server_leader)
 
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
@@ -176,12 +175,14 @@ def test_rollback_on_config_server(
         else:
             unit = config_server_leader
 
-        task = juju.run(unit, "resume-refresh")
+        try:
+            task = juju.run(unit, "resume-refresh")
+        except jubilant.TaskError as err:
+            task = err.task
 
-        if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
-        ):
-            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+        assert task.results["result"].startswith(
+            "Refresh resumed."
+        ), "resume-refresh failed, expected to succeed."
 
     logger.info("Wait for the charm to be rolled back")
     juju.wait(
