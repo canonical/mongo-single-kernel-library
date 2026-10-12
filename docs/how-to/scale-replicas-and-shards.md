@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    description: "Scale a Charmed MongoDB sharded cluster or replica set via Juju actions."
+    description: "Scale a Charmed MongoDB sharded cluster or replica set via Juju commands."
 ---
 
 (scale-replicas-and-shards)=
