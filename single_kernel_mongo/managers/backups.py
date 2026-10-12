@@ -532,16 +532,20 @@ class BackupManager(Object, BackupConfigManager, AbstractManagerStatus[CharmStat
 
         # since we cannot determine whether the user has an AWS or GCP bucket or Minio bucket
         # send them an info
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.region"
-        ):
-            logger.info("Missing region - this is required for AWS")
+        if provided_configs.get("storage", {}).get("type", "") == "s3":
+            storage_s3 = provided_configs.get("storage", {}).get("s3", {})
+            if not storage_s3:
+                logger.info("Missing S3 Config")
+                return False
 
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.endpointUrl"
-        ):
-            logger.info("Missing S3 endpoint.")
-            return False
+            if not storage_s3.get("region"):
+                logger.info(
+                    "Missing region - this is recommended for S3. Default region `us-east-1` will be used."
+                )
+
+            if not storage_s3.get("endpointUrl"):
+                logger.info("Missing S3 endpoint.")
+                return False
 
         return True
 
