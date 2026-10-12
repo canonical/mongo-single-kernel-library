@@ -64,7 +64,6 @@ def test_upgrade(
 ):
     """Refreshes the charm and wait for it to be active again."""
     leader_unit, _ = find_leader(juju, app_name=MONGOS_APP_NAME)
-    leader_id = get_unit_id(leader_unit)
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
         juju.status().get_units(MONGOS_APP_NAME),
@@ -121,10 +120,10 @@ def test_upgrade(
             task = juju.run(unit, "resume-refresh")
         except jubilant.TaskError as error:
             task = error.task
-        if (substrate == Substrate.lxd) or (
-            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1])
-        ):
-            assert task.status == "completed", "resume-refresh failed, expected to succeed."
+
+        assert task.results["result"].startswith(
+            "Refresh resumed."
+        ), "resume-refresh failed, expected to succeed."
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(status, MONGOS_APP_NAME, idle_period=30),
