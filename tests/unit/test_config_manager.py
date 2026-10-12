@@ -426,7 +426,7 @@ def test_mongos_config_manager(mocker):
         "auditLog": {
             "destination": "file",
             "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongos_audit.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/audit_mongos.log",
         }
     }
     assert auth_parameter == {
@@ -461,7 +461,7 @@ def test_mongos_config_manager(mocker):
         "auditLog": {
             "destination": "file",
             "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongos_audit.log",
+            "path": f"{VM_PATH['mongod']['LOGS']}/audit_mongos.log",
         },
         "sharding": {"configDB": "mongodb://config-server-url"},
     }
