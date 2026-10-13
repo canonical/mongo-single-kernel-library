@@ -105,6 +105,9 @@ async def test_preflight_check(ops_test: OpsTest) -> None:
     """Verifies that the preflight check can run successfully."""
     app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", timeout=1000, idle_period=20
+    )
     logger.info("Calling pre-refresh-check")
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
