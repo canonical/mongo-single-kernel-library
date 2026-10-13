@@ -342,7 +342,8 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
         for relation in self.state.config_server_relation:
-            if relation.app.name not in cluster_shards:
+            shard_name = self.state.config_server_state(relation).shard_replset
+            if shard_name and shard_name not in cluster_shards:
                 self.add_shard(relation)
 
     def add_shard(self, relation: Relation) -> None:
