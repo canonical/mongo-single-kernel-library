@@ -27,3 +27,12 @@ def test_mongo_paths(role: CharmSpec):
 
     assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_peer_files)
     assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_client_files)
+
+
+@parameterized.expand([[K8S_MONGOD], [VM_MONGOD]])
+def test_oauth_paths(role: CharmSpec):
+    paths = MongoPaths(role)
+
+    assert paths.oauth_path == Path(role.paths["ETC"]) / "oauth"
+    assert paths.oauth_certificates_dir == paths.oauth_path / "certs"
+    assert paths.oauth_certificates_file == paths.oauth_certificates_dir / "oauth-ca.crt"
