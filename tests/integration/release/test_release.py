@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 from logging import getLogger
 
 import jubilant
@@ -384,8 +385,11 @@ def test_valid_reads(juju: jubilant.Juju):
         coll_name=DEFAULT_COLLECTION_NAME,
     )
     assert reads > 1000
+
+    failed_reads_list = json.loads(failed_reads)
+
     # We can allow for a few errors during restore for example
-    assert len(failed_reads) < 50
+    assert len(failed_reads_list) < 50
 
 
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
