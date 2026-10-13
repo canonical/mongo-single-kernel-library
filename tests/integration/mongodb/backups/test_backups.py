@@ -240,7 +240,7 @@ async def test_multi_backup(ops_test: OpsTest, continuous_writes_to_db, cloud_co
     configuration_parameters, _ = cloud_configs["AWS"]
 
     await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify that backups was made on the AWS bucket
     try:
@@ -293,7 +293,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify all writes are present
     try:
@@ -353,7 +353,7 @@ async def test_restore_new_cluster(
         num_units=len(UNIT_IDS),
     )
 
-    ops_test.model.wait_for_idle(
+    await ops_test.model.wait_for_idle(
         apps=[new_cluster_app_name],
         status="active",
         idle_period=15,
@@ -415,7 +415,7 @@ async def test_update_backup_password(ops_test: OpsTest) -> None:
     db_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
 
     # wait for charm to be idle before setting password
-    ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     parameters = {"username": "backup"}
     action = await db_unit.run_action("set-password", **parameters)

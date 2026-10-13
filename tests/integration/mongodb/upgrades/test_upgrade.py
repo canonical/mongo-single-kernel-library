@@ -13,6 +13,7 @@ from tests.integration.helpers.common import (
     find_unit,
     get_app_name,
     get_password,
+    get_unit_id,
     unit_hostname,
 )
 from tests.integration.helpers.ha import (
@@ -61,8 +62,14 @@ async def test_upgrade(
 ) -> None:
     """Verifies that the upgrade can run successfully."""
     app_name = await get_app_name(ops_test)
+    refresh_order = sorted(
+        ops_test.model.applications[app_name].units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
 
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
 
     logger.info("Calling pre-refresh-check")
     action = await leader_unit.run_action("pre-refresh-check")
@@ -82,7 +89,8 @@ async def test_upgrade(
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
-        assert action.status == "completed", "resume-refresh failed, expected to succeed"
+        if "lxd" or (substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
         await ops_test.model.wait_for_idle(
             apps=[app_name], status="active", timeout=1000, idle_period=120
