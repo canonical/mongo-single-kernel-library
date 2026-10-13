@@ -93,7 +93,7 @@ async def test_rollback_on_config_server(
     # await ops_test.model.applications[CONFIG_SERVER_APP_NAME].refresh(
     #     channel="6/edge", switch="ch:mongodb"
     # )
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/edge", charm_base=base_app_name)
+    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/edge", charm_name=base_app_name)
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],

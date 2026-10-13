@@ -925,11 +925,11 @@ def map_s3_config_to_pbm_config(credentials: dict[str, str]) -> dict[str, Any]:
     pbm_configs: dict[str, Any] = {}
     if "googleapis" in credentials.get("endpoint", ""):
         logger.debug("Storage type is GCS.")
-        pbm_configs = {"storage.type": "gcs"}
+        pbm_configs = {"storage": {"type": "gcs"}}
         config_map = GCS_PBM_OPTION_MAP
     else:
         logger.debug("Storage type is S3.")
-        pbm_configs = {"storage.type": "s3"}
+        pbm_configs = {"storage": {"type": "s3"}}
         config_map = S3_PBM_OPTION_MAP
 
     for s3_option, s3_value in credentials.items():

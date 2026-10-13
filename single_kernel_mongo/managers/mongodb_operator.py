@@ -843,9 +843,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if self.substrate != Substrates.VM:
             return
-        ports = [MongoPorts.MONGODB_PORT]
+        ports = [MongoPorts.MONGODB_PORT.value]
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            ports.append(MongoPorts.MONGOS_PORT)
+            ports.append(MongoPorts.MONGOS_PORT.value)
 
         try:
             for port in ports:
