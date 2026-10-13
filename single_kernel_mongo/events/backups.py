@@ -114,7 +114,13 @@ class BackupEventsHandler(Object):
                 component=self.dependent.name,
             )
             return
-        if not self.manager.workload.active():
+        try:
+            is_active = self.manager.workload.active()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while checking PBM service status.")
+            is_active = False
+
+        if not is_active:
             defer_event_with_info_log(
                 logger,
                 event,
@@ -179,7 +185,11 @@ class BackupEventsHandler(Object):
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
-        self.manager.cleanup_certs_and_restart(event.relation)
+        try:
+            self.manager.cleanup_certs_and_restart(event.relation)
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         self.manager.state.statuses.clear(scope="unit", component=self.manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:

@@ -5,16 +5,27 @@
 import logging
 
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from ..helpers.common import find_unit, get_unit_id
-from ..helpers.types import Substrate
+from tests.integration.helpers.common import find_unit, get_unit_id
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 
 
+@retry(
+    retry=retry_if_exception_type(AssertionError),
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(10),
+    reraise=True,
+)
 async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
-    """Get the workload version of the deployed router charm."""
-    return_code, output, _ = await ops_test.juju(
+    """Get the workload version of the deployed router charm.
+
+    Retries 5 times since `juju ssh` can fail transiently (e.g. the exec proxy path isn't
+    ready yet on k8s).
+    """
+    return_code, output, stderr = await ops_test.juju(
         "ssh",
         unit_name,
         "sudo",
@@ -22,7 +33,7 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
         f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
     )
 
-    assert return_code == 0
+    assert return_code == 0, f"failed to read refresh_versions.toml on {unit_name}: {stderr}"
     return output.strip()
 
 

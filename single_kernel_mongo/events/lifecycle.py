@@ -52,11 +52,14 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
+    DeferrableFailedHookChecksError,
     InvalidConfigRoleError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
+    ShardAuthError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
@@ -119,7 +122,12 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError):
+        except (
+            ContainerNotReadyError,
+            WorkloadServiceError,
+            WorkloadExecError,
+            NotReadyError,
+        ):
             logger.info("Not ready to start.")
             event.defer()
             return
@@ -194,7 +202,11 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        self.dependent.update_status()
+        try:
+            self.dependent.update_status()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while updating status.")
+            return
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
@@ -221,7 +233,13 @@ class LifecycleEventsHandler(Object):
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError, WorkloadServiceError):
+        except (
+            NotReadyError,
+            PyMongoError,
+            ShardAuthError,
+            WorkloadServiceError,
+            DeferrableFailedHookChecksError,
+        ):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
@@ -247,7 +265,7 @@ class LifecycleEventsHandler(Object):
         """Relation departed event."""
         try:
             self.dependent.peer_leaving(departing_unit=event.departing_unit)
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
