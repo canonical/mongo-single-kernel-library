@@ -226,7 +226,11 @@ def test_mongos_can_scale(juju: jubilant.Juju, substrate: Substrate) -> None:
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME, idle_period=20
+            status,
+            MONGOS_CLIENT_APPLICATION,
+            MONGOS_APP_NAME,
+            idle_period=20,
+            unit_count={app_name: n_units + 1},
         ),
         timeout=TIMEOUT,
     )
@@ -247,7 +251,11 @@ def test_mongos_can_scale(juju: jubilant.Juju, substrate: Substrate) -> None:
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status, MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME, idle_period=20
+            status,
+            MONGOS_CLIENT_APPLICATION,
+            MONGOS_APP_NAME,
+            idle_period=20,
+            unit_count={app_name: n_units},
         ),
         timeout=TIMEOUT,
     )

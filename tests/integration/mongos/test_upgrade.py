@@ -134,7 +134,7 @@ def test_upgrade(
 
     for unit, mongos_unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
         number = get_unit_id(unit)
-        cmd = f"db.test_collection.insertOne({{number: {number}}} );"
+        cmd = f"db.test_collection.insertOne({{number: {number}}})"
         uri = generate_mongos_uri(
             juju,
             substrate,
@@ -151,4 +151,4 @@ def test_upgrade(
             unit_name=unit,
             container_name="mongos",
         )
-        assert check, "mongos user failed to write data"
+        assert check.succeeded, "mongos user failed to write data"
