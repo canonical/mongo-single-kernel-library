@@ -87,8 +87,7 @@ async def test_rollback_on_shard_and_config_server(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
 
-    # Read the revision directly out of the `.charm` artifact that was actually
-    # deployed
+    # Read the revision directly out of the `.charm` artifact that was actually deployed
     with zipfile.ZipFile(mongodb_charm) as charm_zip:
         revision = charm_zip.read("charm_version").decode().strip()
 
