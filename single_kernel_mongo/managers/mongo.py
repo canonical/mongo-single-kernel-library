@@ -132,12 +132,12 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
 
     def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
-        self.initialise_operator_user()
+        self._initialise_operator_user()
         self.initialise_user(MonitorUser)
         self.initialise_user(BackupUser)
         self.initialise_user(LogRotateUser)
 
-    def initialise_operator_user(self):
+    def _initialise_operator_user(self):
         """Creates initial admin user for MongoDB.
 
         Initial admin user can be created only through localhost connection.

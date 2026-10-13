@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-from pathlib import Path
+import zipfile
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -12,6 +12,7 @@ from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+    check_app_status,
     stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
@@ -78,7 +79,6 @@ async def test_rollback_on_shard_and_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
     base_app_name: str,
-    mongod_base_path: Path,
     mongodb_charm: str,
     mongod_resource: dict,
     add_continuous_writes_to_shards,
@@ -88,18 +88,40 @@ async def test_rollback_on_shard_and_config_server(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
 
-    with open(mongod_base_path / "charm_version") as fd:
-        revision = fd.read().strip()
+    # Read the revision directly out of the `.charm` artifact that was actually deployed
+    with zipfile.ZipFile(mongodb_charm) as charm_zip:
+        revision = charm_zip.read("charm_version").decode().strip()
+
+    shard_revision_messages = {
+        app_name: (
+            f"Charm revision ({ops_test.model.applications[app_name].charm_url.rsplit('-', 1)[-1]}) "
+            f"is not up-to date with config-server ({revision}-locally built)."
+        )
+        for app_name in (SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME)
+    }
+    config_server_waiting_message = (
+        f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built."
+    )
 
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+    await asyncio.gather(
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_ONE_APP_NAME,
+            status=shard_revision_messages[SHARD_ONE_APP_NAME],
+        ),
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_TWO_APP_NAME,
+            status=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="waiting",
+            message=config_server_waiting_message,
         ),
     )
 
@@ -112,14 +134,19 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
+    await asyncio.gather(
+        wait_for_mongodb_units_blocked(
+            ops_test,
+            substrate,
+            SHARD_TWO_APP_NAME,
+            status=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="waiting",
+            message=config_server_waiting_message,
         ),
     )
 
