@@ -389,6 +389,13 @@ class MongoConnection:
         )
 
     @staticmethod
+    def is_any_unreachable(rs_status: dict[str, Any]) -> bool:
+        """Returns true if any unit is unreachable."""
+        return any(
+            member["stateStr"] == "(not reachable/healthy)" for member in rs_status["members"]
+        )
+
+    @staticmethod
     def is_any_removing(rs_status: dict[str, Any]) -> bool:
         """Returns true if any replica set member is removing itself.
 

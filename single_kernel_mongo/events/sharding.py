@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.charm import (
@@ -23,6 +23,7 @@ from single_kernel_mongo.config.literals import TrustStoreFiles
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
+    ClusterVersionMismatchError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@final
 class ConfigServerEventHandler(Object):
     """Event Handler for managing config server side events."""
 
@@ -81,11 +83,18 @@ class ConfigServerEventHandler(Object):
         """Handle relation changed and relation broken events."""
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
+            # Cleanup a few statuses that might be left from former events.
             self.manager.state.statuses.delete(
                 ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="all",
                 component=self.manager.name,
             )
+            if self.charm.unit.is_leader():
+                self.manager.state.statuses.delete(
+                    ConfigServerStatuses.waiting_to_add_shard(event.relation.app.name),
+                    scope="app",
+                    component=self.manager.name,
+                )
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
 
             shard_hosts = (
@@ -94,6 +103,11 @@ class ConfigServerEventHandler(Object):
                 else None
             )
             self.dependent.sync_cluster_network_access_restrictions(excluded_addresses=shard_hosts)
+        except ClusterVersionMismatchError as e:
+            # We don't display any status here: the MongoDBOperator manager is responsible of adding
+            # the appropriate status.
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except (
             DeferrableFailedHookChecksError,
             ServerSelectionTimeoutError,
@@ -105,24 +119,35 @@ class ConfigServerEventHandler(Object):
             PyMongoError,
             OperationFailure,
         ) as e:
-            self.manager.state.statuses.add(
-                ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
-                scope="all",
-                component=self.manager.name,
-            )
+            # Because we can't be sure we have received the replicaset name from the databag,
+            # we use event.relation.app.name. That will look weird in cross-model relations
+            # but this is the only way to reliably display the correct status.
+            if self.charm.unit.is_leader():
+                self.manager.state.statuses.add(
+                    ConfigServerStatuses.waiting_to_add_shard(event.relation.app.name),
+                    scope="app",
+                    component=self.manager.name,
+                )
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
 
     def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Relation joined events."""
         try:
             self.manager.prepare_sharding_config(event.relation)
+        except ClusterVersionMismatchError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except DeferrableFailedHookChecksError as e:
             logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
 
 
 class ShardEventHandler(Object):

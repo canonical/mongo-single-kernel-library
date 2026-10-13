@@ -69,9 +69,19 @@ class MongoPaths:
         return Path(f"{self.logs_path}/mongodb.log")
 
     @property
+    def mongos_log_file(self) -> Path:
+        """The main mongos log file."""
+        return Path(f"{self.logs_path}/mongos.log")
+
+    @property
     def audit_file(self) -> Path:
-        """The main mongod config file."""
+        """The main mongod audit log file."""
         return Path(f"{self.logs_path}/audit.log")
+
+    @property
+    def mongos_audit_file(self) -> Path:
+        """The main mongos audit log file."""
+        return Path(f"{self.logs_path}/audit_mongos.log")
 
     @property
     def ext_pem_file(self) -> Path:
