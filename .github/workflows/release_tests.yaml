@@ -52,6 +52,22 @@ on:
 
 name: Release testing
 jobs:
+  build-helpers:
+    strategy:
+      matrix:
+        path:
+          - tests/integration/applications/client_relations_charm
+          - tests/integration/applications/continuous_write_charm
+          - tests/integration/applications/mongos_client_charm
+    name: Build charm | ${{ matrix.path }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
+    with:
+      path-to-charm-directory: ${{ matrix.path }}
+      artifact-prefix: packed-charm
+      cache: true
+    permissions:
+      contents: read
+
   collect-release-tests:
     name: Collect release test spread jobs
     runs-on: ubuntu-latest
@@ -142,6 +158,7 @@ jobs:
     name: ${{ matrix.job.name }}
     needs:
       - collect-release-tests
+      - build-helpers
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
     steps:
@@ -193,6 +210,12 @@ jobs:
       - run: |
           sudo snap install go --classic
           go install github.com/canonical/spread/cmd/spread@latest
+      - name: Download packed charm(s)
+        timeout-minutes: 5
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ needs.build-helpers.outputs.artifact-prefix }}-*
+          merge-multiple: true
       - name: Run spread job
         timeout-minutes: 180
         id: spread
