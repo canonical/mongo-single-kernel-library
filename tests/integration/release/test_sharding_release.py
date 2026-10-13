@@ -230,7 +230,7 @@ def test_deploy_apps(
 
     juju.integrate(
         f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
-        f"{CONFIG_SERVER_APP_NAME:{CLUSTER_REL_NAME}}",
+        f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
