@@ -396,9 +396,9 @@ def test_restore_backup_7_to_8(
     juju: jubilant.Juju,
     substrate: Substrate,
 ):
-    leader_name_seven, _ = find_leader(juju, app_name=CONFIG_SERVER_SEVEN)
+    leader_name_eight, _ = find_leader(juju, app_name=CONFIG_SERVER_EIGHT)
 
-    task = juju.run(leader_name_seven, "list-backups")
+    task = juju.run(leader_name_eight, "list-backups")
 
     list_result = task.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]

@@ -81,6 +81,13 @@ def test_deploy_mongodb_6(
     deploy_application(juju, application_path=application_path, app_name=application_name)
     relate_application(juju, MONGODB_SIX, application_name)
 
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, MONGODB_SIX, application_name, idle_period=20
+        ),
+        timeout=TIMEOUT,
+    )
+
     add_rel8_internal_users(juju, substrate, MONGODB_SIX)
 
     start_continuous_writes(juju, client_app_name=application_name)
