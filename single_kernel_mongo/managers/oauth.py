@@ -9,6 +9,9 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from charmlibs.interfaces.certificate_transfer import CertificateTransferRequires
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 
 from single_kernel_mongo.config.literals import (
@@ -17,13 +20,16 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
+from single_kernel_mongo.config.models import OAuthIntegrationState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     InvalidOAuthWithShardError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.oauth_state import OAuthState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import OperatorProtocol
@@ -31,13 +37,13 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class OAuthManager(Object):
+class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     """Manages the identity provider CA bundle on replica sets, config-servers and routers.
 
     The mongodb charm holds the `oauth-certificate-transfer` relation (`with_relations=True`):
     every unit keeps the certificates it receives and writes the bundle, and a config-server
     shares it on every `cluster` relation. Routers (`with_relations=False`) keep and write the
-    bundle the config-server shared.
+    bundle the config-server shared, and report no status.
     """
 
     def __init__(
@@ -73,16 +79,33 @@ class OAuthManager(Object):
     # Certificates (oauth-certificate-transfer relation, or the cluster bundle on routers)
 
     def store_certificates(self, certificates: set[str]) -> None:
-        """Runs when the certificate set changed (every unit)."""
+        """Runs when the certificate set changed (every unit).
+
+        A set that does not parse as PEM certificates is not stored: the unit keeps its last
+        valid chain and files, and reports Blocked until the provider sends a valid set.
+        """
         if self.state.oauth_cert_relation is None:
             # A deferred event re-run after certificates-removed: do not restore a stale chain.
             logger.info("Not storing the OAuth CA certificates: the CA relation is gone.")
             return
         self.assert_pass_hook_checks()
+        try:
+            loaded = OAuthState.load_certificates(certificates)
+        except ValueError as err:
+            logger.error("Not storing the identity provider CA certificates: %s", err)
+            self.recompute_unit_statuses()
+            return
+        for certificate in loaded:
+            if not OAuthState.is_ca(certificate):
+                logger.warning(
+                    "Identity provider certificate %s is not a CA certificate.",
+                    certificate.subject.rfc4514_string(),
+                )
         self.state.oauth.chain = sorted(certificates)
         self.sync_certificate_files()
         if self.charm.unit.is_leader():
             self.share_ca_with_mongos()
+        self.recompute_unit_statuses()
 
     def store_certificates_from_bundle(self, bundle: str | None) -> None:
         """Routers: stores the bundle shared by the config-server as this unit's chain.
@@ -98,6 +121,7 @@ class OAuthManager(Object):
         self.sync_certificate_files()
         if self.charm.unit.is_leader():
             self.share_ca_with_mongos()
+        self.recompute_unit_statuses()
 
     def reconcile_certificates(self) -> None:
         """Update-status (mongodb): applies the certificate set the relation carries now.
@@ -116,8 +140,8 @@ class OAuthManager(Object):
             logger.info("The OAuth CA relation is gone, removing the stored certificates.")
             self.remove_certificates()
             return
-        if self.state.is_role(MongoDBRoles.SHARD):
-            logger.debug("Not reconciling the OAuth CA certificates: shards do not support OAuth.")
+        if (state := self.oauth_state()) is not OAuthIntegrationState.ACTIVE:
+            logger.debug("Not reconciling the OAuth CA certificates: %s.", state.name)
             return
         certificates = self.certificate_transfer.get_all_certificates(relation.id)
         if sorted(certificates) != (self.state.oauth.chain or []):
@@ -147,6 +171,58 @@ class OAuthManager(Object):
                 self.workload.delete(bundle_file)
             if is_mongod and charm_copy.is_file():
                 charm_copy.unlink()
+
+    # Statuses
+
+    def received_certificates_valid(self) -> bool:
+        """Whether the certificate set the provider currently publishes parses."""
+        relation = self.state.oauth_cert_relation
+        if relation is None or self.certificate_transfer is None:
+            return True
+        try:
+            OAuthState.load_certificates(
+                self.certificate_transfer.get_all_certificates(relation.id)
+            )
+        except ValueError:
+            return False
+        return True
+
+    def oauth_state(self) -> OAuthIntegrationState:
+        """The state of the integration as seen by this unit."""
+        if not self.state.db_initialised or not self.with_relations:
+            return OAuthIntegrationState.EMPTY
+        if self.state.oauth_cert_relation is None:
+            return OAuthIntegrationState.EMPTY
+        if self.state.is_role(MongoDBRoles.SHARD):
+            return OAuthIntegrationState.WRONG_ROLE
+        if not self.received_certificates_valid():
+            return OAuthIntegrationState.INVALID_CERTS
+        return OAuthIntegrationState.ACTIVE
+
+    def map_state_to_statuses(self, state: OAuthIntegrationState) -> list[StatusObject]:
+        """Maps an integration state to its statuses; none while healthy."""
+        match state:
+            case OAuthIntegrationState.WRONG_ROLE:
+                return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+            case OAuthIntegrationState.INVALID_CERTS:
+                return [OAuthStatuses.INVALID_CERTS.value]
+            case OAuthIntegrationState.EMPTY | OAuthIntegrationState.ACTIVE:
+                return []
+
+    def recompute_unit_statuses(self) -> None:
+        """Replaces the stored unit statuses with the current ones."""
+        statuses = self.get_statuses(scope="unit", recompute=True)
+        self.state.statuses.clear(scope="unit", component=self.name)
+        for status in statuses:
+            self.state.statuses.add(status, scope="unit", component=self.name)
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Generates the statuses of this component (unit scope only)."""
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+        if scope == "app":
+            return []
+        return self.map_state_to_statuses(self.oauth_state())
 
     # Sharded clusters
 

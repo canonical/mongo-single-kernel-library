@@ -514,6 +514,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.s3_backup_manager,
             self.gcs_backup_manager,
             self.ldap_manager,
+            self.oauth_manager,
         )
 
     # BEGIN: Handlers.

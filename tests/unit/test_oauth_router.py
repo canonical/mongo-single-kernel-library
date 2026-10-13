@@ -165,6 +165,10 @@ def test_router_writes_no_charm_ca_copy(router, mocker, substrate):
     unlink.assert_not_called()
 
 
-def test_router_has_no_oauth_relation(router):
-    harness, _ = router
-    assert harness.charm.operator.oauth_manager.certificate_transfer is None
+def test_router_has_no_oauth_relation_and_no_status(router):
+    harness, rel_id = router
+    manager = harness.charm.operator.oauth_manager
+    assert manager.certificate_transfer is None
+    harness.update_relation_data(rel_id, "mongodb", {"oauth-ca-secret": "PEM"})
+    harness.charm.operator.cluster_manager._set_oauth_ca_bundle()
+    assert manager.get_statuses(scope="unit", recompute=True) == []

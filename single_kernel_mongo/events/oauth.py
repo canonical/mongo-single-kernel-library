@@ -17,7 +17,7 @@ from ops.framework import Object
 
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
+    InvalidOAuthWithShardError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
@@ -33,7 +33,8 @@ class OAuthEventHandler(Object):
     """Event handler for the identity provider CA relation, shaped like LDAPEventHandler.
 
     Routers hold no relation: they receive the bundle over `cluster` (see ClusterRequirer).
-    On update-status the certificates are reconciled with the relation.
+    On update-status the certificates are reconciled with the relation, and the status handler
+    recomputes the statuses.
     """
 
     def __init__(self, dependent: OperatorProtocol):
@@ -61,8 +62,9 @@ class OAuthEventHandler(Object):
             self.manager.store_certificates(event.certificates)
         except (DeferrableFailedHookChecksError, WorkloadServiceError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
-        except NonDeferrableFailedHookChecksError as err:
+        except InvalidOAuthWithShardError as err:
             logger.error(f"{err}")
+            self.manager.recompute_unit_statuses()
 
     def _on_certificates_removed(self, event: CertificatesRemovedEvent) -> None:
         """The CA relation is gone: the bundle files are removed."""

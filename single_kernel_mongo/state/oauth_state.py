@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from cryptography import x509
 from ops import Relation
 from ops.model import Application
 
@@ -43,6 +45,32 @@ class OAuthState(AbstractRelationState[DataPeerData]):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
         self.secrets = SecretCache(charm=charm, relation=self.data_interface.relation_name)
+
+    # Certificates received over oauth-certificate-transfer
+
+    @staticmethod
+    def load_certificates(certificates: Iterable[str]) -> list[x509.Certificate]:
+        """Parses a certificate set; an entry may hold several PEM certificates.
+
+        Raises:
+            ValueError: If an entry holds no PEM certificate or a malformed one.
+        """
+        loaded: list[x509.Certificate] = []
+        entries = sorted(certificates)
+        for index, entry in enumerate(entries):
+            try:
+                loaded += x509.load_pem_x509_certificates(entry.encode())
+            except ValueError as err:
+                raise ValueError(f"entry {index + 1} of {len(entries)}: {err}") from err
+        return loaded
+
+    @staticmethod
+    def is_ca(certificate: x509.Certificate) -> bool:
+        """Whether the certificate carries the CA basic constraint."""
+        try:
+            return certificate.extensions.get_extension_for_class(x509.BasicConstraints).value.ca
+        except (x509.ExtensionNotFound, ValueError):
+            return False
 
     # Certificates (unit secret)
 

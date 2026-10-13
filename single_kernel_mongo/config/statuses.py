@@ -721,6 +721,21 @@ class LdapStatuses(Enum):
         return StatusObject(status="blocked", message=f"{err}")
 
 
+class OAuthStatuses(Enum):
+    """OAuth statuses. Unit scope, component `oauth`."""
+
+    INVALID_OAUTH_REL_ON_SHARD = StatusObject(
+        status="blocked",
+        message="OAuth is not supported on shards",
+        action="Remove the oauth-certificate-transfer relation from the shard.",
+    )
+    INVALID_CERTS = StatusObject(
+        status="blocked",
+        message="Identity provider CA certificates are not valid PEM",
+        action="Fix the certificates sent over oauth-certificate-transfer; see the unit log.",
+    )
+
+
 class PasswordManagementStatuses(Enum):
     """Password management statuses."""
 
