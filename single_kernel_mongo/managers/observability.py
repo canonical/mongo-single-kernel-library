@@ -89,8 +89,8 @@ class ObservabilityManager(Object):
             f"{self.dependent.workload.paths.mongos_audit_file}",
         ]
         mongod_log_files = [
-            f"{self.dependent.workload.paths.mongos_log_file}",
-            f"{self.dependent.workload.paths.mongos_audit_file}",
+            f"{self.dependent.workload.paths.log_file}",
+            f"{self.dependent.workload.paths.audit_file}",
         ]
         if self.state.is_role(MongoDBRoles.MONGOS):
             return mongos_log_files

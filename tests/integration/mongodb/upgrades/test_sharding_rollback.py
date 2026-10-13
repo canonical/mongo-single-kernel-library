@@ -98,15 +98,7 @@ def test_rollback_on_config_server(
 
     assert task.status == "completed", "pre-refresh-check failed, expected to succeed."
 
-    logger.info("Refreshing the application")
-    # Refresh always happens from highest to lowest unit number
-    refresh_order = sorted(
-        juju.status().get_units(CONFIG_SERVER_APP_NAME),
-        key=lambda unit: get_unit_id(unit),
-        reverse=True,
-    )
-
-    logger.info("Refresing the charm")
+    logger.info("Refreshing the config-server")
     refresh_charm(
         juju, substrate, CONFIG_SERVER_APP_NAME, faulty_mongodb_upgrade_charm, mongod_resource
     )

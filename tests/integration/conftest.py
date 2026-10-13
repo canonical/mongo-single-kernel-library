@@ -826,12 +826,8 @@ def jubilant_add_continuous_writes_to_shards(
 
     yield
 
-    stop_continuous_writes(
-        juju, app_name, db_name=SHARD_ONE_APP_NAME, coll_name=SHARD_ONE_COLL_NAME
-    )
-    stop_continuous_writes(
-        juju, app_name, db_name=SHARD_TWO_APP_NAME, coll_name=SHARD_TWO_COLL_NAME
-    )
+    stop_continuous_writes(juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
+    stop_continuous_writes(juju, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
 
     clear_continuous_writes(
         juju, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME

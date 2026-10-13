@@ -76,12 +76,10 @@ def test_preflight_check_fails_during_backup(juju: jubilant.Juju, cloud_configs:
     assert app_name
     configuration_parameters, credentials = cloud_configs["AWS"]
 
+    # apply new configuration options
     configure_s3(juju, S3_APP_NAME, configuration_parameters, credentials)
 
-    # apply new configuration options
-
     # after applying correct config options and creds the applications should both be active
-
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(status, S3_APP_NAME, idle_period=20),
         timeout=TIMEOUT,
@@ -149,7 +147,7 @@ def test_preflight_check_failure(
         juju.run(leader_name, "pre-refresh-check", wait=120)
     assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
-    restore_network_to_unit(substrate, juju.model, machine_name)
+    restore_network_to_unit(substrate, juju.model, machine_name, ip_change=True)
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(status, app_name, idle_period=20),
