@@ -373,7 +373,7 @@ async def test_restore_new_cluster(
     )
 
     # wait for new cluster to sync
-    ops_test.model.wait_for_idle(apps=[new_cluster_app_name], status="active", idle_period=15)
+    await ops_test.model.wait_for_idle(apps=[new_cluster_app_name], status="active", idle_period=15)
 
     # verify that the listed backups from the old cluster are not listed as failed.
     assert await count_failed_backups(db_unit) == 0, "Backups from old cluster are listed as failed"
