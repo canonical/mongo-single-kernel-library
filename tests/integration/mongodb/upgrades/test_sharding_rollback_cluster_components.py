@@ -3,8 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import subprocess
-from pathlib import Path
+import zipfile
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -79,7 +78,6 @@ async def test_build_and_deploy(
 async def test_rollback_on_shard_and_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
-    mongod_base_path: Path,
     mongodb_charm: str,
     mongod_resource: dict,
     add_continuous_writes_to_shards,
@@ -89,18 +87,10 @@ async def test_rollback_on_shard_and_config_server(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
 
-    with open(mongod_base_path / "charm_version") as fd:
-        revision = fd.read().strip()
-
-    # `scripts/build_lib_for_integration.sh` builds the revision as
-    # `{charm_version}+{git describe}`
-    git_hash = subprocess.run(
-        ["git", "describe", "--always", "--dirty"],
-        capture_output=True,
-        check=True,
-        encoding="utf-8",
-    ).stdout.strip()
-    revision = f"{revision}+{git_hash}"
+    # Read the revision directly out of the `.charm` artifact that was actually
+    # deployed
+    with zipfile.ZipFile(mongodb_charm) as charm_zip:
+        revision = charm_zip.read("charm_version").decode().strip()
 
     shard_revision_messages = {
         app_name: (
