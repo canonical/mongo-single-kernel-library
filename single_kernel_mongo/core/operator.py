@@ -75,6 +75,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.managers.ldap import LDAPManager
+    from single_kernel_mongo.managers.oauth import OAuthManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
     from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
@@ -113,6 +114,7 @@ class OperatorProtocol(
     upgrades_manager: MongoDBUpgradesManager
     upgrades_status_manager: MongoDBUpgradesStatusManager
     ldap_manager: LDAPManager
+    oauth_manager: OAuthManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
