@@ -539,7 +539,7 @@ def set_password(
         username: the user to set the password for
         password: the password to use
     """
-    secret_name = "system_users_secret"
+    secret_name = f"system_users_secret_{app_name}"
 
     # if secret exists, update it, else add secret
     existing = next((s for s in juju.secrets() if s.name == secret_name), None)
