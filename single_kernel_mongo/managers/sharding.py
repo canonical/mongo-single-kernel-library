@@ -237,7 +237,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             self.data_interface.update_relation_data(relation.id, {key: value})
 
     def update_mongos_hosts(self) -> None:
-        """Updates the hosts for mongos on the relation data."""
+        """Updates the hosts and overall data for mongos on the relation data."""
         if not self.charm.unit.is_leader():
             return
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
@@ -249,6 +249,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             self.data_interface.update_relation_data(
                 relation.id,
                 {
+                    AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(True),
                     AppShardingComponentKeys.HOST.value: json.dumps(
                         sorted(self.state.internal_hosts)
                     ),
