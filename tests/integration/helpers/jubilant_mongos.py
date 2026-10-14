@@ -292,14 +292,14 @@ def get_node_port_info(model_name: str, node_port_name: str) -> int:
 
 
 def get_external_uri(juju: jubilant.Juju, unit_name: str) -> str:
-    """Builds the internal uri for mongos."""
+    """Builds the external uri for mongos."""
     assert juju.model
     unit_id = get_unit_id(unit_name)
     exposed_node_port = get_node_port_info(
         model_name=juju.model, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
     )
     public_k8s_ip = get_k8s_public_ip()
-    username, password = get_relation_username_password(juju, MONGOS_APP_NAME, "cluster")
+    username, password = get_relation_username_password(juju, MONGOS_APP_NAME, CLUSTER_REL_NAME)
     return f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
 
 
@@ -344,7 +344,7 @@ def assert_mongos_tls_enabled(juju: jubilant.Juju, substrate: Substrate, interna
 def assert_mongos_tls_disabled(
     juju: jubilant.Juju, substrate: Substrate, internal: bool = True
 ) -> None:
-    # check mongos is running with TLS enabled
+    # check mongos is running with TLS disabled
     for unit_name, unit_status in juju.status().get_units(MONGOS_APP_NAME).items():
         uri = (
             get_external_uri(juju, unit_name)
@@ -367,7 +367,7 @@ def assert_mongos_tls_disabled(
             mongos=True,
             container="mongos",
             uri=uri,
-        ), f"TLS not enabled on {unit_name}"
+        ), f"TLS enabled on {unit_name}"
 
 
 def rotate_and_verify_certs(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> None:
@@ -400,7 +400,7 @@ def rotate_and_verify_certs(juju: jubilant.Juju, substrate: Substrate, app_name:
 
     set_private_keys(juju, app_name)
 
-    # wait for certificate to be available and processed. Can get receive two certificate
+    # wait for certificate to be available and processed. Can receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
@@ -473,7 +473,6 @@ def toggle_tls_mongos(
 
 def check_continuous_writes(juju: jubilant.Juju, substrate: Substrate):
     """Checks that continuous writes are working as expected."""
-    secret_tls = None
     endpoint = "mongos" if substrate == Substrate.lxd else "mongodb"
     relation_id = get_relation_id_for(juju, MONGOS_CLIENT_APPLICATION, endpoint, "mongos_proxy")
 
@@ -511,12 +510,12 @@ def has_node_port(model: str, node_port_name: str) -> bool:
     return True
 
 
-def assert_node_port_availablity(model: str, node_port_name: str, available: bool = True) -> None:
+def assert_node_port_availability(model: str, node_port_name: str, available: bool = True) -> None:
     """Checks the availability/non availability of the node port."""
-    incorrect_availablity = "not available" if available else "is available"
+    incorrect_availability = "not available" if available else "is available"
     assert (
         has_node_port(model, node_port_name) == available
-    ), f"Port information {incorrect_availablity} for service"
+    ), f"Port information {incorrect_availability} for service"
 
 
 def assert_all_unit_node_ports_available(juju: jubilant.Juju):
@@ -524,7 +523,7 @@ def assert_all_unit_node_ports_available(juju: jubilant.Juju):
     assert juju.model
     for unit_name in juju.status().get_units(MONGOS_APP_NAME):
         unit_id = get_unit_id(unit_name)
-        assert_node_port_availablity(
+        assert_node_port_availability(
             juju.model, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
         )
 
@@ -542,7 +541,7 @@ def assert_all_unit_node_ports_are_unavailable(juju: jubilant.Juju):
     assert juju.model
     for unit_name in juju.status().get_units(MONGOS_APP_NAME):
         unit_id = get_unit_id(unit_name)
-        assert_node_port_availablity(
+        assert_node_port_availability(
             juju.model,
             node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external",
             available=False,
@@ -558,8 +557,8 @@ def assert_app_uri_matches_external_setting(
     """
     uri = get_connection_string(juju, app_name, rel_name)
 
-    pulic_ip_present_in_uri = get_k8s_public_ip() in uri
-    assert pulic_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
+    public_ip_present_in_uri = get_k8s_public_ip() in uri
+    assert public_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
 
     hostnames = get_mongodb_hostnames_for_app(juju, Substrate.k8s, MONGOS_APP_NAME)
     for host in hostnames:
