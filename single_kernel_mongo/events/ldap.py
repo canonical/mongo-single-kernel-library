@@ -19,6 +19,7 @@ from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
+    InvalidLdapHashError,
     InvalidLdapWithShardError,
     LDAPSNotEnabledError,
     NonDeferrableFailedHookChecksError,
@@ -146,6 +147,7 @@ class LDAPEventHandler(Object):
         except (
             DeferrableFailedHookChecksError,
             InvalidLdapWithShardError,
+            InvalidLdapHashError,
             UnableToBindError,
             NonDeferrableFailedHookChecksError,
             RollingOpsNoRelationError,

@@ -229,12 +229,11 @@ class ContinuousWritesApplication(CharmBase):
             return -1
         finally:
             del self.app_peer_data[self.proc_id_key(db_name, collection_name)]
-
-        if os.path.isfile("error.log"):
-            with open("error.log", mode="r") as error_fd:
-                for line in error_fd.readlines():
-                    logger.warning("ERROR: %s", line)
-            os.remove("error.log")
+            if os.path.isfile("error.log"):
+                with open("error.log", mode="r") as error_fd:
+                    for line in error_fd.readlines():
+                        logger.warning("ERROR: %s", line)
+                os.remove("error.log")
 
         # read the last written_value
         try:
