@@ -657,11 +657,8 @@ def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
             MONGOS_BIS_APP_NAME,
             MONGOS_TER_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
-        delay=5,
-        successes=3,
     )
     # Remove the offers and tear down deployment
     teardown_offers(juju, juju_k8s_model)
