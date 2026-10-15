@@ -90,7 +90,9 @@ async def test_upgrade(
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
-        if "lxd" or (substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)):
+        if substrate == "lxd" or (
+            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     async with ops_test.fast_forward(fast_interval="60s"):

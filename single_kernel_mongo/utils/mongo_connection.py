@@ -320,21 +320,21 @@ class MongoConnection:
                 "Waiting for all members to finish syncing before adding new member."
             )
 
-        # This reconciliates old FQDNs with new FQDNs
-        members = [
-            member
-            for member in rs_config["config"]["members"]
-            if not hostname.startswith(member["host"]) and hostname != member["host"]
-        ]
-
-        # Avoid reusing IDs, according to the doc
-        # https://www.mongodb.com/docs/manual/reference/replica-configuration/
-        max_id = max([int(member["_id"]) for member in rs_config["config"]["members"]])
-
-        members.append({"_id": max_id + 1, "host": hostname})
+        # Rename members if needed
+        # This is a fix for the new FQDNs
+        for member in rs_config["config"]["members"]:
+            if hostname.startswith(member["host"]) and hostname != member["host"]:
+                member["host"] = hostname
 
         rs_config["config"]["version"] += 1
-        rs_config["config"]["members"] = members
+
+        if all(member["host"] != hostname for member in rs_config["config"]["members"]):
+            # Avoid reusing IDs, according to the doc
+            # https://www.mongodb.com/docs/manual/reference/replica-configuration/
+            max_id = max([int(member["_id"]) for member in rs_config["config"]["members"]])
+            new_member = {"_id": max_id + 1, "host": hostname}
+            rs_config["config"]["members"].append(new_member)
+
         logger.debug("rs_config: %r", rs_config["config"])
         self.client.admin.command("replSetReconfig", rs_config["config"])
 
