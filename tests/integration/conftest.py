@@ -181,7 +181,7 @@ def jubilant_continuous_writes_to_db(juju: jubilant.Juju, application_path: str)
 
 
 @pytest.fixture
-async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
+def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
     """This fixture builds a mongodb charm that will fail the upgrade.
 
     It works by updating the workload version and the version of the snap to install.
@@ -220,7 +220,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
 
 
 @pytest.fixture
-async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str, tmp_path: Path):
+def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str, tmp_path: Path):
     """This fixture builds a mongos charm that will fail the upgrade.
 
     It works by updating the workload version and the version of the snap to install.

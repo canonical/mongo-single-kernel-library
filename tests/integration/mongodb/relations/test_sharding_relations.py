@@ -383,7 +383,6 @@ def test_shard_s3_relation(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_config_server_tls_replication_relation(juju: jubilant.Juju) -> None:
     """Verifies that using a replica as a shard fails even when TLS is integrated."""
     # attempt to add a shard to a replication deployment as a config server.

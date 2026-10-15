@@ -38,6 +38,10 @@ def pytest_addoption(parser: Parser):
         default=None,
         type=str,
     )
+    # Model name for Jubilant testing
+    parser.addoption("--model", action="store", default=None)
+    # Should the model be kept after test fails
+    parser.addoption("--keep-models", action="store_true", default=False)
 
 
 def pytest_configure(config):

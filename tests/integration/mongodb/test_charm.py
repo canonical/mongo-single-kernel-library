@@ -70,7 +70,6 @@ STATS_PASSWORD = "my-new-secret-password"
 OPERATOR_PASSWORD = "SOMETHING"
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.juju_setup
 def test_build_and_deploy(
     juju: jubilant.Juju,
@@ -104,7 +103,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_consistency_between_workload_and_metadata(
     juju: jubilant.Juju, substrate: Substrate, mongod_base_path: str
 ):
@@ -138,7 +136,6 @@ def test_consistency_between_workload_and_metadata(
     ), f"Version of mongod running is invalid ({mongod_version}), should be {local_version}"
 
 
-@pytest.mark.abort_on_fail
 def test_status_is_active(juju: jubilant.Juju) -> None:
     """Verifies that the application and unit are active."""
     app_name = existing_app(juju)
@@ -153,7 +150,6 @@ def test_status_is_active(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_tmp_permissions(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies that every unit's temporary directory has the expected permissions."""
     app_name = existing_app(juju)
@@ -167,7 +163,6 @@ def test_tmp_permissions(juju: jubilant.Juju, substrate: Substrate) -> None:
         assert permissions.strip() == "1777", f"invalid /tmp permissions on {unit_name}"
 
 
-@pytest.mark.abort_on_fail
 def test_unit_is_running_as_replica_set(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that mongodb is running as a replica set for the application unit."""
     # connect to mongo replica set
@@ -187,7 +182,6 @@ def test_unit_is_running_as_replica_set(juju: jubilant.Juju, substrate: Substrat
         client.close()
 
 
-@pytest.mark.abort_on_fail
 def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Checks that all units have a PBM log file."""
     app_name = existing_app(juju)
@@ -208,7 +202,6 @@ def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) ->
         )
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_check_max_tasks(juju: jubilant.Juju, substrate: Substrate):
     """Check that we update the TasksMax in the service to infinity on VM."""
@@ -224,7 +217,6 @@ def test_check_max_tasks(juju: jubilant.Juju, substrate: Substrate):
         assert "infinity" in output, f"Unit {unit_name} has an invalid TasksMax value"
 
 
-@pytest.mark.abort_on_fail
 def test_exactly_one_primary(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that there is exactly one primary in the deployed units."""
     app_name = existing_app(juju)
@@ -241,7 +233,6 @@ def test_exactly_one_primary(juju: jubilant.Juju, substrate: Substrate) -> None:
     ), f"Expected one unit to be a primary: {number_of_primaries} != 1"
 
 
-@pytest.mark.abort_on_fail
 def test_get_primary_action(juju: jubilant.Juju, substrate: Substrate):
     """Tests that action get-primary outputs the correct unit with the primary replica."""
     app_name = existing_app(juju)
@@ -284,7 +275,6 @@ def test_get_primary_action(juju: jubilant.Juju, substrate: Substrate):
         assert identified_primary == expected_primary
 
 
-@pytest.mark.abort_on_fail
 def test_update_operator_password(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
     app_name = existing_app(juju)
@@ -329,7 +319,6 @@ def test_update_operator_password(juju: jubilant.Juju, substrate: Substrate) -> 
         client.close()
 
 
-@pytest.mark.abort_on_fail
 def test_not_granted_secret_for_password_update(juju: jubilant.Juju) -> None:
     """Test password update for a secret not granted to the application."""
     app_name = existing_app(juju)
@@ -371,7 +360,6 @@ def test_not_granted_secret_for_password_update(juju: jubilant.Juju) -> None:
     assert new_password == reported_password
 
 
-@pytest.mark.abort_on_fail
 def test_update_password_for_charmed_stats_user(juju: jubilant.Juju) -> None:
     """Test password is updated for the charmed-stats user."""
     app_name = existing_app(juju)
@@ -392,7 +380,6 @@ def test_update_password_for_charmed_stats_user(juju: jubilant.Juju) -> None:
     assert reported_password == new_password
 
 
-@pytest.mark.abort_on_fail
 def test_charmed_stats_user(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test verifies that the charmed stats user can perform operations such as 'rs.conf()'."""
     app_name = existing_app(juju)
@@ -424,7 +411,6 @@ def test_charmed_stats_user(juju: jubilant.Juju, substrate: Substrate) -> None:
     assert result.succeeded, f"Failed to get conf with {CHARMED_STATS_USERNAME} user."
 
 
-@pytest.mark.abort_on_fail
 def test_empty_password(juju: jubilant.Juju) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = existing_app(juju)
@@ -459,7 +445,6 @@ def test_empty_password(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_no_password_change_on_invalid_password(juju: jubilant.Juju) -> None:
     """Test that in general, there is no change when password validation fails."""
     app_name = existing_app(juju)
@@ -495,7 +480,6 @@ def test_no_password_change_on_invalid_password(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_audit_log(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test that audit log was created and contains actual audit data."""
     app_name = existing_app(juju)
@@ -519,7 +503,6 @@ def test_audit_log(juju: jubilant.Juju, substrate: Substrate) -> None:
         assert audit_log_line_sanity_check(item), "Audit sanity log check failed for first line"
 
 
-@pytest.mark.abort_on_fail
 def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path: str) -> None:
     """Test that log are being rotated."""
     app_name = existing_app(juju)
@@ -575,7 +558,6 @@ def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path:
     ), "Could not find audit.log in log files"
 
 
-@pytest.mark.abort_on_fail
 def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
     """Tests juju add-unit functionality.
 
@@ -644,8 +626,7 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
+def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
     """Tests juju remove-unit functionality.
 
     This test verifies:
@@ -723,8 +704,7 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
     assert primary in juju_hosts, "no primary after scaling down"
 
 
-@pytest.mark.abort_on_fail
-async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Substrate):
+def test_replication_data_consistency(juju: jubilant.Juju, substrate: Substrate):
     """Test the data consistency between the primary and secondaries.
 
     Verifies that after writing data to the primary the data on

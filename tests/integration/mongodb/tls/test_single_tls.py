@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CLIENT_TLS_RELATION_NAME,
@@ -27,7 +26,6 @@ from tests.integration.helpers.status_helpers import are_apps_active_and_agents_
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
