@@ -200,7 +200,7 @@ def test_integrate_second_client(juju: jubilant.Juju, application_path: str):
 def test_integrate_third_client(juju: jubilant.Juju, application_path: str):
     """Tests that we can integrate with a third client, which will only read data.
 
-    The client is a continuous write application.
+    The client is a continuous read application.
     """
     app_name = existing_app(juju)
     assert app_name
@@ -389,7 +389,7 @@ def test_valid_reads(juju: jubilant.Juju):
     failed_reads_list = json.loads(failed_reads)
 
     # We can allow for a few errors during restore for example
-    assert len(failed_reads_list) < 50
+    assert len(failed_reads_list) < 10
 
 
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):

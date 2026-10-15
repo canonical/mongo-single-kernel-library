@@ -401,7 +401,7 @@ def test_integrate_third_shard(
 def test_integrate_third_client(juju: jubilant.Juju, application_path: str):
     """Tests that we can integrate with a third client, which will only read data.
 
-    The client is a continuous write application.
+    The client is a continuous reads application.
     """
     deploy_application(
         juju,
@@ -424,7 +424,7 @@ def test_integrate_third_client(juju: jubilant.Juju, application_path: str):
     )
     juju.wait(
         lambda status: are_agents_idle(
-            status, MONGOS_TER_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, idle_period=15
+            status, MONGOS_TER_APP_NAME, READER_APPLICATION, idle_period=15
         ),
         timeout=TIMEOUT,
     )
@@ -438,7 +438,7 @@ def test_integrate_third_client(juju: jubilant.Juju, application_path: str):
         lambda status: are_apps_active_and_agents_idle(
             status,
             MONGOS_TER_APP_NAME,
-            CONTINUOUS_WRITE_APPLICATION_BIS,
+            READER_APPLICATION,
             CONFIG_SERVER_APP_NAME,
             idle_period=20,
         ),
@@ -510,7 +510,6 @@ def tests_restore_backup(juju: jubilant.Juju, substrate: Substrate):
         coll_name=SECOND_COLL_NAME,
     )
     leader_unit, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
-    # count total writes
     # count total writes
     first_number_writes = count_writes(
         juju,
@@ -633,7 +632,7 @@ def test_valid_reads(juju: jubilant.Juju):
     failed_reads_list = json.loads(failed_reads)
 
     # We can allow for a few errors during restore for example
-    assert len(failed_reads_list) < 50
+    assert len(failed_reads_list) < 10
 
 
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
