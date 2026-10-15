@@ -732,6 +732,7 @@ async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Subs
     """
     app_name = existing_app(juju)
     assert app_name
+    assert juju.model
 
     # generate a collection id
     collection_id = generate_collection_id()
@@ -744,8 +745,9 @@ async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Subs
                 for unit_info in juju.status().get_units(app_name).values()
             ]
         case Substrate.k8s:
+            model_name = juju.model
             hosts = [
-                f"mongodb-k8s-{get_unit_id(unit_name)}.mongodb-k8s-endpoints"
+                f"mongodb-k8s-{get_unit_id(unit_name)}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
                 for unit_name in juju.status().get_units(app_name)
             ]
 

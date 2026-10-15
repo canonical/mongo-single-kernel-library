@@ -475,12 +475,21 @@ def cloud_configs(
 
 
 @pytest.fixture(scope="module")
-def juju(architecture: str) -> Generator[jubilant.Juju, Any, None]:
-    # `testing` is the default model created by concierge
-    juju = jubilant.Juju(model="testing")
-    juju.wait_timeout = 1000
-    juju.cli("set-model-constraints", f"arch={architecture}")
-    yield juju
+def juju(request: pytest.FixtureRequest, architecture: str):
+    """Pytest fixture that wraps jubilant.temp_model."""
+    model = request.config.getoption("--model")
+    keep_models = bool(request.config.getoption("--keep-models"))
+
+    if model:
+        juju = jubilant.Juju(model=model)
+        juju.wait_timeout = 1000
+        juju.cli("set-model-constraints", f"arch={architecture}")
+        yield juju
+    else:
+        with jubilant.temp_model(keep=keep_models) as juju:
+            juju.wait_timeout = 1000
+            juju.cli("set-model-constraints", f"arch={architecture}")
+            yield juju
 
 
 @pytest.fixture(scope="module")
