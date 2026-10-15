@@ -130,7 +130,7 @@ def deploy_charm(
     bind: dict[str, str] | None = None,
 ):
     if revision is not None:
-        channel = "8/beta"
+        channel = channel or "8/beta"
     if substrate == Substrate.k8s:
         base = base or BASE
         juju.deploy(

@@ -402,7 +402,7 @@ class ContinuousWritesApplication(CharmBase):
         db_name = event.params.get("db-name") or self.database_name
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
         reads, failed_reads = self._stop_continuous_reads(db_name, collection_name)
-        event.set_results({"reads": reads or -1, "failed-reads": failed_reads})
+        event.set_results({"reads": reads or -1, "failed-reads": json.dumps(failed_reads)})
         return None
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
