@@ -83,7 +83,7 @@ def stop_continuous_reads(
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
-) -> tuple[int, list[str]]:
+) -> tuple[int, str]:
     """Helper function to run the `stop-continuous-reads` action on the continuous write app."""
     result = juju.run(
         f"{client_app_name}/0",

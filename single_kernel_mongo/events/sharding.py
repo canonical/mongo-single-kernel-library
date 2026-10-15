@@ -89,7 +89,7 @@ class ConfigServerEventHandler(Object):
                 scope="all",
                 component=self.manager.name,
             )
-            if self.charm.unit.is_leader():
+            if self.charm.unit.is_leader() and event.relation.app and event.relation.app.name:
                 self.manager.state.statuses.delete(
                     ConfigServerStatuses.waiting_to_add_shard(event.relation.app.name),
                     scope="app",
@@ -122,7 +122,7 @@ class ConfigServerEventHandler(Object):
             # Because we can't be sure we have received the replicaset name from the databag,
             # we use event.relation.app.name. That will look weird in cross-model relations
             # but this is the only way to reliably display the correct status.
-            if self.charm.unit.is_leader():
+            if self.charm.unit.is_leader() and event.relation.app and event.relation.app.name:
                 self.manager.state.statuses.add(
                     ConfigServerStatuses.waiting_to_add_shard(event.relation.app.name),
                     scope="app",
