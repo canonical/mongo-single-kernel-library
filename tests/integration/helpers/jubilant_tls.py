@@ -13,7 +13,6 @@ import jubilant
 from jubilant.statustypes import UnitStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
-from tests.integration.helpers.common import ProcessError
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     CLIENT_TLS_RELATION_NAME,
@@ -22,6 +21,7 @@ from tests.integration.helpers.constants import (
     TLS_CERTIFICATES_APP_NAME,
 )
 from tests.integration.helpers.jubilant_common import (
+    ProcessError,
     execute_on_mongod,
     external_cert_path,
     get_application_relation_data,

@@ -1,7 +1,7 @@
 import pytest
 
+from tests.integration.helpers.jubilant_vault import VAULT, VAULT_K8S
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.vault import VAULT, VAULT_K8S
 
 
 @pytest.fixture

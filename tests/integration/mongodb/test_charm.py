@@ -17,11 +17,6 @@ from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError
 
 from single_kernel_mongo.config.statuses import PasswordManagementStatuses
-from tests.integration.helpers.common import (
-    audit_log_line_sanity_check,
-    generate_collection_id,
-    get_unit_id,
-)
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     CHARMED_STATS_USERNAME,
@@ -41,6 +36,7 @@ from tests.integration.helpers.continuous_writes_helpers import (
     stop_continuous_writes,
 )
 from tests.integration.helpers.jubilant_common import (
+    audit_log_line_sanity_check,
     check_if_test_documents_stored,
     count_primaries,
     deploy_application,
@@ -49,8 +45,10 @@ from tests.integration.helpers.jubilant_common import (
     execute_on_mongod,
     existing_app,
     find_leader,
+    generate_collection_id,
     get_ip_from_unit,
     get_password,
+    get_unit_id,
     relate_application,
     remove_number_units,
     replica_set_uri,

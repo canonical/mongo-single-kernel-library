@@ -229,6 +229,15 @@ def write_data_to_mongodb(client: MongoClient, db_name: str, coll_name: str, con
     horses_collection.insert_one(content)
 
 
+def remove_db_writes(client: MongoClient, db_name: str, coll_name: str):
+    """Remove any writes to the test collection."""
+    db = client[db_name]
+
+    # collection for continuous writes
+    test_collection = db[coll_name]
+    test_collection.drop()
+
+
 def verify_data_mongodb(
     client: MongoClient, db_name: str, coll_name: str, key: str, value: str, shard: str
 ) -> bool:
