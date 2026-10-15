@@ -26,7 +26,10 @@ def test_add_replset_member(mongo_connection, mocker):
             return {
                 "config": {
                     "version": 1,
-                    "members": [{"_id": "1", "host": "host1"}, {"_id": "2", "host": "host2"}],
+                    "members": [
+                        {"_id": "1", "host": "host1:27017"},
+                        {"_id": "2", "host": "host2:27017"},
+                    ],
                 }
             }
         if command == "replSetGetStatus":
@@ -35,10 +38,10 @@ def test_add_replset_member(mongo_connection, mocker):
             new_config = args[0]
             assert new_config["version"] == 2
             assert len(new_config["members"]) == 2
-            assert new_config["members"][-1]["host"] == "host1.new-cluster"
-            assert new_config["members"][0]["host"] == "host2"
+            assert new_config["members"][0]["host"] == "host1.new-cluster:27017"
+            assert new_config["members"][1]["host"] == "host2:27017"
             return {"1"}
         raise ValueError("Invalid call")
 
     mocker.patch.object(mongo_connection.client.admin, "command", new=mock_command)
-    mongo_connection.add_replset_member("host1.new-cluster")
+    mongo_connection.add_replset_member("host1.new-cluster:27017")

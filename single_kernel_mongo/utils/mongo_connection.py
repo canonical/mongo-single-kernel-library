@@ -323,7 +323,12 @@ class MongoConnection:
         # Rename members if needed
         # This is a fix for the new FQDNs
         for member in rs_config["config"]["members"]:
-            if hostname.startswith(member["host"]) and hostname != member["host"]:
+            member_host_without_port = member["host"].split(":")[0]
+            hostname_without_port = hostname.split(":")[0]
+            if (
+                hostname_without_port.startswith(member_host_without_port)
+                and hostname_without_port != member_host_without_port
+            ):
                 member["host"] = hostname
 
         rs_config["config"]["version"] += 1
