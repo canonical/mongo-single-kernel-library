@@ -97,7 +97,7 @@ async def test_upgrade(
 
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
-            apps=app_name,
+            apps=[app_name],
             status="active",
             timeout=1000,
             idle_period=30,
