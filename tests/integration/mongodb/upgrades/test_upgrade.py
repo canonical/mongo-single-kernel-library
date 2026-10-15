@@ -69,7 +69,6 @@ async def test_upgrade(
     )
 
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    leader_id = get_unit_id(leader_unit.name)
 
     logger.info("Calling pre-refresh-check")
     action = await leader_unit.run_action("pre-refresh-check")
@@ -78,13 +77,15 @@ async def test_upgrade(
     assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=120
+        apps=[app_name], status="active", timeout=1000, idle_period=60
     )
 
     app_name = await get_app_name(ops_test)
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
     if "resume-refresh" in ops_test.model.applications[app_name].status_message:
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
@@ -92,8 +93,13 @@ async def test_upgrade(
         if "lxd" or (substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)):
             assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
+    async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
-            apps=[app_name], status="active", timeout=1000, idle_period=120
+            apps=app_name,
+            status="active",
+            timeout=1000,
+            idle_period=30,
+            raise_on_error=False,
         )
 
     # verify that the no writes were skipped

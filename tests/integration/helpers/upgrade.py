@@ -58,7 +58,6 @@ async def assert_successful_run_upgrade_sequence(
         reverse=True,
     )
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    leader_id = get_unit_id(leader_unit.name)
 
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
@@ -88,6 +87,11 @@ async def assert_successful_run_upgrade_sequence(
     # unit is the second unit to upgrade because it will be shut down
     # immediately on k8S.
     # This is a known limitation, so in that case we allow the action to fail.
+
+    # In case leader changed
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
+
     if "lxd" or (substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)):
         assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
