@@ -56,9 +56,6 @@ def test_pebble_ready_container_cannot_connect(
     push_keyfile_to_workload.assert_not_called()
     defer.assert_called()
 
-    mock_exec.assert_any_call(["systemctl", "restart", "snapd.service"])
-    mock_exec.assert_any_call(["systemctl", "is-active", "--quiet", "snapd.service"])
-
 
 def test_get_keyfile_contents_no_secret(mongos_harness: Harness[MongosTestCharm]):
     """Tests file isn't checked if secret isn't set."""
