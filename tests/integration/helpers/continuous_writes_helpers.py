@@ -13,16 +13,14 @@ from tenacity import retry
 from tenacity.stop import stop_after_attempt
 from tenacity.wait import wait_exponential
 
-from tests.integration.helpers.common import (
-    CONTINUOUS_WRITE_APPLICATION,
-    external_cert_path,
-)
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
+    CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
 )
 from tests.integration.helpers.jubilant_common import (
+    external_cert_path,
     get_ip_from_unit,
     get_password,
     scp_file_preserve_ctime,

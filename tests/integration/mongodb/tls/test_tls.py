@@ -6,7 +6,6 @@ import re
 import time
 
 import jubilant
-import pytest
 from cryptography import x509
 
 from single_kernel_mongo.config.statuses import TLSStatuses
@@ -56,7 +55,6 @@ from tests.integration.helpers.types import Substrate
 REGEX_TLS = re.compile("(-+(BEGIN|END) [A-Z ]+-+)")
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -107,7 +105,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_enable_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify each unit has TLS enabled after relating to the TLS application."""
     # Relate it to the MongoDB to enable TLS.

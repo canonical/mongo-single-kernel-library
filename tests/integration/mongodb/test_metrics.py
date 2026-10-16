@@ -4,7 +4,6 @@
 import time
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CHARMED_STATS_USERNAME,
@@ -33,7 +32,6 @@ from tests.integration.helpers.types import Substrate
 MEDIAN_REELECTION_TIME = 12
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -66,7 +64,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_endpoints(juju: jubilant.Juju, substrate: Substrate):
     """Sanity check that endpoints are running."""
     app_name = existing_app(juju)
@@ -76,7 +73,6 @@ def test_endpoints(juju: jubilant.Juju, substrate: Substrate):
         verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-@pytest.mark.abort_on_fail
 def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate):
     """Verify that endpoints still function correctly after the stats user password changes."""
     app_name = existing_app(juju)
@@ -97,7 +93,6 @@ def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate):
         verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-@pytest.mark.abort_on_fail
 def test_endpoints_network_cut(
     juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh: None
 ):

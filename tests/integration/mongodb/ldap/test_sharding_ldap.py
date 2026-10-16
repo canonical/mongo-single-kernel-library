@@ -5,7 +5,6 @@
 import logging
 
 import jubilant
-import pytest
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
@@ -44,7 +43,6 @@ ENDPOINT_LDAP_CERT = "send-ca-cert"
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -95,7 +93,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integrate_ldap_only(juju: jubilant.Juju):
     """Only integrate ldap endpoint, should go into blocked state."""
     app_name = CONFIG_SERVER_APP_NAME
@@ -120,7 +117,6 @@ def test_integrate_ldap_only(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integrate_also_ldap_cert(juju: jubilant.Juju):
     app_name = CONFIG_SERVER_APP_NAME
     juju.integrate(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
@@ -135,7 +131,6 @@ def test_integrate_also_ldap_cert(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     app_name = CONFIG_SERVER_APP_NAME
     # We create a client which should be able to write
@@ -156,7 +151,6 @@ def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
 def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
     app_name = CONFIG_SERVER_APP_NAME
 
@@ -214,7 +208,6 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
 def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
     """Only integrate ldap-certificate-transfer endpoint, should go into blocked state."""
     app_name = CONFIG_SERVER_APP_NAME
@@ -241,7 +234,6 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     app_name = CONFIG_SERVER_APP_NAME
     juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
