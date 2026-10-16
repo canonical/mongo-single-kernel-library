@@ -19,7 +19,7 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 ## Features
 
-* Build and test ARM64 architecture ([PR #203](https://github.com/canonical/mongo-single-kernel-library/pull/203))
+* ARM64 Support ([PR #203](https://github.com/canonical/mongo-single-kernel-library/pull/203))
 * MongoDB 8.0.28 and PBM Agent log file ([PR #414](https://github.com/canonical/mongo-single-kernel-library/pull/414))
 * MongoDB Encryption At Rest ([PR #258](https://github.com/canonical/mongo-single-kernel-library/pull/258))
 * GCS Backup support ([PR #218](https://github.com/canonical/mongo-single-kernel-library/pull/218))
@@ -32,7 +32,7 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 ## Bug fixes
 
-Many bug fixes were brought to improve stability, handle connectivity issues, self healing and improve cross-model deployments support on Kubernetes.
+Many bug fixes were brought to improve stability, handle connectivity issues, self healing and improve cross-model deployments support.
 
 * allowConnectionsWithoutCertificates ([PR #287](https://github.com/canonical/mongo-single-kernel-library/pull/287))
 * Self healing for LDAP ([PR #321](https://github.com/canonical/mongo-single-kernel-library/pull/321))
