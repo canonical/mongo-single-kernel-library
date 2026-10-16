@@ -278,6 +278,18 @@ class MongoConnection:
             # before giving up.
             raise NotReadyError
 
+        members = rs_config["config"]["members"]
+
+        if len(members) == 1:
+            logger.info(
+                "We're the last member of the replica set, we failed to detect that before."
+            )
+            return
+
+        if not any(hostname == hostname_from_hostport(member["host"]) for member in members):
+            logger.info("Replica set member %s is already removed", hostname)
+            return
+
         # avoid downtime we need to reelect new primary if removable member is the primary.
         if self.primary(rs_status) == hostname:
             logger.debug("Stepping down from primary.")
@@ -285,9 +297,7 @@ class MongoConnection:
 
         rs_config["config"]["version"] += 1
         rs_config["config"]["members"] = [
-            member
-            for member in rs_config["config"]["members"]
-            if hostname != hostname_from_hostport(member["host"])
+            member for member in members if hostname != hostname_from_hostport(member["host"])
         ]
         logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
         self.client.admin.command("replSetReconfig", rs_config["config"])
@@ -310,25 +320,37 @@ class MongoConnection:
                 "Waiting for all members to finish syncing before adding new member."
             )
 
-        # Avoid reusing IDs, according to the doc
-        # https://www.mongodb.com/docs/manual/reference/replica-configuration/
-        max_id = max([int(member["_id"]) for member in rs_config["config"]["members"]])
-
-        new_member = {"_id": max_id + 1, "host": hostname}
+        # Rename members if needed
+        # This is a fix for the new FQDNs
+        for member in rs_config["config"]["members"]:
+            member_host_without_port = member["host"].split(":")[0]
+            hostname_without_port = hostname.split(":")[0]
+            if (
+                hostname_without_port.startswith(member_host_without_port)
+                and hostname_without_port != member_host_without_port
+            ):
+                member["host"] = hostname
 
         rs_config["config"]["version"] += 1
-        rs_config["config"]["members"].append(new_member)
+
+        if all(member["host"] != hostname for member in rs_config["config"]["members"]):
+            # Avoid reusing IDs, according to the doc
+            # https://www.mongodb.com/docs/manual/reference/replica-configuration/
+            max_id = max([int(member["_id"]) for member in rs_config["config"]["members"]])
+            new_member = {"_id": max_id + 1, "host": hostname}
+            rs_config["config"]["members"].append(new_member)
+
         logger.debug("rs_config: %r", rs_config["config"])
         self.client.admin.command("replSetReconfig", rs_config["config"])
 
     def get_databases(self) -> set[str]:
         """Return list of all non-default databases."""
         databases: list[str] = self.client.list_database_names()
-        return {db for db in databases if db not in SystemDBS}
+        return {db for db in databases if db not in SystemDBS}  # type: ignore[operator]
 
     def drop_database(self, database: str):
         """Drop a non-default database."""
-        if database in SystemDBS:
+        if database in SystemDBS:  # type: ignore[operator]
             logger.info(f"Not dropping system DB {database}.")
             return
         self.client.drop_database(database)

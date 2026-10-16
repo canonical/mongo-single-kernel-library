@@ -7,9 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.ha import replica_set_primary, scale_application
-
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
     deploy_charm,
@@ -17,7 +15,8 @@ from ..helpers.common import (
     get_app_name,
     get_unit_id,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.ha import replica_set_primary, scale_application
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 

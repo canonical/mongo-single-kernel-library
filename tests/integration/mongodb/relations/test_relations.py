@@ -9,9 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from tests.integration.helpers.ha import replica_set_primary
-
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     check_or_scale_app,
@@ -24,14 +22,15 @@ from ...helpers.common import (
     is_relation_joined,
     run_action,
 )
-from ...helpers.relations import (
+from tests.integration.helpers.ha import replica_set_primary
+from tests.integration.helpers.relations import (
     APPLICATION_APP_NAME,
     FIRST_DATABASE_RELATION_NAME,
     SECOND_DATABASE_RELATION_NAME,
     assert_created_user_can_connect,
     verify_application_data,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 DATABASE_RELATION_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"

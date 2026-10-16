@@ -9,15 +9,15 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.backups import S3_APP_NAME, S3_ENDPOINT, count_logical_backups
-from ...helpers.common import (
+from tests.integration.helpers.backups import S3_APP_NAME, S3_ENDPOINT, count_logical_backups
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
     has_file,
     is_relation_joined,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     SHARD_APPS,
     SHARD_ONE_APP_NAME,
@@ -30,8 +30,8 @@ from ...helpers.sharding import (
     integrate_sharding_components,
     verify_writes_restored,
 )
-from ...helpers.tls import get_file_content
-from ...helpers.types import Substrate
+from tests.integration.helpers.tls import get_file_content
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 

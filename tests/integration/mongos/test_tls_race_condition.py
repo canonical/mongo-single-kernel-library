@@ -5,19 +5,19 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT
-from ..helpers.mongos import (
+from tests.integration.helpers.common import MONGOS_APP_NAME, TIMEOUT
+from tests.integration.helpers.mongos import (
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
     integrate_cluster_with_tls,
 )
-from ..helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
-from ..helpers.tls import (
+from tests.integration.helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
+from tests.integration.helpers.tls import (
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

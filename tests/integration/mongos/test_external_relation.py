@@ -23,8 +23,7 @@ from tests.integration.helpers.sharding import (
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
 )
-
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

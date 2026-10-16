@@ -52,9 +52,12 @@ async def assert_successful_run_upgrade_sequence(
     ops_test: OpsTest, substrate: Substrate, app_name: str, new_charm: str, mongod_resource: dict
 ) -> None:
     """Runs the upgrade sequence on a given app."""
-    number_of_units = len(ops_test.model.applications[app_name].units)
+    refresh_order = sorted(
+        ops_test.model.applications[app_name].units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    leader_id = get_unit_id(leader_unit.name)
 
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
@@ -84,13 +87,22 @@ async def assert_successful_run_upgrade_sequence(
     # unit is the second unit to upgrade because it will be shut down
     # immediately on k8S.
     # This is a known limitation, so in that case we allow the action to fail.
-    if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
+
+    # In case leader changed
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
+
+    if substrate == "lxd" or (
+        substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+    ):
         assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
 
 
-async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> None:
-    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:mongodb"
+async def refresh_with_juju(
+    ops_test: OpsTest, app_name: str, channel: str, charm_name: str
+) -> None:
+    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:{charm_name}"
     await ops_test.juju(*refresh_cmd.split())

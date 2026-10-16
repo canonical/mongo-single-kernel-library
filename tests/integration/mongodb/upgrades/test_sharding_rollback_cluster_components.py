@@ -78,6 +78,7 @@ async def test_build_and_deploy(
 async def test_rollback_on_shard_and_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongodb_charm: str,
     mongod_resource: dict,
     add_continuous_writes_to_shards,
@@ -149,7 +150,9 @@ async def test_rollback_on_shard_and_config_server(
         ),
     )
 
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, channel="6/edge")
+    await refresh_with_juju(
+        ops_test, CONFIG_SERVER_APP_NAME, channel="6/edge", charm_name=base_app_name
+    )
 
     # verify no writes were skipped during upgrade process
     shard_one_expected_writes = await stop_continous_writes(

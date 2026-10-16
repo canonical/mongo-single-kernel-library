@@ -5,8 +5,8 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
-from ...helpers.sharding import (
+from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     check_cluster_tls_disabled,
     check_cluster_tls_enabled,
@@ -16,8 +16,8 @@ from ...helpers.sharding import (
     remove_tls_integrations,
     rotate_and_verify_certs,
 )
-from ...helpers.tls import TLS_CERTIFICATES_APP_NAME
-from ...helpers.types import Substrate
+from tests.integration.helpers.tls import TLS_CERTIFICATES_APP_NAME
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

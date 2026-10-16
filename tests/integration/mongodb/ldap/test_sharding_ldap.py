@@ -10,13 +10,13 @@ from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     ProcessError,
     execute_on_mongod,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.ldap import (
+from tests.integration.helpers.ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -26,13 +26,13 @@ from ...helpers.ldap import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 TIMEOUT = 15 * 60
 ENDPOINT_LDAP = "ldap"

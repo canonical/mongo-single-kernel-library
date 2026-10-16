@@ -7,7 +7,7 @@ import pytest
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_app_status,
@@ -18,7 +18,7 @@ from ..helpers.common import (
     get_password,
     unit_uri,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 

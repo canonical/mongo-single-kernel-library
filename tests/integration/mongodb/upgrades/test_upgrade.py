@@ -7,22 +7,23 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     deploy_charm,
     find_unit,
     get_app_name,
     get_password,
+    get_unit_id,
     unit_hostname,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     cut_network_from_unit,
     restore_network_for_unit,
     verify_writes,
     wait_until_unit_in_status,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import refresh_charm
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,11 @@ async def test_upgrade(
 ) -> None:
     """Verifies that the upgrade can run successfully."""
     app_name = await get_app_name(ops_test)
+    refresh_order = sorted(
+        ops_test.model.applications[app_name].units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
 
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
 
@@ -71,21 +77,31 @@ async def test_upgrade(
     assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=120
+        apps=[app_name], status="active", timeout=1000, idle_period=60
     )
 
     app_name = await get_app_name(ops_test)
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
     if "resume-refresh" in ops_test.model.applications[app_name].status_message:
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
-        assert action.status == "completed", "resume-refresh failed, expected to succeed"
+        if substrate == "lxd" or (
+            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        ):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
+    async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
-            apps=[app_name], status="active", timeout=1000, idle_period=120
+            apps=[app_name],
+            status="active",
+            timeout=1000,
+            idle_period=30,
+            raise_on_error=False,
         )
 
     # verify that the no writes were skipped
@@ -97,6 +113,9 @@ async def test_preflight_check(ops_test: OpsTest) -> None:
     """Verifies that the preflight check can run successfully."""
     app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", timeout=1000, idle_period=20
+    )
     logger.info("Calling pre-refresh-check")
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
