@@ -24,7 +24,6 @@ from kubernetes.client.exceptions import ApiException
 from pymongo import MongoClient
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 
-from tests.integration.helpers.common import ProcessError, mongodb_log_path
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     DEFAULT_DATABASE_NAME,
@@ -32,8 +31,8 @@ from tests.integration.helpers.constants import (
     RELEASES,
 )
 from tests.integration.helpers.continuous_writes_helpers import replica_set_primary
-from tests.integration.helpers.ha import ProcessRunningError
 from tests.integration.helpers.jubilant_common import (
+    ProcessError,
     count_primaries,
     execute_on_mongod,
     find_leader,
@@ -42,6 +41,7 @@ from tests.integration.helpers.jubilant_common import (
     get_ips_for_app,
     get_mongodb_hostnames_for_app,
     get_password,
+    mongodb_log_path,
     read_remote_file,
     replica_set_uri,
     run_command_on_server,
@@ -85,6 +85,10 @@ NETWORK_CUT_RULES = (
     "INPUT ! --in-interface lo --jump DROP",
     "OUTPUT ! --out-interface lo --jump DROP",
 )
+
+
+class ProcessRunningError(Exception):
+    """Raised when a process is running when it is not expected to be."""
 
 
 def storage_type(juju: jubilant.Juju, app_name: str, storage_name: str) -> str | None:
@@ -739,7 +743,9 @@ def fetch_replica_set_members(
     """Fetches the hosts listed as replica set members in the MongoDB replica set configuration.
 
     Args:
-        ops_test: reference to deployment.
+        juju: Juju client
+        substrate: The substrate the test is running on (VM or k8s)
+        app_name: The name of the application
     """
     # connect to replica set uri
     # get ips from MongoDB replica set configuration

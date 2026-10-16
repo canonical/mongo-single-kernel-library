@@ -5,7 +5,6 @@
 import time
 
 import jubilant
-import pytest
 from tenacity import RetryError
 
 from tests.integration.helpers.constants import (
@@ -45,7 +44,6 @@ MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "multiple-database-clusters"
 ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "aliased-multiple-database-clusters"
 
 
-@pytest.mark.abort_on_fail
 def test_deploy_charms(
     juju: jubilant.Juju,
     substrate: Substrate,

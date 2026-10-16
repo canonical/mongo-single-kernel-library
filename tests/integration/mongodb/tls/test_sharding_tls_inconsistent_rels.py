@@ -4,7 +4,6 @@
 
 
 import jubilant
-import pytest
 
 from single_kernel_mongo.config.statuses import ShardStatuses
 from tests.integration.helpers.constants import (
@@ -45,7 +44,6 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_tls_then_build_cluster(
     juju: jubilant.Juju, substrate: Substrate, mongodb_charm: str, mongod_resource: dict[str, str]
 ) -> None:
@@ -114,7 +112,6 @@ def test_tls_then_build_cluster(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> None:
     juju.deploy(
         charm=TLS_CERTIFICATES_APP_NAME,

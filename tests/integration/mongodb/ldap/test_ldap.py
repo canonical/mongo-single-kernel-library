@@ -5,7 +5,6 @@
 import logging
 
 import jubilant
-import pytest
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
@@ -43,7 +42,6 @@ ENDPOINT_LDAP_CERT = "send-ca-cert"
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -106,7 +104,6 @@ def test_build_and_deploy(
     create_mongodb_user_roles(juju, substrate, app_name, "ou=superheroes,ou=users,dc=glauth,dc=com")
 
 
-@pytest.mark.abort_on_fail
 def test_integrate_ldap_only(juju: jubilant.Juju):
     """Only integrate ldap endpoint, should go into blocked state."""
     app_name = existing_app(juju)
@@ -137,7 +134,6 @@ def test_integrate_ldap_only(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integrate_ldap_cert(juju: jubilant.Juju):
     """Integrate the second relation, we should end up with everything active."""
     app_name = existing_app(juju)
@@ -159,7 +155,6 @@ def test_integrate_ldap_cert(juju: jubilant.Juju):
     )
 
 
-@pytest.mark.abort_on_fail
 def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     """Checks that the LDAP user can write to the DB.
 
@@ -185,7 +180,6 @@ def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
 def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
     """We want to ensure that we can log in using the ldap userToDNMapping.
 
@@ -251,7 +245,6 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
     assert result.succeeded, "Failed to read value with LDAP client"
 
 
-@pytest.mark.abort_on_fail
 def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
     """Only integrate ldap-certificate-transfer endpoint, should go into blocked state."""
     app_name = existing_app(juju)
@@ -306,7 +299,6 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
     assert result.failed
 
 
-@pytest.mark.abort_on_fail
 def test_remove_ldap_certs_goes_to_blocked(juju: jubilant.Juju, substrate: Substrate):
     """With only ldap relation it should also go to blocked."""
     app_name = existing_app(juju)
@@ -376,7 +368,6 @@ def test_remove_ldap_certs_goes_to_blocked(juju: jubilant.Juju, substrate: Subst
     assert result.failed
 
 
-@pytest.mark.abort_on_fail
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     """Teardown of the whole offers and relations."""
     app_name = existing_app(juju)

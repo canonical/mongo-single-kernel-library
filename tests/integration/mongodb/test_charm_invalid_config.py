@@ -4,7 +4,6 @@
 import logging
 
 import jubilant
-import pytest
 from pymongo import MongoClient
 
 from single_kernel_mongo.config.statuses import MongoDBStatuses
@@ -31,7 +30,6 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,

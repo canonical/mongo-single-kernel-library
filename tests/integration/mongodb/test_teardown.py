@@ -7,8 +7,8 @@ import logging
 import jubilant
 import pytest
 
-from tests.integration.helpers.common import CONTINUOUS_WRITE_APPLICATION
 from tests.integration.helpers.constants import (
+    CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
 )

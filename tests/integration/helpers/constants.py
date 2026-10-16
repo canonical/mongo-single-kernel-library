@@ -18,6 +18,7 @@ DEPLOYMENT_TIMEOUT = 2000
 CHARMED_BACKUP_USERNAME = "charmed-backup"
 CHARMED_OPERATOR_USERNAME = "charmed-operator"
 CHARMED_OPERATOR_PASSWORD = "operator-password"
+CHARMED_LOGROTATE_USERNAME = "charmed-logrotate"
 CHARMED_STATS_USERNAME = "charmed-stats"
 INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
@@ -81,6 +82,7 @@ CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_
 CONFIG_SERVER_REL_NAME = "config-server"
 CLUSTER_REL_NAME = "cluster"
 SHARD_APPS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
+MONGOS_CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME]
 
 SHARD_DEFAULT_COLL_NAME = "test_collection"
 SHARD_ONE_DB_NAME = "continuous_writes_database"
@@ -106,3 +108,12 @@ REPLICATION_APP_NAME = "replication"
 APPLICATION_APP_NAME = "application"
 FIRST_DATABASE_RELATION_NAME = "first-database"
 SECOND_DATABASE_RELATION_NAME = "second-database"
+
+MONGOS_CLIENT_APPLICATION = "test-routing-application"
+MONGOS_SOCKET = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
+TEST_USER_NAME = "TestUserName1"
+TEST_USER_PWD = "Test123"
+TEST_DB_NAME = "my-test-db"
+PING_CMD = "db.runCommand({ping: 1})"
+MONGOS_RELATION = "mongos_proxy"
+CLIENT_RELATION = "mongodb"

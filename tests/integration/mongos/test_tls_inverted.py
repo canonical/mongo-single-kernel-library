@@ -2,34 +2,36 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import pytest
-from pytest_operator.plugin import OpsTest
+import jubilant
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import MongosStatuses
+from tests.integration.helpers.constants import (
     MONGOS_APP_NAME,
-    TIMEOUT,
-    check_status_detail,
-    wait_for_mongodb_units_blocked,
-)
-from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     MONGOS_CLUSTER_COMPONENTS,
+    TIMEOUT,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.jubilant_mongos import (
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
 )
-from tests.integration.helpers.tls import (
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_BASE,
-    TLS_CERTIFICATES_CHANNEL,
+from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
@@ -38,8 +40,8 @@ async def test_build_and_deploy(
     application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
         mongos_charm,
@@ -48,60 +50,55 @@ async def test_build_and_deploy(
         application_path,
     )
     if substrate == Substrate.lxd:
-        await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].set_config(
-            {"external-connectivity": "false"}
-        )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
+        juju.config(MONGOS_CLIENT_APPLICATION, {"external-connectivity": False})
+    build_cluster(juju, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
     config = {"ca-common-name": "Test CA"}
-    await ops_test.model.deploy(
+    juju.deploy(
         TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
         base=TLS_CERTIFICATES_BASE,
         config=config,
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[TLS_CERTIFICATES_APP_NAME],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, TLS_CERTIFICATES_APP_NAME, idle_period=20
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_mongos_tls_enabled_on_cluster(ops_test: OpsTest, substrate: Substrate):
+def test_mongos_tls_enabled_on_cluster(juju: jubilant.Juju):
     """Tests that if we enable on cluster first, we end up in blocked state."""
-    await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
+    integrate_apps_with_tls(juju, *MONGOS_CLUSTER_COMPONENTS)
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        MONGOS_APP_NAME,
-        status="Missing peer-certificates relation.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(status, MONGOS_APP_NAME, idle_period=20)
+            and does_status_match(
+                status,
+                expected_unit_statuses={
+                    MONGOS_APP_NAME: [MongosStatuses.MISSING_PEER_TLS_REL.value]
+                },
+                expected_app_statuses={
+                    MONGOS_APP_NAME: [MongosStatuses.MISSING_PEER_TLS_REL.value]
+                },
+            )
+        ),
         timeout=TIMEOUT,
-        subordinate=(substrate == Substrate.lxd),
-    )
-    await check_status_detail(
-        ops_test,
-        MONGOS_APP_NAME,
-        status="blocked",
-        message="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
     )
 
 
-@pytest.mark.abort_on_fail
-async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate):
+def test_mongos_tls_enabled(juju: jubilant.Juju, substrate: Substrate):
     """Tests that if we then add the TLS integration on mongos it resolves."""
-    assert ops_test.model
-    await integrate_apps_with_tls(ops_test, applications=[MONGOS_APP_NAME])
-    await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
-        idle_period=20,
+    integrate_apps_with_tls(juju, MONGOS_APP_NAME)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, MONGOS_APP_NAME, *MONGOS_CLUSTER_COMPONENTS, idle_period=20
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
-        status="active",
     )
 
-    await assert_mongos_tls_enabled(ops_test, substrate)
+    assert_mongos_tls_enabled(juju, substrate)

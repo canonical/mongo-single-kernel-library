@@ -51,7 +51,6 @@ REMOVAL_TIMEOUT = 30 * 60
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -130,7 +129,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_cluster_active(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests the integration of cluster components works without error."""
     juju.integrate(
@@ -167,7 +165,6 @@ def test_cluster_active(juju: jubilant.Juju, substrate: Substrate) -> None:
     ), "Config server did not process config properly"
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_cluster_ip_source_allowlists(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify VM cluster allowlists contain the expected replica-set IPs."""
@@ -180,7 +177,6 @@ def test_cluster_ip_source_allowlists(juju: jubilant.Juju, substrate: Substrate)
     )
 
 
-@pytest.mark.abort_on_fail
 def test_set_operator_password(juju: jubilant.Juju):
     """Tests that the cluster can safely set the charmed_operator password."""
     for cluster_app_name in CLUSTER_APPS:
@@ -220,7 +216,6 @@ def test_set_operator_password(juju: jubilant.Juju):
         ), f"{cluster_app_name} did not rotate to new password."
 
 
-@pytest.mark.abort_on_fail
 def test_sharding_write(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests writing data to mongos gets propagated to shards."""
     mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
@@ -264,7 +259,6 @@ def test_sharding_write(juju: jubilant.Juju, substrate: Substrate) -> None:
     assert has_correct_data, "data not written to shard-three"
 
 
-@pytest.mark.abort_on_fail
 def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test shard removal.
 
@@ -328,7 +322,6 @@ def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
         )
 
 
-@pytest.mark.abort_on_fail
 def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate):
     """Tests safe removal of a shard that is not primary."""
     # add back a shard so we can safely remove a shard.
@@ -383,7 +376,6 @@ def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate)
     ), "Not all databases on final shard"
 
 
-@pytest.mark.abort_on_fail
 def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
     """Tests that removing a shard application safely drains data.
 
