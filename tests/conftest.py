@@ -38,9 +38,9 @@ def pytest_addoption(parser: Parser):
         default=None,
         type=str,
     )
-    # Model name for Jubilant testing
+    # Model name for Jubilant testing. When provided, models are always kept.
     parser.addoption("--model", action="store", default=None)
-    # Should the model be kept after test fails
+    # Should the model be kept after test fails. Only used if --model is not passed.
     parser.addoption("--keep-models", action="store_true", default=False)
 
 

@@ -9,8 +9,6 @@ import pytest
 from tests.integration.helpers.jubilant_ha import k8s_deploy_chaos_mesh, k8s_destroy_chaos_mesh
 from tests.integration.helpers.types import Substrate
 
-ORIGINAL_RESTART_DELAY = 5
-
 
 @pytest.fixture
 def base_app_name(mongod_metadata) -> str:
