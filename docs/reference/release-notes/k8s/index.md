@@ -7,5 +7,5 @@
 
 Revision 93 <revision-93>
 Revision 114 <revision-114>
-Revision XXX,YYY <revision-XXX-YYY>
+Revision YYY, ZZZ <revision-YYY-ZZZ>
 ```

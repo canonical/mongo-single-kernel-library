@@ -1,6 +1,6 @@
-(revision-XXX-ZZZ)=
+(revision-YYY-ZZZ)=
 
-# Revision XXX, ZZZ
+# Revision YYY, ZZZ
 
 <sub>16 October 2026</sub>
 
@@ -17,7 +17,7 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 \*OCI image resources:
 
-* `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:f9dff72533f5b2a8fa54784b94e06adbf1eec77dd0a37b97ad5250af46104e7f
+* `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:f9dff72533f5b2a8fa54784b94e06adbf1eec77dd0a37b97ad5250af46104e7f`
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
