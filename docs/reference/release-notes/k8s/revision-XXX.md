@@ -4,7 +4,8 @@
 
 <sub>XX October 2026</sub>
 
-Charmed MongoDB K8s Revision XXX has been release to the [`6/stable` channel](https://charmhub.io/mongodb-k8s?channel=6/stable) on Charmhub.
+Charmed MongoDB K8s revision XXX has been release to the [`6/stable` channel](https://charmhub.io/mongodb-k8s?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos K8s revision YYY that has been release to the [`6/stable` channel](https://charmhub.io/mongos-k8s?channel=6/stable) on Charmhub.
 
 ## Highlights
 

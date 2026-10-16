@@ -5,6 +5,7 @@
 <sub>NN October 2026</sub>
 
 Charmed MongoDB Revision YYY has been deployed to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos revision ZZZ that has been release to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
 
 ## Highlights
 
