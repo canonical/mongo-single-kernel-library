@@ -1,9 +1,8 @@
 import getpass
 from pathlib import Path
 
-from charmlibs.snap.src.charmlibs import snap
 import pytest
-from charmlibs.snap import SnapError
+from charmlibs.snap.src.charmlibs import snap
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VmUser
@@ -256,6 +255,7 @@ def test_active(mocker, output: str, expected: bool):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.active() == expected
 
+
 def test_active_exec_failure(mocker):
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.exec",
@@ -263,6 +263,7 @@ def test_active_exec_failure(mocker):
     )
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.active() is False
+
 
 def test_exec():
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)

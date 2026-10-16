@@ -6,7 +6,6 @@
 
 import subprocess
 from collections.abc import Mapping
-from functools import cached_property
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
@@ -14,7 +13,7 @@ from shutil import copyfile
 
 import charmlibs.snap as snap
 from ops import Container
-from tenacity import Retrying, retry, retry_if_result, stop_after_attempt, wait_fixed
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
