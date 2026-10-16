@@ -1,8 +1,8 @@
 import getpass
 from pathlib import Path
 
+import charmlibs.snap as snap
 import pytest
-from charmlibs.snap.src.charmlibs import snap
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VmUser

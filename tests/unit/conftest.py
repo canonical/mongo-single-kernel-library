@@ -1,12 +1,11 @@
 import socket
 from pathlib import Path
 
+import charmlibs.snap as snap
 import pytest
 import yaml
-from charmlibs.snap import Snap, SnapState
 from ops.testing import Harness
 
-from single_kernel_mongo.config.literals import SNAP
 from tests.integration.helpers.types import Substrate
 from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
@@ -141,17 +140,10 @@ def mongod_ready(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_snap_cache(mocker):
+def mock_snap_not_installed(mocker):
     mocker.patch(
-        "charmlibs.snap.SnapCache.__getitem__",
-        return_value=Snap(
-            "charmed-mongodb",
-            state=SnapState.Available,
-            channel=SNAP.channel,
-            revision=SNAP.revision,
-            confinement="classic",
-            apps=None,
-        ),
+        "single_kernel_mongo.core.vm_workload.snap.list_one",
+        side_effect=snap.NotInstalledError("not installed", kind="snap-not-installed", value=None),
     )
 
 
@@ -164,7 +156,7 @@ def setup_secrets(harness: Harness) -> None:
 def mock_fs_interactions(mocker, substrate: Substrate) -> None:
     if substrate == "lxd":
         mocker.patch(
-            "charmlibs.snap.Snap.present",
+            "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present",
             new_callable=mocker.PropertyMock,
             return_value=True,
         )
