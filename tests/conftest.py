@@ -31,6 +31,13 @@ def pytest_addoption(parser: Parser):
         default=1,
         type=int,
     )
+    parser.addoption(
+        "--mongodb-charm-channel",
+        action="store",
+        help="Charm Channel, for use with mongodb and mongos",
+        default=None,
+        type=str,
+    )
 
 
 def pytest_configure(config):

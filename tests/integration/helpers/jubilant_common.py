@@ -130,7 +130,7 @@ def deploy_charm(
     bind: dict[str, str] | None = None,
 ):
     if revision is not None:
-        channel = "8/beta"
+        channel = channel or "8/beta"
     if substrate == Substrate.k8s:
         base = base or BASE
         juju.deploy(
@@ -138,7 +138,7 @@ def deploy_charm(
             app=app_name,
             revision=revision,
             resources=(mongod_resource if not channel else None),
-            num_units=0 if subordinate else num_units,
+            num_units=num_units,
             base=base,
             trust=True,
             config=config,
@@ -149,7 +149,7 @@ def deploy_charm(
         juju.deploy(
             charm,
             app=app_name,
-            num_units=0 if subordinate else num_units,
+            num_units=1 if subordinate else num_units,
             revision=revision,
             config=config,
             channel=channel,
@@ -172,24 +172,32 @@ def get_highest_unit(juju: jubilant.Juju, app_name: str) -> str | None:
 
 
 def remove_number_units(
-    juju: jubilant.Juju, substrate: Substrate, app_name: str, num_units: int
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    num_units: int | None = None,
+    specific_units: list[str] | None = None,
 ) -> None:
     """Remove a specified number of units from an application.
 
     Args:
         juju: An instance of Jubilant's Juju class on which to run Juju commands
-        app: The name of the application from which to remove units
-        num_units: The number of units to remove
         substrate: The substrate type ("k8s" or "vm")
+        app_name: The name of the application from which to remove units
+        num_units: The number of units to remove.
+        specific_units: Takes precedence over num_units. The list of units to remove if provided.
+                        On K8S, the length of this list takes precedence over num_units.
     """
+    assert num_units is not None or specific_units is not None
     match substrate:
         case Substrate.k8s:
+            num_units = len(specific_units) if specific_units else num_units
             juju.remove_unit(app_name, num_units=num_units)
         case Substrate.lxd:
             # get units names
-            unit_names = list(juju.status().get_units(app_name))
+            unit_names = specific_units or list(juju.status().get_units(app_name))[:num_units]
             # remove units by name until num_units have been removed
-            juju.remove_unit(*unit_names[:num_units])
+            juju.remove_unit(*unit_names)
 
 
 def ensure_app_number_units(
@@ -236,8 +244,15 @@ def split_unit_id_and_app_name(unit_name: str) -> tuple[int, str]:
 
 
 def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
+    """Gets the name and status of the leader unit."""
     units = juju.status().get_units(app_name)
     return next((name, unit) for name, unit in units.items() if unit.leader)
+
+
+def find_non_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
+    """Gets the name and status of the first non leader unit."""
+    units = juju.status().get_units(app_name)
+    return next((name, unit) for name, unit in units.items() if not unit.leader)
 
 
 def get_secret_uri_by_owner(
@@ -532,7 +547,7 @@ def set_password(
         username: the user to set the password for
         password: the password to use
     """
-    secret_name = "system_users_secret"
+    secret_name = f"system_users_secret_{app_name}"
 
     # if secret exists, update it, else add secret
     existing = next((s for s in juju.secrets() if s.name == secret_name), None)

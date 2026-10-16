@@ -294,8 +294,10 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             pbm_status=pbm_status, backup_list=finished_backups
         )
 
-        # process in progress backups
+        # Ensure up to date status on list-backup
+        self.recompute_statuses()
 
+        # process in progress backups
         return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
 
     def list_finished_backups(self, pbm_status: dict) -> BackupListType:
@@ -859,3 +861,14 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
                 self.state.config_server_data_interface.delete_relation_data(
                     relation.id, [AppShardingComponentKeys.BACKUP_CA_SECRET.value]
                 )
+
+    def recompute_statuses(self) -> None:
+        """Recomputes and store all statuses."""
+        scopes: list[Scope] = ["unit"]
+        if self.charm.unit.is_leader():
+            scopes.append("app")
+        for scope in scopes:
+            self.state.statuses.clear(scope=scope, component=self.name)
+            statuses = self.get_statuses(scope=scope, recompute=True)
+            for status in statuses:
+                self.state.statuses.add(status, scope=scope, component=self.name)

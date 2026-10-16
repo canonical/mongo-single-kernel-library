@@ -43,6 +43,7 @@ from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatu
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
+    ClusterVersionMismatchError,
     DeferrableError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
@@ -218,7 +219,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         # computes the revision check.
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # The status will be added during the get status
-            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
+            raise ClusterVersionMismatchError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
         """Runs pre hooks checks and raises the appropriate error if it fails.
@@ -275,18 +276,17 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
                 continue
-            self.data_interface.update_relation_data(
-                relation.id,
-                {
-                    AppShardingComponentKeys.HOST.value: json.dumps(
-                        sorted(self.state.internal_hosts)
-                    ),
-                    AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
-                        sorted(cidrs(self.state.cluster_network().bind_addresses))
-                    ),
-                    AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
-                },
-            )
+            data = {
+                AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
+                AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
+                    sorted(cidrs(self.state.cluster_network().bind_addresses))
+                ),
+                AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
+            }
+            # Reconciliation of shard-integrated flag
+            if self.state.config_server_state(relation).auth_updated:
+                data[AppShardingComponentKeys.SHARD_INTEGRATED.value] = json.dumps(True)
+            self.data_interface.update_relation_data(relation.id, data)
 
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""
@@ -593,7 +593,7 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
         # computes the revision check.
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # The status will be added during the get status
-            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
+            raise ClusterVersionMismatchError("Mismatched versions in the cluster")
 
         # Edge case for DPE-4998
         # TODO: Remove this when https://github.com/canonical/operator/issues/1306 is fixed.
@@ -765,6 +765,13 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
             logger.info("Deferrable error during mongod restart. %s", e)
             return OperationResult.RETRY_RELEASE
 
+        # The shard has restarted, we can clean up the status.
+        # The rest is on the server side.
+        self.charm.state.statuses.delete(
+            ShardStatuses.ADDING_TO_CLUSTER.value,
+            scope="unit",
+            component=self.name,
+        )
         return OperationResult.RELEASE
 
     def async_shard_restart_on_key_file(self):
@@ -1246,6 +1253,10 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
         if self.should_skip_shard_status():
             return charm_statuses
 
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # No need to go further if the revision is invalid
+            return charm_statuses
+
         # return in these cases as other statuses require a config-server to compute
         if not self.state.shard_relation:
             if self.state.unit_peer_data.drained:
@@ -1253,10 +1264,6 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
             if not self.state.unit_peer_data.drained:
                 return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
-
-        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
-            # No need to go further if the revision is invalid
-            return charm_statuses
 
         if tls_statuses := self.tls_statuses():
             charm_statuses += tls_statuses
