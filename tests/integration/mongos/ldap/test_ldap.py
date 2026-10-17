@@ -7,12 +7,10 @@ import jubilant
 
 from single_kernel_mongo.config.statuses import LdapStatuses, MongosStatuses
 from tests.integration.helpers.constants import (
-    BASE,
     CLUSTER_COMPONENTS,
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
     DATA_INTEGRATOR_APP_NAME,
-    DEPLOYMENT_TIMEOUT,
     SHARD_ONE_APP_NAME,
     SHARD_TWO_APP_NAME,
     TIMEOUT,
@@ -27,9 +25,9 @@ from tests.integration.helpers.jubilant_ldap import (
     LDAP_OFFER,
     apply_ldif,
     consume_glauth_offers,
-    create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
+    request_ldap_group_role,
     teardown_offers,
 )
 from tests.integration.helpers.jubilant_sharding import (
@@ -66,7 +64,7 @@ def test_build_and_deploy_mongodb_cluster(
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
         extra_config_config_server={
-            "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
+            "ldap-query-template": "dc=glauth,dc=com?ou?sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
         num_units_cluster_config={
             CONFIG_SERVER_APP_NAME: 1,
@@ -89,10 +87,6 @@ def test_build_and_deploy_mongodb_cluster(
     # Apply the LDIF file on glauth-utils to create users and groups
     apply_ldif(juju_k8s_model, "ldap_entries.ldif")
 
-    create_mongodb_user_roles(
-        juju, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
-    )
-
 
 def test_build_and_deploy_mongos(
     juju: jubilant.Juju,
@@ -103,7 +97,9 @@ def test_build_and_deploy_mongos(
 ) -> None:
     """Deploys mongos and data integrator, and integrates both.
 
-    Then integrate mongos and sharded cluster.
+    data-integrator asks mongos for the LDAP group role as a GROUP entity. The request is
+    served once mongos is integrated with the config-server, see
+    test_group_role_created_through_mongos.
     """
     deploy_charm(
         juju=juju,
@@ -116,20 +112,8 @@ def test_build_and_deploy_mongos(
     )
 
     # This is necessary for mongos operator on VM, but we deploy it anyway for flow unicity.
-    juju.deploy(
-        DATA_INTEGRATOR_APP_NAME,
-        channel="latest/stable",
-        base=BASE,
-        num_units=1,
-        config={"database-name": "test-database"},
-    )
-
-    juju.wait(
-        lambda status: are_agents_idle(status, DATA_INTEGRATOR_APP_NAME, idle_period=20),
-        timeout=DEPLOYMENT_TIMEOUT,
-    )
-
-    juju.integrate(DATA_INTEGRATOR_APP_NAME, base_app_name)
+    # On VM, the relation carries the mongos unit, so it is not re-created for the role.
+    request_ldap_group_role(juju, substrate, base_app_name, mongos=True, wait=False)
 
     # verify that Charmed Mongos is blocked and reports incorrect credentials
     juju.wait(
@@ -276,6 +260,27 @@ def test_glauth_fully_integrated(juju: jubilant.Juju):
     )
 
 
+def test_group_role_created_through_mongos(juju: jubilant.Juju):
+    """The GROUP request of data-integrator is served through mongos.
+
+    mongos-k8s creates the role, a VM mongos forwards the request to the config-server over
+    `cluster`. data-integrator turns Active once mongos published the entity name.
+    """
+    app_name = existing_app(juju, charm_name="mongos")
+    assert app_name
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            DATA_INTEGRATOR_APP_NAME,
+            app_name,
+            idle_period=20,
+            unit_count={DATA_INTEGRATOR_APP_NAME: 1},
+        ),
+        timeout=TIMEOUT,
+    )
+
+
 def test_user_can_write(juju: jubilant.Juju, substrate: Substrate):
     app_name = existing_app(juju, charm_name="mongos")
     assert app_name
@@ -316,22 +321,25 @@ def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     app_name = existing_app(juju, charm_name="mongos")
     assert app_name
 
-    juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
-    juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
+    # Remove data-integrator (its relation drops the group role) and the router, on VM its
+    # subordinate, before the LDAP offers.
+    juju.remove_application(DATA_INTEGRATOR_APP_NAME, app_name)
     juju.remove_relation(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
     juju.remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 
-    # Everything should be integrated now!
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(
-            status,
-            CONFIG_SERVER_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
-            app_name,
-            idle_period=20,
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                SHARD_TWO_APP_NAME,
+                idle_period=20,
+            )
+            and DATA_INTEGRATOR_APP_NAME not in status.apps
+            and app_name not in status.apps
         ),
         timeout=TIMEOUT,
     )

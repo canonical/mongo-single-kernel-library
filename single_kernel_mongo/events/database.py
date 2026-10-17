@@ -22,7 +22,10 @@ from single_kernel_mongo.exceptions import (
     FailedToGetHostsError,
     UpgradeInProgressError,
 )
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import DatabaseProvides
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseEntityPermissionsChangedEvent,
+    DatabaseProvides,
+)
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
@@ -57,14 +60,25 @@ class DatabaseEventsHandler(Object):
         self.framework.observe(
             self.database_provides.on.database_requested, self._on_relation_event
         )
+        self.framework.observe(
+            self.database_provides.on.database_entity_requested, self._on_relation_event
+        )
+        self.framework.observe(
+            self.database_provides.on.database_entity_permissions_changed,
+            self._on_entity_permissions_changed,
+        )
 
-    def _on_relation_event(self, event: RelationEvent):
+    def _on_relation_event(self, event: RelationEvent):  # noqa: C901
         """Handle relation joined events.
 
         When relations join, change, or depart, the :class:`MongoDBClientRelation`
         creates or drops MongoDB users and sets credentials into relation
         data. As a result, related charm gets credentials for accessing the
         MongoDB database.
+
+        Entity relations are dispatched to `add_entity`, user relations to
+        `reconcile_mongo_users_and_dbs`. A broken relation goes to `remove_entity`
+        and then to `reconcile_mongo_users_and_dbs`, both deciding from peer data.
         """
         relation_departing = False
         relation_changed = False
@@ -108,9 +122,16 @@ class DatabaseEventsHandler(Object):
             logger.info("Relation changed event, updating relation data.")
 
         try:
-            self.manager.reconcile_mongo_users_and_dbs(
-                event.relation, relation_departing, relation_changed
-            )
+            if relation_departing:
+                # Both are no-ops for the other kind of relation, decided from peer data.
+                self.manager.remove_entity(event.relation.id)
+                self.manager.reconcile_mongo_users_and_dbs(event.relation, relation_departing=True)
+            elif self.dependent.state.is_entity_relation(event.relation):
+                self.manager.add_entity(event.relation)
+            else:
+                self.manager.reconcile_mongo_users_and_dbs(
+                    event.relation, relation_departing, relation_changed
+                )
         except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError) as e:
             # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
             # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
@@ -119,6 +140,13 @@ class DatabaseEventsHandler(Object):
             logger.error("Deferring _on_relation_event since: error=%r", e)
             event.defer()
             return
+
+    def _on_entity_permissions_changed(self, event: DatabaseEntityPermissionsChangedEvent) -> None:
+        """Handle a change of the requested entity permissions."""
+        logger.warning(
+            "Changing entity-permissions is not supported yet, the role of relation %s keeps its privileges.",
+            event.relation.id,
+        )
 
     # Checks:
     def pass_hook_checks(self, event: RelationEvent) -> bool:
