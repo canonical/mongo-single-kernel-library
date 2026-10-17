@@ -31,6 +31,11 @@ class ClusterStateKeys(str, Enum):
     USERNAME = "username"
     PASSWORD = "password"
     CLUSTER_ID = "cluster-id"
+    CLIENT_ENTITY_TYPE = "client-entity-type"
+    CLIENT_EXTRA_GROUP_ROLES = "client-extra-group-roles"
+    CLIENT_ENTITY_PERMISSIONS = "client-entity-permissions"
+    CLIENT_ENTITY_NAME = "client-entity-name"
+    ENTITY_NAME = "entity-name"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -65,6 +70,47 @@ class ClusterState(AbstractRelationState[Data]):
     @database.setter
     def database(self, value: str):
         self.update({ClusterStateKeys.DATABASE.value: value})
+
+    @property
+    def client_entity_type(self) -> str:
+        """Return the entity type of the client request relayed in the databag."""
+        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_TYPE.value, "")
+
+    @client_entity_type.setter
+    def client_entity_type(self, value: str):
+        self.update({ClusterStateKeys.CLIENT_ENTITY_TYPE.value: value})
+
+    @property
+    def client_extra_group_roles(self) -> str:
+        """Return the extra group roles of the client request relayed in the databag."""
+        return self.relation_data.get(ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value, "")
+
+    @client_extra_group_roles.setter
+    def client_extra_group_roles(self, value: str):
+        self.update({ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value: value})
+
+    @property
+    def client_entity_permissions(self) -> str:
+        """Return the entity permissions of the client request relayed in the databag."""
+        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value, "")
+
+    @client_entity_permissions.setter
+    def client_entity_permissions(self, value: str):
+        self.update({ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value: value})
+
+    @property
+    def client_entity_name(self) -> str:
+        """Return the entity name of the client request relayed in the databag."""
+        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_NAME.value, "")
+
+    @client_entity_name.setter
+    def client_entity_name(self, value: str):
+        self.update({ClusterStateKeys.CLIENT_ENTITY_NAME.value: value})
+
+    @property
+    def entity_name(self) -> str:
+        """Return the entity name published by the config-server."""
+        return self.relation_data.get(ClusterStateKeys.ENTITY_NAME.value, "")
 
     @property
     def keyfile(self) -> str:
