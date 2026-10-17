@@ -67,6 +67,7 @@ from single_kernel_mongo.state.config_server_state import (
     UnitShardingComponentState,
 )
 from single_kernel_mongo.state.ldap_state import LdapState
+from single_kernel_mongo.state.oauth_state import OAuthState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
@@ -131,6 +132,7 @@ class CharmState(Object, AbstractStatusesState):
         self.secrets = SecretCache(charm)
         self.peer_relation_name = charm.peer_rel_name.value
         self.ldap_peer_relation_name = PeerRelationNames.LDAP_PEERS.value
+        self.oauth_peer_relation_name = PeerRelationNames.OAUTH_PEERS.value
         self.statuses_relation_name = PeerRelationNames.STATUS_PEERS.value
 
         self.statuses = StatusesState(self, self.statuses_relation_name)
@@ -147,6 +149,10 @@ class CharmState(Object, AbstractStatusesState):
         self.ldap_peer_interface = DataPeerData(
             self.model,
             self.ldap_peer_relation_name,
+        )
+        self.oauth_peer_interface = DataPeerData(
+            self.model,
+            self.oauth_peer_relation_name,
         )
 
         self.paths = MongoPaths(self.charm_role)
@@ -183,6 +189,11 @@ class CharmState(Object, AbstractStatusesState):
     def ldap_peer_relation(self) -> Relation | None:
         """The LDAP peer relation."""
         return self.model.get_relation(self.ldap_peer_relation_name)
+
+    @property
+    def oauth_peer_relation(self) -> Relation | None:
+        """The OAuth peer relation."""
+        return self.model.get_relation(self.oauth_peer_relation_name)
 
     @property
     def peers_units(self) -> set[Unit]:
@@ -257,6 +268,11 @@ class CharmState(Object, AbstractStatusesState):
     def ldap_cert_relation(self) -> Relation | None:
         """The certificate transfer relation for LDAP if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.LDAP_CERT.value)
+
+    @property
+    def oauth_cert_relation(self) -> Relation | None:
+        """The certificate transfer relation for OAuth if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.OAUTH_CERT.value)
 
     @property
     def vault_relation(self) -> Relation | None:
@@ -369,6 +385,7 @@ class CharmState(Object, AbstractStatusesState):
                 ClusterStateKeys.INT_CA_SECRET.value,
                 ClusterStateKeys.EXT_CA_SECRET.value,
                 ClusterStateKeys.CLUSTER_ID.value,
+                ClusterStateKeys.OAUTH_CA_SECRET.value,
             ],
         )
 
@@ -397,6 +414,16 @@ class CharmState(Object, AbstractStatusesState):
             self.charm,
             relation=self.ldap_peer_relation,
             data_interface=self.ldap_peer_interface,
+            component=self.model.app,
+        )
+
+    @property
+    def oauth(self) -> OAuthState:
+        """A view of the OAuth state from the oauth-peers relation."""
+        return OAuthState(
+            self.charm,
+            relation=self.oauth_peer_relation,
+            data_interface=self.oauth_peer_interface,
             component=self.model.app,
         )
 

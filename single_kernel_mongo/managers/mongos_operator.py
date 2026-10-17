@@ -64,6 +64,7 @@ from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.oauth import OAuthManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
@@ -170,6 +171,10 @@ class MongosOperator(OperatorProtocol, Object):
             ExternalRequirerRelations.LDAP,
             ExternalRequirerRelations.LDAP_CERT,
         )
+
+        # OAuth Manager without relations: routers get the CA bundle from the config-server.
+        self.oauth_manager = OAuthManager(self, self.state, self.substrate, with_relations=False)
+
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
         pod_name = self.model.unit.name.replace("/", "-")
@@ -251,8 +256,9 @@ class MongosOperator(OperatorProtocol, Object):
         for internal in [True, False]:
             self.tls_manager.push_tls_files_to_workload(internal)
 
-        # Save LDAP certificates
+        # Save LDAP and OAuth certificates
         self.ldap_manager.save_certificates(self.state.ldap.chain)
+        self.oauth_manager.sync_certificate_files()
 
         # Setup systemd overrides to prevent mongos/mongodb from cutting connections
         self.setup_systemd_overrides()

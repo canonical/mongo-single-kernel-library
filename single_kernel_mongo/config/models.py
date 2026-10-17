@@ -167,6 +167,15 @@ class LdapState(Enum):
     ACTIVE = auto()
 
 
+class OAuthIntegrationState(Enum):
+    """OAuth integration state that can be mapped to a status."""
+
+    EMPTY = auto()
+    WRONG_ROLE = auto()
+    INVALID_CERTS = auto()
+    ACTIVE = auto()
+
+
 class BackupState(Enum):
     """Backup state that can be mapped to a status."""
 
