@@ -63,7 +63,9 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedLogRotateUser,
     CharmedOperatorUser,
     CharmedStatsUser,
+    DBPrivilege,
     MongoDBUser,
+    RolePrivilege,
     roles_for_database,
     same_role_definition,
 )
@@ -439,8 +441,9 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         The role is created in `admin` under the requested name, with the requested
         privileges, inheriting the requested charm roles on the requested database. Only
         the entity name is published to the requester. A relation now requesting another
-        name gets its previous role dropped first. An existing role is adopted only when it
-        has the requested definition and no other relation recorded it: a hook
+        name gets its previous role dropped first, and so does a forwarded relation now
+        requesting another definition under the same name. An existing role is adopted only
+        when it has the requested definition and no other relation recorded it: a hook
         failing after `createRole` leaves it without a record. An invalid request or a role
         MongoDB refuses is reported with a Blocked status. A write concern error means
         the role was created on the primary, so it is recorded like a created one.
@@ -470,12 +473,20 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         roles = roles_for_database(entity.database, entity.extra_group_roles)
         managed_entities = self.state.app_peer_data.managed_entities
         recorded = managed_entities.get(relation.id)
-        if recorded == name:
+        # Through a VM mongos, a replacement client may forward the same name with another
+        # definition on the same cluster relation: it must not inherit the previous role.
+        redefined = (
+            entity.forwarded and recorded == name and self._role_redefined(name, privileges, roles)
+        )
+        if recorded == name and not redefined:
             logger.info("Role %s of relation %s already created, skipping.", name, relation.id)
             return
         if recorded:
             logger.info(
-                "Relation %s now requests role %s instead of %s.", relation.id, name, recorded
+                "Relation %s now requests role %s with another name or definition than %s.",
+                relation.id,
+                name,
+                recorded,
             )
             self.remove_entity(relation.id)
             managed_entities = self.state.app_peer_data.managed_entities
@@ -531,11 +542,20 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         self.state.app_peer_data.managed_entities = managed_entities
         entity.entity_name = name
 
+    def _role_redefined(
+        self, name: str, privileges: list[RolePrivilege], roles: list[DBPrivilege]
+    ) -> bool:
+        """Whether the role `name` exists with another definition than the given one."""
+        with MongoConnection(self.state.mongo_config) as mongo:
+            existing = mongo.get_role(name)
+        return existing is not None and not same_role_definition(existing, privileges, roles)
+
     def remove_entity(self, relation_id: int) -> None:
         """Drops the MongoDB role this application created for the relation.
 
         Decided from the peer data only: the relation data is not readable once the
-        relation is broken.
+        relation is broken. On a cluster relation still there, whose mongos units are gone,
+        the published entity name is withdrawn too.
 
         Args:
             relation_id: The id of the relation the role was created for.
@@ -553,6 +573,9 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             logger.info("Drop role %s of relation %s", name, relation_id)
             mongo.drop_role(name)
         self.state.app_peer_data.managed_entities = managed_entities
+        for relation in self.state.cluster_relations:
+            if relation.id == relation_id:
+                self.state.entity_state(relation).entity_name = ""
 
     def update_app_relation_data(self, relation: Relation) -> None:
         """Helper function to update this application relation data."""

@@ -36,7 +36,7 @@ from single_kernel_mongo.config.relations import (
     PeerRelationNames,
     RelationNames,
 )
-from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -49,6 +49,7 @@ from single_kernel_mongo.exceptions import (
     ClusterTLSError,
     ContainerNotReadyError,
     DeferrableError,
+    InvalidEntityRequestError,
     InvalidLdapStateError,
     MissingConfigServerError,
     UpgradeInProgressError,
@@ -69,6 +70,7 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.entity_state import EntityStateKeys
 from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
@@ -397,6 +399,7 @@ class MongosOperator(OperatorProtocol, Object):
         First, as always we ensure the expose external value is valid.
         Then we ensure the integration to config server before doing anything else.
         We proceed to update client connections if needed and renew certificates as well if needed.
+        Finally, a mongos-k8s router reconciles the roles requested by its clients.
         """
         if self.can_self_heal():
             # In case any information was changed, we proceed to update the
@@ -412,6 +415,11 @@ class MongosOperator(OperatorProtocol, Object):
             # We first check if we need a refresh to prevent useless restarts.
             if self.substrate == Substrates.K8S and self.tls_manager.is_waiting_for_a_cert():
                 self.tls_events.refresh_certificates()
+
+            # Create the roles requested earlier and drop the roles of removed relations. Last, so
+            # that an error in the steps above cannot fail the hook after a role is created, which
+            # would discard its record while the role stays in MongoDB.
+            self.reconcile_entities()
 
     @override
     def new_peer(self) -> None:
@@ -570,7 +578,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     def remove_connection_info(self) -> None:
         """Deletes the information from the client databag."""
-        for relation in self.state.client_relations:
+        for relation in self.state.user_relations:
             data_interface = DatabaseProviderData(
                 self.model,
                 relation.name,
@@ -583,21 +591,48 @@ class MongosOperator(OperatorProtocol, Object):
         """Actually shares the configuration according to the substrate."""
         match self.substrate:
             case Substrates.VM:
+                # Mirrored here too, so that a request of a client integrated before the
+                # config-server, or kept across a re-integration, reaches the config-server,
+                # and a clear that failed or was missed converges.
+                for relation in self.state.client_relations:
+                    self._forward_entity_request(relation)
                 # We can't build the config if those are missing so we get it beforehand.
                 username, password = self.state.get_user_credentials()
                 if not username or not password:
+                    logger.info("Credentials not received yet, not sharing them with clients.")
                     return
                 # We'll always have only one client relation as VM because
-                # we're a subordinate charm, so this loop will run at most once.
-                # For consistency however it's easier to "just" loop on the
-                # `client_relations` method.
-                for relation in self.state.client_relations:
+                # we're a subordinate charm, so these loops will run at most once
+                # in total. For consistency however it's easier to "just" loop on
+                # the `user_relations` and `entity_relations` properties.
+                for relation in self.state.user_relations:
                     self.mongo_manager.update_app_relation_data_for_config(
                         relation, self.state.mongos_config
                     )
+                for relation in self.state.entity_relations:
+                    self._share_entity_name(relation)
             case Substrates.K8S:
-                for relation in self.state.client_relations:
+                for relation in self.state.user_relations:
                     self.mongo_manager.update_app_relation_data(relation)
+
+    def _share_entity_name(self, relation: Relation) -> None:
+        """Publishes to the client the name of the role created by the config-server.
+
+        Args:
+            relation: The client relation carrying the entity request.
+        """
+        cluster = self.state.cluster
+        name = cluster.entity_name
+        if not name or name != cluster.client_entity_name:
+            # Right after a new request, the config-server may still show the previous name.
+            logger.info(
+                "The config-server has not answered the entity request of relation %s yet.",
+                relation.id,
+            )
+            return
+        entity = self.state.entity_state(relation)
+        if entity.entity_name != name:
+            entity.entity_name = name
 
     def update_proxy_connection(self, relation: Relation):
         """Shares credentials to the client and opens the port if necessary."""
@@ -635,6 +670,93 @@ class MongosOperator(OperatorProtocol, Object):
 
         if external_connectivity:
             self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT.value)
+
+        self._forward_entity_request(relation)
+
+    def _forward_entity_request(self, relation: Relation) -> None:
+        """Mirrors the entity request of the client on the cluster relation.
+
+        A VM mongos cannot create roles, its config-server creates them. The request
+        fields, the name included, are copied as raw strings under `client-` prefixed keys,
+        each written when different. A relation without a valid request clears them, unless
+        its role exists (its name is published) or another client relation requests an
+        entity, so that the config-server drops the role of a previous client instead of
+        serving it to one that did not ask. The request is validated first, which resolves
+        the name: an invalid request, or one whose secret cannot be read, is logged and
+        reported with a Blocked status here. A removed relation changes nothing: the
+        config-server drops the role at its next update-status once the mongos units, which
+        vanish with the client relation, are gone.
+
+        Args:
+            relation: The client relation carrying the entity request.
+        """
+        if not relation.active:
+            logger.info("Relation %s is being removed, not mirroring its request.", relation.id)
+            return
+        if not self.state.mongos_cluster_relation:
+            logger.info(
+                "Not forwarding the entity request of relation %s: no config-server integration.",
+                relation.id,
+            )
+            return
+        entity = self.state.entity_state(relation)
+        entity_type = extra_group_roles = permissions = name = ""
+        if not entity.requested:
+            logger.debug("Relation %s does not request an entity.", relation.id)
+        else:
+            try:
+                entity.validate()
+                name = entity.name
+                entity_type = entity.entity_type
+                extra_group_roles = entity.field(EntityStateKeys.EXTRA_GROUP_ROLES)
+                permissions = entity.field(EntityStateKeys.ENTITY_PERMISSIONS)
+            except InvalidEntityRequestError as e:
+                logger.error("Cannot forward the entity request of relation %s: %s", relation.id, e)
+                self.state.statuses.add(
+                    MongodStatuses.INVALID_ENTITY_REQUEST.value, scope="app", component=self.name
+                )
+        # Kept while the role of this relation exists, its name published (an invalid change
+        # of an answered request), or while another client relation requests an entity.
+        if not name and (
+            entity.entity_name
+            or any(other.id != relation.id for other in self.state.entity_relations)
+        ):
+            logger.info(
+                "Keeping the forwarded entity request: the role of relation %s exists or another "
+                "client relation requests one.",
+                relation.id,
+            )
+            return
+
+        # An empty value deletes the key.
+        cluster = self.state.cluster
+        if cluster.client_entity_type != entity_type:
+            cluster.client_entity_type = entity_type
+        if cluster.client_extra_group_roles != extra_group_roles:
+            cluster.client_extra_group_roles = extra_group_roles
+        if cluster.client_entity_permissions != permissions:
+            cluster.client_entity_permissions = permissions
+        if cluster.client_entity_name != name:
+            cluster.client_entity_name = name
+
+    @override
+    def reconcile_entities(self) -> None:
+        """Reconciles the entity roles on the leader of a mongos-k8s router only.
+
+        The config-server creates the roles of a VM mongos.
+        """
+        if not self.charm.unit.is_leader():
+            logger.debug("Not reconciling entities, only the leader manages them.")
+            return
+        if self.substrate != Substrates.K8S:
+            logger.debug(
+                "Not reconciling entities, VM mongos roles are created by the config-server."
+            )
+            return
+        if not self.state.has_credentials():
+            logger.info("Not reconciling entities, credentials not received yet.")
+            return
+        super().reconcile_entities()
 
     # BEGIN: Helpers
     def update_k8s_external_services(self):
@@ -748,7 +870,19 @@ class MongosOperator(OperatorProtocol, Object):
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name).root
+            statuses = self.state.statuses.get(scope=scope, component=self.name).root
+            if scope == "app" and self.substrate == Substrates.K8S:
+                # `add_entity` stores its event-time statuses under the mongo manager.
+                statuses = statuses + [
+                    status
+                    for status in self.mongo_manager.get_statuses("app")
+                    if status not in statuses
+                ]
+            return statuses
+
+        if scope == "app" and self.substrate == Substrates.K8S:
+            # Cleared on every recompute, even one returning before re-deriving them.
+            self.state.statuses.clear("app", component=self.mongo_manager.name)
 
         if (
             self.substrate == Substrates.K8S
@@ -778,6 +912,20 @@ class MongosOperator(OperatorProtocol, Object):
             # if TLS is misconfigured we will get redherrings on the remaining messages
             charm_statuses += statuses
             return charm_statuses
+
+        # A mongos-k8s router creates the roles requested by its clients.
+        if scope == "app" and self.substrate == Substrates.K8S and self.state.db_initialised:
+            charm_statuses += self.mongo_manager.get_statuses("app", recompute=True)
+
+        # A VM mongos forwards them, unless they are invalid.
+        if scope == "app" and self.substrate == Substrates.VM:
+            for relation in self.state.entity_relations:
+                try:
+                    self.state.entity_state(relation).validate()
+                except InvalidEntityRequestError as e:
+                    logger.warning("Invalid entity request on relation %s: %s", relation.id, e)
+                    charm_statuses.append(MongodStatuses.INVALID_ENTITY_REQUEST.value)
+                    break
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
