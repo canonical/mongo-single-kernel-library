@@ -1306,6 +1306,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         # cluster nodes.
         self.mongo_manager.set_election_priority(priority=1)
 
+        # Create the roles requested earlier and drop the roles of removed relations. Last, so
+        # that an error in the steps above cannot fail the hook after a role is created, which
+        # would discard its record while the role stays in MongoDB.
+        self.reconcile_entities()
+
     def update_ips_in_databag(self) -> None:
         """Sets all the ips in the databag to be used by the leader."""
         self.state.unit_peer_data.database_address = ip_addresses(
@@ -1324,6 +1329,14 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
         self.process_unremoved_units()
         self.update_related_hosts()
+
+    @override
+    def reconcile_entities(self) -> None:
+        """Reconciles the entity roles once the database is initialised."""
+        if not self.state.db_initialised:
+            logger.info("Not reconciling entities, db is not initialised.")
+            return
+        super().reconcile_entities()
 
     def process_unremoved_units(self) -> None:
         """Remove units from replica set."""
@@ -1359,7 +1372,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def update_related_hosts(self) -> None:
         """Update the app relations that need to be made aware of the new set of hosts."""
         if self.state.is_role(MongoDBRoles.REPLICATION):
-            for relation in self.state.client_relations:
+            for relation in self.state.user_relations:
                 self.mongo_manager.update_app_relation_data(relation)
             return
 
@@ -1625,7 +1638,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         This function first initialises the replica set, and then the three charm users.
         Finally, if there are any integrated clients (direct clients in the
         case of replication, or mongos clients in case of config-server),
-        oversee the relation to create the associated users.
+        oversee the relation to create the associated users and entity roles.
         At the very end, it sets the `db_initialised` flag to True.
         """
         if self.state.db_initialised:
@@ -1641,11 +1654,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         logger.info("Manage client relation users")
         try:
             if self.state.is_role(MongoDBRoles.REPLICATION):
-                for relation in self.state.client_relations:
+                for relation in self.state.user_relations:
                     self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
             elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 for relation in self.state.cluster_relations:
                     self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            for relation in self.state.entity_relations:
+                self.mongo_manager.add_entity(relation)
         except DatabaseRequestedHasNotRunYetError:
             logger.info(
                 "Database requested has not run yet. Users and DBs will be reconciled later."

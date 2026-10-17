@@ -29,6 +29,7 @@ from pymongo.errors import (
     OperationFailure,
     PyMongoError,
     ServerSelectionTimeoutError,
+    WriteConcernError,
 )
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
@@ -39,6 +40,7 @@ from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
     FailedToElectNewPrimaryError,
+    InvalidEntityRequestError,
     MissingCredentialsError,
     SetPasswordError,
 )
@@ -53,6 +55,7 @@ from single_kernel_mongo.utils.mongo_config import (
     MongoConfiguration,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
     AuthRestrictions,
@@ -61,6 +64,8 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedOperatorUser,
     CharmedStatsUser,
     MongoDBUser,
+    roles_for_database,
+    same_role_definition,
 )
 from single_kernel_mongo.utils.network_helpers import (
     cidrs,
@@ -428,6 +433,127 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             managed_users.remove(username)
         self.state.app_peer_data.managed_users = managed_users
 
+    def add_entity(self, relation: Relation) -> None:
+        """Creates the MongoDB role requested over the relation, once.
+
+        The role is created in `admin` under the requested name, with the requested
+        privileges, inheriting the requested charm roles on the requested database. Only
+        the entity name is published to the requester. A relation now requesting another
+        name gets its previous role dropped first. An existing role is adopted only when it
+        has the requested definition and no other relation recorded it: a hook
+        failing after `createRole` leaves it without a record. An invalid request or a role
+        MongoDB refuses is reported with a Blocked status. A write concern error means
+        the role was created on the primary, so it is recorded like a created one.
+
+        Args:
+            relation: The relation carrying the entity request.
+
+        Raises:
+            PyMongoError: on a connection or authentication failure, to retry later.
+        """
+        entity = self.state.entity_state(relation)
+        if not entity.requested:
+            logger.info("Relation %s does not request an entity, skipping.", relation.id)
+            return
+
+        try:
+            entity.validate()
+        except InvalidEntityRequestError as e:
+            logger.error("Invalid entity request on relation %s: %s", relation.id, e)
+            self.state.statuses.add(
+                MongodStatuses.INVALID_ENTITY_REQUEST.value, scope="app", component=self.name
+            )
+            return
+
+        name = entity.name
+        privileges = entity.permissions
+        roles = roles_for_database(entity.database, entity.extra_group_roles)
+        managed_entities = self.state.app_peer_data.managed_entities
+        recorded = managed_entities.get(relation.id)
+        if recorded == name:
+            logger.info("Role %s of relation %s already created, skipping.", name, relation.id)
+            return
+        if recorded:
+            logger.info(
+                "Relation %s now requests role %s instead of %s.", relation.id, name, recorded
+            )
+            self.remove_entity(relation.id)
+            managed_entities = self.state.app_peer_data.managed_entities
+
+        with MongoConnection(self.state.mongo_config) as mongo:
+            existing = mongo.get_role(name)
+            if existing and (
+                name in managed_entities.values()
+                or not same_role_definition(existing, privileges, roles)
+            ):
+                logger.error(
+                    "Role %s already exists with another definition or for another relation, "
+                    "not adopting it.",
+                    name,
+                )
+                self.state.statuses.add(
+                    MongodStatuses.ENTITY_ROLE_NOT_CREATED.value, scope="app", component=self.name
+                )
+                return
+
+            if existing:
+                logger.info("Adopt the existing role %s for relation %s", name, relation.id)
+            else:
+                logger.info("Create role %s for relation %s", name, relation.id)
+                try:
+                    mongo.create_role(name, privileges, roles)
+                except WriteConcernError as e:
+                    # A subclass of OperationFailure: the role exists, only its replication
+                    # was not acknowledged in time. Not recording it would leak it.
+                    logger.warning(
+                        "Entity role %s was created with a write concern error: %r", name, e
+                    )
+                except OperationFailure as e:
+                    if e.code in (
+                        MongoErrorCodes.UNAUTHORIZED,
+                        MongoErrorCodes.AUTHENTICATION_FAILED,
+                    ):
+                        raise
+                    logger.error(
+                        "MongoDB refused to create role %s for relation %s: %s",
+                        name,
+                        relation.id,
+                        e,
+                    )
+                    self.state.statuses.add(
+                        MongodStatuses.ENTITY_ROLE_NOT_CREATED.value,
+                        scope="app",
+                        component=self.name,
+                    )
+                    return
+
+        managed_entities[relation.id] = name
+        self.state.app_peer_data.managed_entities = managed_entities
+        entity.entity_name = name
+
+    def remove_entity(self, relation_id: int) -> None:
+        """Drops the MongoDB role this application created for the relation.
+
+        Decided from the peer data only: the relation data is not readable once the
+        relation is broken.
+
+        Args:
+            relation_id: The id of the relation the role was created for.
+
+        Raises:
+            PyMongoError: if the role cannot be dropped, the record is kept to retry later.
+        """
+        managed_entities = self.state.app_peer_data.managed_entities
+        name = managed_entities.pop(relation_id, None)
+        if name is None:
+            logger.info("No role was created for relation %s, nothing to drop.", relation_id)
+            return
+
+        with MongoConnection(self.state.mongo_config) as mongo:
+            logger.info("Drop role %s of relation %s", name, relation_id)
+            mongo.drop_role(name)
+        self.state.app_peer_data.managed_entities = managed_entities
+
     def update_app_relation_data(self, relation: Relation) -> None:
         """Helper function to update this application relation data."""
         if not self.charm.unit.is_leader():
@@ -575,7 +701,7 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             return [MongodStatuses.WAITING_REPL_SET_INIT.value]
 
         if scope == "app":
-            return []
+            return self._entity_statuses()
 
         if not self.mongod_ready():
             return [MongodStatuses.NOT_READY.value]
@@ -618,6 +744,25 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         except MissingCredentialsError as e:
             logger.warning("Missing credentials: %s", e, exc_info=True)
             return [MongodStatuses.WAITING_CREDENTIALS.value]
+
+    def _entity_statuses(self) -> list[StatusObject]:
+        """Returns the statuses of the entity requests, at most one of each kind."""
+        statuses: list[StatusObject] = []
+        managed_entities = self.state.app_peer_data.managed_entities
+        for relation in sorted(self.state.entity_relations, key=lambda relation: relation.id):
+            try:
+                self.state.entity_state(relation).validate()
+            except InvalidEntityRequestError as e:
+                logger.warning("Invalid entity request on relation %s: %s", relation.id, e)
+                status = MongodStatuses.INVALID_ENTITY_REQUEST.value
+            else:
+                if relation.id in managed_entities:
+                    continue
+                logger.warning("The role requested on relation %s is not created.", relation.id)
+                status = MongodStatuses.ENTITY_ROLE_NOT_CREATED.value
+            if status not in statuses:
+                statuses.append(status)
+        return statuses
 
     def get_leader_statuses(self) -> list[StatusObject]:
         """Returns statuses that juju leader can retrieve for mongo."""
