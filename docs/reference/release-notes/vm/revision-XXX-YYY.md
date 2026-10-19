@@ -10,10 +10,10 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 | Charm   | Architecture | Charm revision | Snap version | MongoDB version | Min. recommended Juju version |
 |-------- | ------------ | -------------- |------------- | --------------- | ----------------------------- |
-| MongoDB |   `amd64`    | XXX            |  320         |    8.0.28-12    |        3.6.29+                |
-| MongoDB |   `arm64`    | YYY            |  319         |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `amd64`    | ...            |  320         |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `arm64`    | ...            |  319         |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `amd64`    | XXX            |  358         |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `arm64`    | YYY            |  359         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `amd64`    | ...            |  358         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `arm64`    | ...            |  359         |    8.0.28-12    |        3.6.29+                |
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 

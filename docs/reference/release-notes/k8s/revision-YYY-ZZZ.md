@@ -10,14 +10,14 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 | Charm   | Architecture | Charm revision | OCI Image revision* | MongoDB version | Min. recommended Juju version |
 |-------- | ------------ | -------------- |-------------------- | --------------- | ----------------------------- |
-| MongoDB |   `amd64`    | XXX            |  49                 |    8.0.28-12    |        3.6.29+                |
-| MongoDB |   `arm64`    | YYY            |  49                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `amd64`    | ...            |  49                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `arm64`    | ...            |  49                 |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `amd64`    | XXX            |  50                 |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `arm64`    | YYY            |  50                 |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `amd64`    | ...            |  20                 |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `arm64`    | ...            |  20                 |    8.0.28-12    |        3.6.29+                |
 
 \*OCI image resources:
 
-* `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:f9dff72533f5b2a8fa54784b94e06adbf1eec77dd0a37b97ad5250af46104e7f`
+* `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:4f3fda68dc0739baf3e8bb29d326ae94ff82db78562c9a5dc647e32ad84c047b`
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
