@@ -4,6 +4,7 @@
 
 """Manager for handling Mongo configuration."""
 
+import json
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -400,10 +401,30 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
-                self.ldap_parameters,
+                self.authentication_parameters,
                 self.vault_parameters,
             ],
         )
+
+    @property
+    def authentication_parameters(self) -> dict[str, Any]:
+        """Preserve enabled authentication while incompatible setups coexist."""
+        if not self.state.authentication_conflict:
+            return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
+        current = safe_load("\n".join(self.workload.read(self.file))) or {}
+        security = current.get("security", {})
+        parameters = current.get("setParameter", {})
+        return {
+            "security": {
+                key: security[key] for key in ("authorization", "ldap") if key in security
+            },
+            "setParameter": {
+                key: value
+                for key, value in parameters.items()
+                if key in ("authenticationMechanisms", "oidcIdentityProviders")
+                or key.startswith("ldap")
+            },
+        }
 
     @property
     @abstractmethod
@@ -422,6 +443,37 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     def vault_parameters(self) -> dict[str, Any]:
         """The vault parameters."""
         ...
+
+    @property
+    @abstractmethod
+    def oauth_parameters(self) -> dict[str, Any]:
+        """The OAuth parameters for this workload."""
+        ...
+
+    @staticmethod
+    def _build_oauth_parameters(issuer: str | None) -> dict[str, Any]:
+        """Build the shared OIDC settings for an issuer."""
+        if not issuer:
+            return {}
+        return {
+            "security": {"authorization": "enabled"},
+            "setParameter": {
+                "authenticationMechanisms": "SCRAM-SHA-256,MONGODB-OIDC",
+                "oidcIdentityProviders": json.dumps(
+                    [
+                        {
+                            "issuer": issuer,
+                            "audience": "mongodb",
+                            "authNamePrefix": "oauth",
+                            "principalName": "sub",
+                            "useAuthorizationClaim": True,
+                            "authorizationClaim": "groups",
+                            "supportsHumanFlows": False,
+                        }
+                    ]
+                ),
+            },
+        }
 
     @property
     def binding_ips(self) -> dict[str, Any]:
@@ -690,12 +742,25 @@ class MongoDBConfigManager(MongoConfigManager):
             )
         return ldap_params
 
+    @property
+    @override
+    def oauth_parameters(self) -> dict[str, Any]:
+        """Render OIDC settings for an OAuth-enabled replica set."""
+        if self.state.app_peer_data.role != MongoDBRoles.REPLICATION:
+            return {}
+        return self._build_oauth_parameters(self.state.app_peer_data.oauth_issuer)
+
     @override
     def build_config(self) -> dict[str, Any]:
         base = super().build_config()
         return reduce(
             always_merger.merge,
-            [base, self.replset_option, self.role_parameter, self.db_path_argument],
+            [
+                base,
+                self.replset_option,
+                self.role_parameter,
+                self.db_path_argument,
+            ],
         )
 
 
@@ -711,6 +776,12 @@ class MongosConfigManager(MongoConfigManager):
         self.file = self.workload.paths.mongos_config_file
         self.log_file = self.workload.paths.mongos_log_file
         self.audit_file = self.workload.paths.mongos_audit_file
+
+    @property
+    @override
+    def oauth_parameters(self) -> dict[str, Any]:
+        """Render OIDC settings from the config server's cluster relation."""
+        return self._build_oauth_parameters(self.state.cluster.oauth_issuer)
 
     @property
     def config_server_db_parameter(self) -> dict[str, Any]:

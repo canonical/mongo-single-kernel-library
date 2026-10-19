@@ -648,6 +648,26 @@ class UpgradeStatuses(Enum):
     )
 
 
+class AuthenticationStatuses(Enum):
+    """Statuses shared by the mutually exclusive LDAP and OIDC integrations."""
+
+    LDAP_OIDC_CONFLICT = StatusObject(
+        status="blocked",
+        message="LDAP and OIDC are mutually exclusive.",
+        action="Remove either the LDAP setup or the OAuth setup.",
+    )
+
+
+class OAuthStatuses(Enum):
+    """OAuth integration statuses."""
+
+    INVALID_OAUTH_REL_ON_SHARD = StatusObject(
+        status="blocked",
+        message="Cannot integrate OIDC with shard.",
+        action="Remove the oauth relation from shard.",
+    )
+
+
 class LdapStatuses(Enum):
     """Ldap Statuses."""
 

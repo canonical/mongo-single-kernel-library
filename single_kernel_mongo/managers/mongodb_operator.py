@@ -76,6 +76,7 @@ from single_kernel_mongo.events.backups import BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
+from single_kernel_mongo.events.oauth import OAuthEventHandler
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
@@ -116,6 +117,7 @@ from single_kernel_mongo.managers.config import (
 )
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.oauth import OAuthManager
 from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
@@ -309,6 +311,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
         self.ldap_events = LDAPEventHandler(self)
+        self.oauth_manager = OAuthManager(self, self.state)
+        self.oauth_events = OAuthEventHandler(self)
 
         # Listens after all other events to have the latest up to date data.
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
@@ -508,6 +512,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.s3_backup_manager,
             self.gcs_backup_manager,
             self.ldap_manager,
+            self.oauth_manager,
         )
 
     # BEGIN: Handlers.
@@ -819,6 +824,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def _handle_ldap_config_changes(self):
         """Helpful method to handle the ldap changes and a restart if necessary."""
+        if self.state.authentication_conflict:
+            return
         # Store in the databag so we never miss it.
         if self.config.ldap_user_to_dn_mapping:
             self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping

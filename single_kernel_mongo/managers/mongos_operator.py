@@ -44,6 +44,7 @@ from single_kernel_mongo.core.structured_config import ExposeExternal, MongosCha
 from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
+from single_kernel_mongo.events.oauth import OAuthEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ClusterTLSError,
@@ -64,6 +65,7 @@ from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.oauth import OAuthManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
@@ -179,6 +181,8 @@ class MongosOperator(OperatorProtocol, Object):
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
         self.ldap_events = LDAPEventHandler(self)
+        self.oauth_manager = OAuthManager(self, self.state)
+        self.oauth_events = OAuthEventHandler(self)
 
         if self.refresh is not None and not self.refresh.next_unit_allowed_to_refresh:
             if self.refresh.in_progress:
@@ -226,7 +230,13 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
-        return (self, self.tls_manager, self.ldap_manager, self.upgrades_status_manager)
+        return (
+            self,
+            self.tls_manager,
+            self.ldap_manager,
+            self.upgrades_status_manager,
+            self.oauth_manager,
+        )
 
     @property
     @override

@@ -22,6 +22,7 @@ class AppPeerDataKeys(str, Enum):
     # MongoDB
     MANAGED_USERS_KEY = "managed-users-key"
     DB_INITIALISED = "db_initialised"
+    OAUTH_ISSUER = "oauth-issuer"
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
     MONGOS_HOSTS = "mongos_hosts"
@@ -93,6 +94,15 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def is_role(self, role_name: str) -> bool:
         """Checks if the application is running in the provided role."""
         return self.role == role_name
+
+    @property
+    def oauth_issuer(self) -> str | None:
+        """The OAuth issuer shared with all replica-set units."""
+        return self.relation_data.get(AppPeerDataKeys.OAUTH_ISSUER.value) or None
+
+    @oauth_issuer.setter
+    def oauth_issuer(self, value: str | None) -> None:
+        self.update({AppPeerDataKeys.OAUTH_ISSUER.value: value or ""})
 
     @property
     def db_initialised(self) -> bool:

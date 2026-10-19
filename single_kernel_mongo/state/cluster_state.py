@@ -28,6 +28,7 @@ class ClusterStateKeys(str, Enum):
     EXT_CA_SECRET = "ext-ca-secret"
     LDAP_USER_TO_DN_MAPPING = "ldap-user-to-dn-mapping"
     LDAP_HASH = "ldap-hash"
+    OAUTH_ISSUER = "oauth-issuer"
     USERNAME = "username"
     PASSWORD = "password"
     CLUSTER_ID = "cluster-id"
@@ -101,6 +102,11 @@ class ClusterState(AbstractRelationState[Data]):
     def ldap_user_to_dn_mapping(self) -> str | None:
         """Returns the userToDNMapping config option shared by the config-server."""
         return self.relation_data.get(ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value, None)
+
+    @property
+    def oauth_issuer(self) -> str | None:
+        """The OAuth issuer supplied by the config server."""
+        return self.relation_data.get(ClusterStateKeys.OAUTH_ISSUER.value) or None
 
     @property
     def ldap_hash(self) -> str | None:
