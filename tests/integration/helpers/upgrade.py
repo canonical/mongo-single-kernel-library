@@ -76,7 +76,9 @@ async def assert_successful_run_upgrade_sequence(
     if len(ops_test.model.applications[app_name].units) < 2:
         return
 
-    if "resume-refresh" not in ops_test.model.applications[app_name].status_message:
+    full_status = await ops_test.model.get_status()
+    status_message = full_status.applications[app_name].status.info or ""
+    if "resume-refresh" not in status_message:
         return
 
     logger.info(f"Calling resume-refresh for {app_name}")
