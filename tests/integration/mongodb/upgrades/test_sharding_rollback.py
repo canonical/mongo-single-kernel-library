@@ -6,7 +6,6 @@ import logging
 import time
 
 import jubilant
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
@@ -104,23 +103,16 @@ def test_rollback_on_config_server(
     )
 
     juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            CONFIG_SERVER_APP_NAME,
-            idle_period=60,
+        lambda status: (
+            are_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                idle_period=60,
+            )
+            and upgrade_incompatible(status, substrate, CONFIG_SERVER_APP_NAME, refresh_order[0])
         ),
         timeout=TIMEOUT,
     )
-
-    for attempt in Retrying(
-        reraise=True,
-        stop=stop_after_delay(TIMEOUT),
-        wait=wait_fixed(10),
-    ):
-        with attempt:
-            assert upgrade_incompatible(
-                juju, substrate, CONFIG_SERVER_APP_NAME, refresh_order[0]
-            ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
 
@@ -128,27 +120,29 @@ def test_rollback_on_config_server(
     refresh_with_juju(juju, CONFIG_SERVER_APP_NAME, "8/edge", charm_name=base_app_name)
 
     time.sleep(15)
+
     juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            CONFIG_SERVER_APP_NAME,
-            idle_period=60,
+        lambda status: (
+            are_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                idle_period=60,
+            )
+            and upgrade_incompatible(status, substrate, CONFIG_SERVER_APP_NAME, refresh_order[0])
         ),
         timeout=TIMEOUT,
     )
+    # will be marked "incompatible" if rollback is not to the same revision as initially
+    # deployed
+    logger.info("Rollback is blocked due to incompatibility")
 
-    if upgrade_incompatible(juju, substrate, CONFIG_SERVER_APP_NAME, refresh_order[0]):
-        # will be marked "incompatible" if rollback is not to the same revision as initially
-        # deployed
-        logger.info("Rollback is blocked due to incompatibility")
-
-        logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        force_refresh_task = juju.run(
-            refresh_order[0],
-            "force-refresh-start",
-            params={"check-compatibility": False, "check-workload-container": False},
-        )
-        assert force_refresh_task.return_code == 0, "action failed"
+    logger.info("Running `force-refresh-start` action with check-compatibility=false")
+    force_refresh_task = juju.run(
+        refresh_order[0],
+        "force-refresh-start",
+        params={"check-compatibility": False, "check-workload-container": False},
+    )
+    assert force_refresh_task.return_code == 0, "action failed"
 
     juju.wait(
         lambda status: are_agents_idle(

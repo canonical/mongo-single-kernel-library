@@ -70,18 +70,18 @@ def refresh_with_juju(juju: jubilant.Juju, app_name: str, channel: str, charm_na
 
 
 def upgrade_incompatible(
-    juju: jubilant.Juju, substrate: Substrate, app_name: str, unit_name: str
+    status: jubilant.Status, substrate: Substrate, app_name: str, unit_name: str
 ) -> bool:
     """Returns True if upgrade is incompatible."""
     if substrate == Substrate.lxd:
-        return "incompatible" in juju.status().apps.get(app_name).app_status.message
+        return "incompatible" in status.apps.get(app_name).app_status.message
     return unit_in_status(
-        juju.status(),
+        status,
         app_name,
         unit_name,
         UPGRADE_INCOMPATIBLE_STATUS,
     ) or unit_in_status(
-        juju.status(),
+        status,
         app_name,
         unit_name,
         MISSING_OCI_STATUS,
@@ -114,29 +114,31 @@ def assert_successful_run_upgrade_sequence(
     refresh_charm(juju, substrate, app_name, new_charm, mongod_resource)
 
     juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            app_name,
-            idle_period=60,
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=20,
+            )
+            and upgrade_incompatible(status, substrate, app_name, refresh_order[0])
         ),
         timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    if upgrade_incompatible(juju, substrate, app_name, refresh_order[0]):
-        logger.info("Upgrade is blocked due to incompatibility")
+    logger.info("Upgrade is blocked due to incompatibility")
 
-        logger.info(f"Continue refresh on unit {refresh_order[0]}")
-        logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        force_refresh_task = juju.run(
-            refresh_order[0],
-            "force-refresh-start",
-            params={
-                "check-compatibility": False,
-                "run-pre-refresh-checks": False,
-                "check-workload-container": False,
-            },
-        )
-        assert force_refresh_task.return_code == 0, "action failed"
+    logger.info(f"Continue refresh on unit {refresh_order[0]}")
+    logger.info("Running `force-refresh-start` action with check-compatibility=false")
+    force_refresh_task = juju.run(
+        refresh_order[0],
+        "force-refresh-start",
+        params={
+            "check-compatibility": False,
+            "run-pre-refresh-checks": False,
+            "check-workload-container": False,
+        },
+    )
+    assert force_refresh_task.return_code == 0, "action failed"
 
     juju.wait(
         lambda status: are_agents_idle(
