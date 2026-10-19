@@ -58,7 +58,6 @@ from single_kernel_mongo.config.models import (
 )
 from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
-from single_kernel_mongo.events.oauth import OAuthEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     RelationBrokenDuringScaleDownError,
@@ -76,7 +75,6 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.managers.ldap import LDAPManager
-    from single_kernel_mongo.managers.oauth import OAuthManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
     from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
@@ -114,12 +112,10 @@ class OperatorProtocol(
     mongo_manager: MongoManager
     upgrades_manager: MongoDBUpgradesManager
     upgrades_status_manager: MongoDBUpgradesStatusManager
-    oauth_manager: OAuthManager
     ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
-    oauth_events: OAuthEventHandler
     ldap_events: LDAPEventHandler
     sysctl_config: Config
     rollingops_manager: RollingOpsManager

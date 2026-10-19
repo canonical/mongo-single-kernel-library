@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from functools import cached_property
 from typing import TYPE_CHECKING
 
 from charmlibs.interfaces.oauth import ClientConfig, OAuthRequirer
@@ -18,7 +17,7 @@ from yaml import safe_load
 
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import AuthenticationStatuses, OAuthStatuses
+from single_kernel_mongo.config.statuses import AuthStatuses, OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -40,13 +39,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         self.charm = dependent.charm
         self.state = state
 
-    @cached_property
-    def oauth_requirer(self) -> OAuthRequirer:
-        """Create the requirer when a charm with an OAuth endpoint needs it."""
-        return OAuthRequirer(
+        self.oauth_requirer = OAuthRequirer(
             self.charm,
             client_config=ClientConfig(
-                redirect_uri=None,
+                # TODO: Remove the dummy URI once providers accept client_credentials
+                # registrations without redirect_uri. This grant does not use redirects.
+                redirect_uri="https://mongodb.invalid/oauth/callback",
                 audience=["mongodb"],
                 grant_types=["client_credentials"],
                 scope="openid",
@@ -58,12 +56,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Report unsupported OAuth relations using the shared status framework."""
         if scope == "unit" and self.state.authentication_conflict:
-            return [AuthenticationStatuses.LDAP_OIDC_CONFLICT.value]
+            return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
         if not recompute:
             return [
                 status
                 for status in self.state.statuses.get(scope=scope, component=self.name).root
-                if status != AuthenticationStatuses.LDAP_OIDC_CONFLICT.value
+                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
             ]
         if scope == "app":
             return []
@@ -79,10 +77,10 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             DeferrableFailedHookChecksError: The database is not initialised, Vault
                 is degraded, a refresh is in progress, or LDAP setup conflicts with OIDC.
         """
-        if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("Cannot integrate OAuth with shard.")
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if (
@@ -94,7 +92,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             raise DeferrableFailedHookChecksError("OAuth hooks are not supported during a refresh.")
 
     def configure(self) -> None:
-        """Store the provider issuer and request an asynchronous rolling restart."""
+        """Store the provider issuer and request an asynchronous rolling restart.
+
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
         self.assert_pass_hook_checks()
         if not (
             self.state.is_role(MongoDBRoles.REPLICATION)
@@ -111,7 +114,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         self.restart_when_ready()
 
     def remove(self) -> None:
-        """Remove the OAuth issuer and request an asynchronous rolling restart."""
+        """Remove the OAuth issuer and request an asynchronous rolling restart.
+
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
         self.assert_pass_hook_checks()
         if self.charm.unit.is_leader():
             self.state.app_peer_data.oauth_issuer = None
@@ -120,7 +128,11 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         self.restart_when_ready()
 
     def restart_when_ready(self) -> None:
-        """Request a rolling restart if the replica-set configuration has changed."""
+        """Request a rolling restart if the replica-set configuration has changed.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if self.state.authentication_conflict:
             return
         if not self.state.is_role(MongoDBRoles.REPLICATION):

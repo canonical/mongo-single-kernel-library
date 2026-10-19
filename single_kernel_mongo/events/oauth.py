@@ -15,11 +15,10 @@ from charmlibs.interfaces.oauth import (
     OAuthInfoRemovedEvent,
 )
 from charmlibs.rollingops import RollingOpsNoRelationError
-from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationEvent
+from ops.charm import RelationChangedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -27,7 +26,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.core.operator import OperatorProtocol
+    from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +34,11 @@ logger = logging.getLogger(__name__)
 class OAuthEventHandler(Object):
     """Dispatch OAuth relation events to the OAuth manager."""
 
-    def __init__(self, dependent: OperatorProtocol):
+    def __init__(self, dependent: MongoDBOperator):
         super().__init__(parent=dependent, key=ExternalRequirerRelations.OAUTH.value)
         self.dependent = dependent
         self.charm = dependent.charm
         self.manager = dependent.oauth_manager
-        # Mongos receives its issuer through cluster events and has no OAuth endpoint.
-        if ExternalRequirerRelations.OAUTH.value not in self.charm.meta.requires:
-            return
-        relation_events = self.charm.on[ExternalRequirerRelations.OAUTH.value]
-        self.framework.observe(relation_events.relation_created, self._on_relation_status_changed)
-        self.framework.observe(relation_events.relation_changed, self._on_relation_status_changed)
-        self.framework.observe(relation_events.relation_broken, self._on_relation_status_changed)
         self.framework.observe(
             self.manager.oauth_requirer.on.oauth_info_changed, self._on_oauth_info_changed
         )
@@ -62,17 +54,6 @@ class OAuthEventHandler(Object):
             self._on_peer_relation_changed,
         )
 
-    def _on_relation_status_changed(self, event: RelationEvent) -> None:
-        """Set or clear the blocked status as the OAuth relation changes."""
-        status = OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value
-        if isinstance(event, RelationBrokenEvent):
-            self.manager.state.statuses.delete(status, scope="unit", component=self.manager.name)
-            return
-        if status in self.manager.get_statuses(scope="unit", recompute=True):
-            self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
-        else:
-            self.manager.state.statuses.delete(status, scope="unit", component=self.manager.name)
-
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconcile the shared issuer on follower units."""
         if self.charm.unit.is_leader():
@@ -80,7 +61,7 @@ class OAuthEventHandler(Object):
         try:
             self.manager.restart_when_ready()
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
-            defer_event_with_info_log(logger, event, "oauth-peer-changed", str(err))
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
@@ -89,7 +70,7 @@ class OAuthEventHandler(Object):
         try:
             self.manager.configure()
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
-            defer_event_with_info_log(logger, event, "oauth-info-changed", str(err))
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
@@ -98,7 +79,7 @@ class OAuthEventHandler(Object):
         try:
             self.manager.remove()
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
-            defer_event_with_info_log(logger, event, "oauth-info-removed", str(err))
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 

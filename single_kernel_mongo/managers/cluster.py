@@ -75,7 +75,12 @@ class ClusterProvider(Object):
         self.data_interface = self.state.cluster_provider_data_interface
 
     def assert_pass_hook_checks(self, initial_event: bool = False) -> None:
-        """Runs the pre hook checks, raises if it fails."""
+        """Runs the pre hook checks, raises if it fails.
+        
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later.
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
@@ -211,7 +216,12 @@ class ClusterProvider(Object):
             )
 
     def update_oauth_issuer_to_mongos(self) -> None:
-        """Publish or remove the OAuth issuer on established mongos relations."""
+        """Publish or remove the OAuth issuer on established mongos relations.
+        
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later.
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
         self.assert_pass_hook_checks()
         issuer = self.state.app_peer_data.oauth_issuer
         for relation in self.state.cluster_relations:

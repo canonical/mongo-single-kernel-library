@@ -1,6 +1,7 @@
 import pathlib
 import socket
 from contextlib import nullcontext
+from functools import partial
 from pathlib import Path
 from platform import platform
 
@@ -13,6 +14,7 @@ from ops.hookcmds import Network
 from ops.testing import Context, Harness
 
 from tests.integration.helpers.types import Substrate
+from tests.unit.auth_scenario_helpers import mongo_state, mongos_state
 from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 CONFIG = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/config.yaml").read_text()))
@@ -376,3 +378,13 @@ def patched_getfqdn(mocker, substrate: Substrate):
             yield getfqdn
     else:
         yield
+
+
+@pytest.fixture
+def mongo_auth_state(mongodb_container):
+    return partial(mongo_state, mongodb_container)
+
+
+@pytest.fixture
+def mongos_auth_state(mongodb_container):
+    return partial(mongos_state, mongodb_container)
