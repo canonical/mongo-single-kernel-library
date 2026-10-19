@@ -2,6 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
 import shlex
 
@@ -25,6 +26,21 @@ MISSING_OCI_STATUS = StatusObject(
     status="blocked",
     message="`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`",
 )
+
+
+def get_resources(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, channel: str
+) -> dict[str, str] | None:
+    """Gets the resources for charm on a specific channel.
+
+    Returns None on VM charms.
+    """
+    if substrate == Substrate.lxd:
+        return None
+    channel_resources = json.loads(
+        juju.cli("charm-resources", app_name, "--channel", channel, "--format", "json")
+    )
+    return {resource["name"]: resource["revision"] for resource in channel_resources}
 
 
 @retry(

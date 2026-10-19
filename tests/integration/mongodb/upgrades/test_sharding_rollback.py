@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 import logging
 import time
 
@@ -33,6 +32,7 @@ from tests.integration.helpers.jubilant_sharding import (
     integrate_sharding_components,
 )
 from tests.integration.helpers.jubilant_upgrades import (
+    get_resources,
     refresh_charm,
     refresh_with_juju,
     upgrade_incompatible,
@@ -85,16 +85,8 @@ def test_rollback_on_config_server(
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_leader, _ = find_leader(juju, CONFIG_SERVER_APP_NAME)
-    original_resources: dict[str, str] | None = None
-    if substrate == Substrate.k8s:
-        channel_resources = json.loads(
-            juju.cli(
-                "charm-resources", CONFIG_SERVER_APP_NAME, "--channel", "8/edge", "--format", "json"
-            )
-        )
-        original_resources = {
-            resource["name"]: resource["revision"] for resource in channel_resources
-        }
+
+    original_resources = get_resources(juju, substrate, CONFIG_SERVER_APP_NAME, "8/edge")
 
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(

@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 
 import jubilant
 
@@ -28,6 +27,7 @@ from tests.integration.helpers.jubilant_sharding import (
 )
 from tests.integration.helpers.jubilant_upgrades import (
     assert_successful_run_upgrade_sequence,
+    get_resources,
     refresh_with_juju,
 )
 from tests.integration.helpers.status_helpers import (
@@ -81,16 +81,7 @@ def test_rollback_on_shard_and_config_server(
 ) -> None:
     """Verify that a config-server and shard can safely rollback without losing writes."""
     # pin the image the channel ships, since Juju keeps the uploaded one
-    original_resources: dict[str, str] | None = None
-    if substrate == Substrate.k8s:
-        channel_resources = json.loads(
-            juju.cli(
-                "charm-resources", CONFIG_SERVER_APP_NAME, "--channel", "8/edge", "--format", "json"
-            )
-        )
-        original_resources = {
-            resource["name"]: resource["revision"] for resource in channel_resources
-        }
+    original_resources = get_resources(juju, substrate, CONFIG_SERVER_APP_NAME, "8/edge")
 
     assert_successful_run_upgrade_sequence(
         juju, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource

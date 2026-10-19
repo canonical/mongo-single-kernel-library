@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 import logging
 import time
 
@@ -16,6 +15,7 @@ from tests.integration.helpers.jubilant_common import (
     get_unit_id,
 )
 from tests.integration.helpers.jubilant_upgrades import (
+    get_resources,
     get_workload_version,
     refresh_with_juju,
     upgrade_incompatible,
@@ -64,14 +64,7 @@ def test_rollback(
     leader_name, _ = find_leader(juju, app_name)
 
     # pin the image the channel ships, since Juju keeps the uploaded one
-    original_resources: dict[str, str] | None = None
-    if substrate == Substrate.k8s:
-        channel_resources = json.loads(
-            juju.cli("charm-resources", app_name, "--channel", "8/edge", "--format", "json")
-        )
-        original_resources = {
-            resource["name"]: resource["revision"] for resource in channel_resources
-        }
+    original_resources = get_resources(juju, substrate, app_name, "8/edge")
     resources = mongod_resource if substrate == Substrate.k8s else None
 
     # Refresh always happens from highest to lowest unit number
