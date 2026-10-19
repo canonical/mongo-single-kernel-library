@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
 import time
 
@@ -84,6 +85,16 @@ def test_rollback_on_config_server(
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_leader, _ = find_leader(juju, CONFIG_SERVER_APP_NAME)
+    original_resources: dict[str, str] | None = None
+    if substrate == Substrate.k8s:
+        channel_resources = json.loads(
+            juju.cli(
+                "charm-resources", CONFIG_SERVER_APP_NAME, "--channel", "8/edge", "--format", "json"
+            )
+        )
+        original_resources = {
+            resource["name"]: resource["revision"] for resource in channel_resources
+        }
 
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
@@ -117,32 +128,15 @@ def test_rollback_on_config_server(
     logger.info("Re-refresh the charm")
 
     # instead of resuming upgrade refresh with the old version
-    refresh_with_juju(juju, CONFIG_SERVER_APP_NAME, "8/edge", charm_name=base_app_name)
+    refresh_with_juju(
+        juju,
+        CONFIG_SERVER_APP_NAME,
+        "8/edge",
+        charm_name=base_app_name,
+        resources=original_resources,
+    )
 
     time.sleep(15)
-
-    juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                CONFIG_SERVER_APP_NAME,
-                idle_period=60,
-            )
-            and upgrade_incompatible(status, substrate, CONFIG_SERVER_APP_NAME, refresh_order[0])
-        ),
-        timeout=TIMEOUT,
-    )
-    # will be marked "incompatible" if rollback is not to the same revision as initially
-    # deployed
-    logger.info("Rollback is blocked due to incompatibility")
-
-    logger.info("Running `force-refresh-start` action with check-compatibility=false")
-    force_refresh_task = juju.run(
-        refresh_order[0],
-        "force-refresh-start",
-        params={"check-compatibility": False, "check-workload-container": False},
-    )
-    assert force_refresh_task.return_code == 0, "action failed"
 
     juju.wait(
         lambda status: are_agents_idle(

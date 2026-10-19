@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
 import time
 
@@ -62,6 +63,15 @@ def test_rollback(
 
     leader_name, _ = find_leader(juju, app_name)
 
+    # pin the image the channel ships, since Juju keeps the uploaded one
+    original_resources: dict[str, str] | None = None
+    if substrate == Substrate.k8s:
+        channel_resources = json.loads(
+            juju.cli("charm-resources", app_name, "--channel", "8/edge", "--format", "json")
+        )
+        original_resources = {
+            resource["name"]: resource["revision"] for resource in channel_resources
+        }
     resources = mongod_resource if substrate == Substrate.k8s else None
 
     # Refresh always happens from highest to lowest unit number
@@ -90,40 +100,19 @@ def test_rollback(
 
     logger.info("Re-refresh the charm")
 
-    refresh_with_juju(juju, app_name, "8/edge", charm_name=base_app_name)
+    refresh_with_juju(
+        juju, app_name, "8/edge", charm_name=base_app_name, resources=original_resources
+    )
 
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                app_name,
-                idle_period=20,
-            )
-            and upgrade_incompatible(status, substrate, app_name, refresh_order[0])
-        ),
-        timeout=DEPLOYMENT_TIMEOUT,
-    )
-    # will be marked "incompatible" if rollback is not to the same revision as initially
-    # deployed
-    logger.info("Rollback is blocked due to incompatibility")
-
-    logger.info("Running `force-refresh-start` action with check-compatibility=false")
-    force_refresh_task = juju.run(
-        refresh_order[0],
-        "force-refresh-start",
-        params={"check-compatibility": False, "check-workload-container": False},
-    )
-    assert force_refresh_task.return_code == 0, "action failed"
-
-    juju.wait(
         lambda status: are_agents_idle(
             status,
             app_name,
-            idle_period=30,
+            idle_period=20,
         ),
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     if "resume-refresh" in juju.status().apps.get(app_name).app_status.message:

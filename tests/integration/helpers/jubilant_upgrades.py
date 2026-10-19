@@ -63,8 +63,18 @@ def refresh_charm(
         juju.refresh(app=app_name, path=mongo_charm, resources=mongod_resource)
 
 
-def refresh_with_juju(juju: jubilant.Juju, app_name: str, channel: str, charm_name: str) -> None:
+def refresh_with_juju(
+    juju: jubilant.Juju,
+    app_name: str,
+    channel: str,
+    charm_name: str,
+    resources: dict[str, str] | None,
+) -> None:
     refresh_cmd = f"refresh {app_name} --channel {channel} --switch {charm_name}"
+    resources = resources or {}
+    for resource, resource_rev in resources.items():
+        refresh_cmd += f" --resource {resource}={resource_rev}"
+
     logger.info(f"[refresh_with_juju] juju {refresh_cmd}")
     juju.cli(*shlex.split(refresh_cmd))
 

@@ -94,34 +94,6 @@ def test_failed_upgrade_and_rollback(
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                MONGOS_APP_NAME,
-                idle_period=60,
-            )
-            and upgrade_incompatible(status, substrate, MONGOS_APP_NAME, refresh_order[0])
-        ),
-        timeout=TIMEOUT,
-    )
-
-    # will be marked "incompatible" if rollback is not to the same revision as initially
-    # deployed
-    logger.info("Rollback is blocked due to incompatibility")
-
-    logger.info("Running `force-refresh-start` action with check-compatibility=false")
-    force_refresh_task = juju.run(
-        refresh_order[0],
-        "force-refresh-start",
-        {
-            "check-compatibility": False,
-            "check-workload-container": False,
-        },
-    )
-
-    assert force_refresh_task.return_code == 0, "action failed"
-
-    juju.wait(
         lambda status: are_agents_idle(
             status,
             MONGOS_APP_NAME,
