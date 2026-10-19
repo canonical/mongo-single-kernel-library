@@ -16,11 +16,13 @@ from tests.integration.helpers.jubilant_common import (
     find_leader,
     get_unit_id,
 )
-from tests.integration.helpers.jubilant_upgrades import UPGRADE_INCOMPATIBLE_STATUS, refresh_charm
+from tests.integration.helpers.jubilant_upgrades import (
+    refresh_charm,
+    upgrade_incompatible,
+)
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
-    unit_in_status,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -87,11 +89,11 @@ def test_upgrade(
         timeout=TIMEOUT,
     )
 
-    if unit_in_status(
-        juju.status(),
+    if upgrade_incompatible(
+        juju,
+        substrate,
         app_name,
         refresh_order[0],
-        UPGRADE_INCOMPATIBLE_STATUS,
     ):
         logger.info("Upgrade is blocked due to incompatibility")
 
