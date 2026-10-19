@@ -21,6 +21,10 @@ UPGRADE_INCOMPATIBLE_STATUS = StatusObject(
     status="blocked",
     message="Refresh incompatible.",
 )
+MISSING_OCI_STATUS = StatusObject(
+    status="blocked",
+    message="`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`",
+)
 
 
 @retry(
@@ -76,6 +80,11 @@ def upgrade_incompatible(
         app_name,
         unit_name,
         UPGRADE_INCOMPATIBLE_STATUS,
+    ) or unit_in_status(
+        juju.status(),
+        app_name,
+        unit_name,
+        MISSING_OCI_STATUS,
     )
 
 
