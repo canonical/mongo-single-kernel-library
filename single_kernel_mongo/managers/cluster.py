@@ -76,7 +76,7 @@ class ClusterProvider(Object):
 
     def assert_pass_hook_checks(self, initial_event: bool = False) -> None:
         """Runs the pre hook checks, raises if it fails.
-        
+
         Raises:
             DeferrableFailedHookChecksError: If the checks fail but can be retried later.
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
@@ -217,7 +217,7 @@ class ClusterProvider(Object):
 
     def update_oauth_issuer_to_mongos(self) -> None:
         """Publish or remove the OAuth issuer on established mongos relations.
-        
+
         Raises:
             DeferrableFailedHookChecksError: If the checks fail but can be retried later.
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
