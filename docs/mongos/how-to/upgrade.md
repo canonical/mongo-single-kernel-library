@@ -38,6 +38,7 @@ Before refreshing, the charm needs to perform some preparatory tasks to define t
 
 Run the pre-refresh-check action against the leader unit of your Mongos application:
 
+````{tab-set}
 ```{tab-item} VM
 :sync: vm
 
@@ -48,6 +49,7 @@ Run the pre-refresh-check action against the leader unit of your Mongos applicat
 
     juju mongos-k8s/leader pre-refresh-check
 ```
+````
 
 ```{warning} 
 Do not proceed if this action is unsuccessful.
