@@ -310,18 +310,8 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             charm_statuses["unit"].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
         try:
-            with MongoConnection(self.state.mongos_config) as mongo:
-                cluster_shards = mongo.get_shard_members()
-
-            relation_shards = {
-                replica_set_name
-                for relation in self.state.config_server_relation
-                if (replica_set_name := self.state.config_server_state(relation).shard_replset)
-                is not None
-            }
-            logger.info("Cluster Shards: %s, Relation Shards: %s", cluster_shards, relation_shards)
-            if shard_draining := (cluster_shards - relation_shards):
-                draining = ",".join(shard_draining)
+            if shard_draining := self.state.app_peer_data.shards_pending_removal:
+                draining = ",".join(sorted(shard_draining))
                 status = ConfigServerStatuses.draining_shard(draining)
                 charm_statuses["unit"].append(status)
                 charm_statuses["app"].append(status)
@@ -393,10 +383,10 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         )
 
     def remove_shards(self) -> None:
-        """During update-status, remove shards until they are removed completely.
+        """During update-status, retry removal of shards pending removal.
 
-        Attempts to remove shards from the sharded cluster that weren't removed
-        during the relation-broken event.
+        Retries removal for shards in `self.state.app_peer_data.shards_pending_removal`
+        that weren't fully removed during the relation-broken event.
 
         This is necessary, because removing a shard requires it to be drained
         (which takes a long time) and the remove-shard command sometimes needs
@@ -404,41 +394,61 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         config-server from running additional operations. Furthermore we cannot
         defer relation-broken events.
         """
-        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
-            logger.info(
-                "Skipping shard removal reconciliation: a related application has a "
-                "mismatched revision, likely mid-upgrade."
-            )
-            return
-
-        with MongoConnection(self.state.mongos_config) as mongo:
-            cluster_shards = mongo.get_shard_members()
-
-        relation_shards = {
-            replica_set_name
-            for relation in self.state.config_server_relation
-            if (replica_set_name := self.state.config_server_state(relation).shard_replset)
-            is not None
-        }
-        for shard_name in cluster_shards - relation_shards:
+        pending = set(self.state.app_peer_data.shards_pending_removal)
+        for shard_name in pending:
             try:
                 logger.info(f"Attempting to remove shard: {shard_name}")
                 self.remove_shard(shard_name)
             except NotReadyError:
                 logger.info(f"Unable to remove shard: {shard_name}, another shard is draining")
+            except NotDrainedError:
+                logger.info(
+                    f"Shard {shard_name} is still present in the cluster after removal, "
+                    "will remove again during the next update-status event."
+                )
             except ShardNotInClusterError:
                 logger.info(
-                    "Shard to remove is not in sharded cluster. It has been successfully removed."
+                    f"Shard {shard_name} is not in sharded cluster. It has been successfully "
+                    "removed."
                 )
+                self._unmark_shard_pending_removal(shard_name)
+
+    def _mark_shard_pending_removal(self, shard_name: str) -> None:
+        """Records that `shard_name` has genuinely started being removed."""
+        pending = self.state.app_peer_data.shards_pending_removal
+        if shard_name not in pending:
+            self.state.app_peer_data.shards_pending_removal = pending | {shard_name}
+
+    def _unmark_shard_pending_removal(self, shard_name: str) -> None:
+        """Records that `shard_name` has been fully removed."""
+        pending = self.state.app_peer_data.shards_pending_removal
+        if shard_name in pending:
+            self.state.app_peer_data.shards_pending_removal = pending - {shard_name}
 
     def remove_shard_from_relation(self, relation: Relation) -> None:
-        """Removes a shard from the cluster."""
+        """Removes a shard from the cluster.
+
+        Called only when a shard's relation has actually broken. Marks the
+        shard as pending removal before attempting removal, so that even if
+        this attempt only partially succeeds, self-healing retries will be able to
+        complete the removal.
+        """
         shard_name = self.state.config_server_state(relation).shard_replset
 
         if not shard_name:
             logger.info("No shard name in databag to remove.")
             return
-        self.remove_shard(shard_name)
+        self._mark_shard_pending_removal(shard_name)
+        try:
+            self.remove_shard(shard_name)
+        except ShardNotInClusterError:
+            logger.info(
+                f"Shard {shard_name} is not in sharded cluster. It has been successfully "
+                "removed."
+            )
+            self._unmark_shard_pending_removal(shard_name)
+            return
+        self._unmark_shard_pending_removal(shard_name)
 
     def remove_shard(self, shard_name: str) -> None:
         """Actually removes a shard based on the shard name."""
@@ -463,6 +473,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
                 logger.info(
                     "Shard to remove is not in sharded cluster. It has been successfully removed."
                 )
+                raise
 
     def cluster_password_synced(self) -> bool:
         """Returns True if the cluster password is synced."""

@@ -25,6 +25,7 @@ class AppPeerDataKeys(str, Enum):
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
     MONGOS_HOSTS = "mongos_hosts"
+    SHARDS_PENDING_REMOVAL = "shards-pending-removal"
 
     # Shared
     ROLE = "role"
@@ -134,6 +135,30 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def mongos_hosts(self, value: list[str]):
         """Stores the mongos hosts in the databag."""
         self.update({AppPeerDataKeys.MONGOS_HOSTS.value: json.dumps(sorted(value))})
+
+    @property
+    def shards_pending_removal(self) -> set[str]:
+        """Shard names that config-server has actually started removing.
+
+        Populated only when a shard relation actually breaks (see
+        `ConfigServerManager.remove_shard_from_relation`). This is the
+        authoritative, explicit record of which shards are genuinely being
+        drained: self-healing retries (`ConfigServerManager.remove_shards`)
+        and the "Draining shard..." status must only ever act on/display
+        names in this set, never on an opportunistic live diff against mongos
+        membership, which can be wrong independently of whether a shard is
+        actually being removed (see issue with `shard-replset` going missing
+        while the shard is still fully integrated).
+        """
+        if not self.relation:
+            return set()
+        return set(
+            json.loads(self.relation_data.get(AppPeerDataKeys.SHARDS_PENDING_REMOVAL.value, "[]"))
+        )
+
+    @shards_pending_removal.setter
+    def shards_pending_removal(self, value: set[str]) -> None:
+        self.update({AppPeerDataKeys.SHARDS_PENDING_REMOVAL.value: json.dumps(sorted(value))})
 
     def set_user_created(self, user: str):
         """Stores the flag stating if user was created."""
