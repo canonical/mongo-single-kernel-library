@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+
 import jubilant
 
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
@@ -26,6 +27,7 @@ from tests.integration.helpers.jubilant_sharding import (
 )
 from tests.integration.helpers.jubilant_upgrades import (
     assert_successful_run_upgrade_sequence,
+    get_resources,
     refresh_with_juju,
 )
 from tests.integration.helpers.status_helpers import (
@@ -78,6 +80,9 @@ def test_rollback_on_shard_and_config_server(
     jubilant_add_continuous_writes_to_shards,
 ) -> None:
     """Verify that a config-server and shard can safely rollback without losing writes."""
+    # pin the image the channel ships, since Juju keeps the uploaded one
+    original_resources = get_resources(juju, substrate, base_app_name, "8/edge")
+
     assert_successful_run_upgrade_sequence(
         juju, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
@@ -132,7 +137,13 @@ def test_rollback_on_shard_and_config_server(
         )
     )
 
-    refresh_with_juju(juju, CONFIG_SERVER_APP_NAME, channel="8/edge", charm_name=base_app_name)
+    refresh_with_juju(
+        juju,
+        CONFIG_SERVER_APP_NAME,
+        channel="8/edge",
+        charm_name=base_app_name,
+        resources=original_resources,
+    )
 
     # verify no writes were skipped during upgrade process
     shard_one_expected_writes = stop_continuous_writes(
