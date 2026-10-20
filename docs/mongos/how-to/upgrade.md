@@ -32,7 +32,8 @@ K8s:
 
 **Ensure your MongoDB deployment is healthy** (`active` and `idle`), and not performing any long-running operations such as creating a backup.
 
-### Step 1: Pre-refresh checks
+(pre-refresh-check)=
+### Step 1: Pre-refresh check
 
 Before refreshing, the charm needs to perform some preparatory tasks to define the refresh plan. 
 
@@ -109,5 +110,5 @@ If all units show `active` and `idle` statuses after upgrading, then your upgrad
 
 If your upgrade failed, then ` juju status` will show that the unit is blocked with the message `Unhealthy after refresh`. You can do the following:
 1. Recommended: Wait for 5-10 minutes to see if the router can heal itself 
-2. Recommended: Roll back. To roll back complete redo Step 4 using the revision from Step 3.
+2. Recommended: Roll back. Use the rollback command from the {ref}`pre-refresh check <pre-refresh-check>`.
 3. **Not Recommended**: Force an upgrade by running `juju run mongos/leader force-refresh-start`. Please **note this can break your database and is not recommended.**
