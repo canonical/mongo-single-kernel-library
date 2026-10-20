@@ -81,7 +81,7 @@ def test_rollback_on_shard_and_config_server(
 ) -> None:
     """Verify that a config-server and shard can safely rollback without losing writes."""
     # pin the image the channel ships, since Juju keeps the uploaded one
-    original_resources = get_resources(juju, substrate, CONFIG_SERVER_APP_NAME, "8/edge")
+    original_resources = get_resources(juju, substrate, base_app_name, "8/edge")
 
     assert_successful_run_upgrade_sequence(
         juju, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource

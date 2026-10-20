@@ -64,7 +64,7 @@ def test_rollback(
     leader_name, _ = find_leader(juju, app_name)
 
     # pin the image the channel ships, since Juju keeps the uploaded one
-    original_resources = get_resources(juju, substrate, app_name, "8/edge")
+    original_resources = get_resources(juju, substrate, base_app_name, "8/edge")
     resources = mongod_resource if substrate == Substrate.k8s else None
 
     # Refresh always happens from highest to lowest unit number

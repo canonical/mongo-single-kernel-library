@@ -29,7 +29,7 @@ MISSING_OCI_STATUS = StatusObject(
 
 
 def get_resources(
-    juju: jubilant.Juju, substrate: Substrate, app_name: str, channel: str
+    juju: jubilant.Juju, substrate: Substrate, charm_name: str, channel: str
 ) -> dict[str, str] | None:
     """Gets the resources for charm on a specific channel.
 
@@ -38,7 +38,7 @@ def get_resources(
     if substrate == Substrate.lxd:
         return None
     channel_resources = json.loads(
-        juju.cli("charm-resources", app_name, "--channel", channel, "--format", "json")
+        juju.cli("charm-resources", charm_name, "--channel", channel, "--format", "json")
     )
     return {resource["name"]: resource["revision"] for resource in channel_resources}
 

@@ -86,7 +86,7 @@ def test_rollback_on_config_server(
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_leader, _ = find_leader(juju, CONFIG_SERVER_APP_NAME)
 
-    original_resources = get_resources(juju, substrate, CONFIG_SERVER_APP_NAME, "8/edge")
+    original_resources = get_resources(juju, substrate, base_app_name, "8/edge")
 
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
