@@ -99,7 +99,7 @@ Using the revision from {ref}`Step 3 <step-3-determine-new-revision>`, upgrade y
 ```{tab-item} K8s
 :sync: k8s
 
-    juju refresh mongos --revision=<revision number>
+    juju refresh mongos-k8s --revision=<revision number>
 ```
 ````
 
