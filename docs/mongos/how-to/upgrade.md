@@ -47,7 +47,7 @@ Run the pre-refresh-check action against the leader unit of your Mongos applicat
 ```{tab-item} K8s
 :sync: k8s
 
-    juju mongos-k8s/leader pre-refresh-check
+    juju run mongos-k8s/leader pre-refresh-check
 ```
 ````
 
