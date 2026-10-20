@@ -1,4 +1,5 @@
 (enable-tls-mongos)=
+
 # How to enable TLS
 
 If the sharded MongoDB cluster has TLS enabled, `mongos` must also enable TLS. Enable it by integrating `mongos` with a TLS application:
@@ -19,7 +20,10 @@ If the sharded MongoDB cluster has TLS enabled, `mongos` must also enable TLS. E
 ```
 ````
 
-`<tls-application` must be the same TLS application that the sharded MongoDB cluster is integrated to. 
+Mongos must mirror the config-server's TLS configuration:
+
+* `<tls-application>` must be the same TLS application that the sharded MongoDB cluster is integrated to.
+* config-server and mongos must be related on the same relations (`peer-certificates`, `client-certificates` or both)  otherwise it will leave mongos blocked.
 
 For more information about TLS in sharded clusters, see the Charmed MongoDB documentation for {ref}`enabling security in sharded clusters <tls>`.
 
