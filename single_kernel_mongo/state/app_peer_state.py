@@ -140,15 +140,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def shards_pending_removal(self) -> set[str]:
         """Shard names that config-server has actually started removing.
 
-        Populated only when a shard relation actually breaks (see
-        `ConfigServerManager.remove_shard_from_relation`). This is the
-        authoritative, explicit record of which shards are genuinely being
-        drained: self-healing retries (`ConfigServerManager.remove_shards`)
-        and the "Draining shard..." status must only ever act on/display
-        names in this set, never on an opportunistic live diff against mongos
-        membership, which can be wrong independently of whether a shard is
-        actually being removed (see issue with `shard-replset` going missing
-        while the shard is still fully integrated).
+        Populated only when a shard relation actually breaks.
         """
         if not self.relation:
             return set()
