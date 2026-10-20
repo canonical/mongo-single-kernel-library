@@ -74,3 +74,12 @@ How-to guides <how-to/index>
 Reference <reference/index>
 Explanation <explanation/index>
 ```
+
+```{toctree}
+:caption: Mongos
+:hidden:
+
+Home <mongos/index>
+How-to guides <mongos/how-to/index>
+Reference <mongos/reference/index>
+```
