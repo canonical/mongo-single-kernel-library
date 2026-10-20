@@ -319,6 +319,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
                 if (replica_set_name := self.state.config_server_state(relation).shard_replset)
                 is not None
             }
+            logger.info("Cluster Shards: %s, Relation Shards: %s", cluster_shards, relation_shards)
             if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
