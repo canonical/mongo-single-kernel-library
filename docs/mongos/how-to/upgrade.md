@@ -21,12 +21,12 @@ This refers to an upgrade between different charm revisions of Mongos 8.
 Only upgrade from these supported revisions in a production environment.
 
 VM:
-* Revision 62
-* Revision 78
+* Revision 24
+* Revision 54
 
 K8s:
-* Revision 54
-* Revision 69
+* Revision 17
+* Revision 43
 
 ### Upgrade steps
 
