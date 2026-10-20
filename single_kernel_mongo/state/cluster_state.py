@@ -8,9 +8,12 @@ import json
 from enum import Enum
 
 from ops import Application
-from ops.model import Relation
+from ops.model import Model, ModelError, Relation, SecretNotFoundError
 
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import Data
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    Data,
+    get_encoded_dict,
+)
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
@@ -31,10 +34,10 @@ class ClusterStateKeys(str, Enum):
     USERNAME = "username"
     PASSWORD = "password"
     CLUSTER_ID = "cluster-id"
-    CLIENT_ENTITY_TYPE = "client-entity-type"
-    CLIENT_EXTRA_GROUP_ROLES = "client-extra-group-roles"
-    CLIENT_ENTITY_PERMISSIONS = "client-entity-permissions"
-    CLIENT_ENTITY_NAME = "client-entity-name"
+    ENTITY_TYPE = "entity-type"
+    EXTRA_GROUP_ROLES = "extra-group-roles"
+    ENTITY_PERMISSIONS = "entity-permissions"
+    REQUESTED_ENTITY_SECRET = "requested-entity-secret"
     ENTITY_NAME = "entity-name"
 
 
@@ -43,9 +46,12 @@ class ClusterState(AbstractRelationState[Data]):
 
     component: Application
 
-    def __init__(self, relation: Relation | None, data_interface: Data, component: Application):
+    def __init__(
+        self, relation: Relation | None, data_interface: Data, component: Application, model: Model
+    ):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
+        self.model = model
 
     @property
     def config_server_uri(self) -> str:
@@ -72,40 +78,73 @@ class ClusterState(AbstractRelationState[Data]):
         self.update({ClusterStateKeys.DATABASE.value: value})
 
     @property
-    def client_entity_type(self) -> str:
+    def entity_type(self) -> str:
         """Return the entity type of the client request relayed in the databag."""
-        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_TYPE.value, "")
+        return self.relation_data.get(ClusterStateKeys.ENTITY_TYPE.value, "")
 
-    @client_entity_type.setter
-    def client_entity_type(self, value: str):
-        self.update({ClusterStateKeys.CLIENT_ENTITY_TYPE.value: value})
+    @entity_type.setter
+    def entity_type(self, value: str):
+        self.update({ClusterStateKeys.ENTITY_TYPE.value: value})
 
     @property
-    def client_extra_group_roles(self) -> str:
+    def extra_group_roles(self) -> str:
         """Return the extra group roles of the client request relayed in the databag."""
-        return self.relation_data.get(ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value, "")
+        return self.relation_data.get(ClusterStateKeys.EXTRA_GROUP_ROLES.value, "")
 
-    @client_extra_group_roles.setter
-    def client_extra_group_roles(self, value: str):
-        self.update({ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value: value})
+    @extra_group_roles.setter
+    def extra_group_roles(self, value: str):
+        self.update({ClusterStateKeys.EXTRA_GROUP_ROLES.value: value})
 
     @property
-    def client_entity_permissions(self) -> str:
+    def entity_permissions(self) -> str:
         """Return the entity permissions of the client request relayed in the databag."""
-        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value, "")
+        return self.relation_data.get(ClusterStateKeys.ENTITY_PERMISSIONS.value, "")
 
-    @client_entity_permissions.setter
-    def client_entity_permissions(self, value: str):
-        self.update({ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value: value})
+    @entity_permissions.setter
+    def entity_permissions(self, value: str):
+        self.update({ClusterStateKeys.ENTITY_PERMISSIONS.value: value})
 
     @property
-    def client_entity_name(self) -> str:
-        """Return the entity name of the client request relayed in the databag."""
-        return self.relation_data.get(ClusterStateKeys.CLIENT_ENTITY_NAME.value, "")
+    def requested_entity_name(self) -> str:
+        """Return the entity name of the client request, shared in a secret of this mongos."""
+        secret_id = self.relation_data.get(ClusterStateKeys.REQUESTED_ENTITY_SECRET.value, "")
+        if not secret_id:
+            return ""
+        try:
+            content = self.model.get_secret(id=secret_id).get_content()
+        except (SecretNotFoundError, ModelError):
+            return ""
+        return content.get(ClusterStateKeys.ENTITY_NAME.value, "")
 
-    @client_entity_name.setter
-    def client_entity_name(self, value: str):
-        self.update({ClusterStateKeys.CLIENT_ENTITY_NAME.value: value})
+    @requested_entity_name.setter
+    def requested_entity_name(self, value: str):
+        """Shares the name in a new secret granted to the config-server, "" removes it.
+
+        The mongos cannot grant the secret of its client. A new secret per name changes the
+        relation data, so that the config-server sees the new name.
+        """
+        if secret_id := self.relation_data.get(ClusterStateKeys.REQUESTED_ENTITY_SECRET.value):
+            try:
+                self.model.get_secret(id=secret_id).remove_all_revisions()
+            except (SecretNotFoundError, ModelError):
+                pass  # Already gone, nothing to remove.
+        new_secret_id = None
+        if value and self.relation:
+            secret = self.component.add_secret({ClusterStateKeys.ENTITY_NAME.value: value})
+            secret.grant(self.relation)
+            new_secret_id = secret.id
+        self.update({ClusterStateKeys.REQUESTED_ENTITY_SECRET.value: new_secret_id})
+
+    @property
+    def seen_request(self) -> dict[str, str]:
+        """Return the fields of this mongos the config-server processed last.
+
+        The data_interfaces library of the config-server keeps them under `data` in its
+        databag, to compute the changes of its next relation-changed event.
+        """
+        if not self.relation or not self.relation.app:
+            return {}
+        return get_encoded_dict(self.relation, self.relation.app, "data") or {}
 
     @property
     def entity_name(self) -> str:

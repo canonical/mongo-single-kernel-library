@@ -5,7 +5,7 @@
 
 A requester sends `entity-type`, `extra-group-roles`, `entity-permissions` and, optionally,
 a `requested-entity-secret` carrying the entity name. A VM mongos forwards the same request
-to its config-server over the `cluster` relation under `client-` prefixed keys.
+to its config-server over the `cluster` relation, under the same keys.
 """
 
 import json
@@ -40,7 +40,6 @@ class EntityStateKeys(str, Enum):
 
 
 ENTITY_TYPE_GROUP = "GROUP"
-FORWARDED_PREFIX = "client-"
 RESOURCE_TYPES = ("db", "collection", "cluster", "anyResource")
 VALID_GROUP_ROLES = {role.value for role in REGULAR_ROLES} | {RoleNames.DEFAULT.value}
 RESERVED_ENTITY_PREFIX = "charmed-"
@@ -111,14 +110,8 @@ class EntityState(AbstractRelationState[DatabaseProviderData]):
         self.forwarded = forwarded
 
     def field(self, key: EntityStateKeys) -> str:
-        """The raw value of an entity request key, "" when unset.
-
-        A forwarded request carries its keys, except `database`, under the `client-` prefix.
-        """
-        name = key.value
-        if self.forwarded and key != EntityStateKeys.DATABASE:
-            name = FORWARDED_PREFIX + name
-        return self.relation_data.get(name, "")
+        """The raw value of an entity request key, "" when unset."""
+        return self.relation_data.get(key.value, "")
 
     @property
     def requested(self) -> bool:
@@ -175,19 +168,13 @@ class EntityState(AbstractRelationState[DatabaseProviderData]):
     def requested_name(self) -> str:
         """The entity name the requester asked for.
 
-        A client relation carries it in the `entity-name` key of its `requested-entity-secret`
-        and defaults to `relation-<id>` without one; a forwarded request carries it in
-        `client-entity-name`.
+        The relation carries it in the `entity-name` key of its `requested-entity-secret` and
+        defaults to `relation-<id>` without one. A VM mongos shares the name of its client in
+        a secret of its own.
 
         Raises:
             InvalidEntityRequestError: if the name cannot be read or is empty.
         """
-        if self.forwarded:
-            name = self.field(EntityStateKeys.ENTITY_NAME)
-            if not name:
-                raise InvalidEntityRequestError("entity-name is empty")
-            return name
-
         if self.relation is None:
             return ""
         secret_id = self.field(EntityStateKeys.REQUESTED_ENTITY_SECRET)
@@ -220,7 +207,7 @@ class EntityState(AbstractRelationState[DatabaseProviderData]):
     def name(self) -> str:
         """The entity name: the published one once created, else the requested one.
 
-        A forwarded request always carries its name, which the mongos rewrites when its
+        A forwarded request always carries its name, which the mongos replaces when its
         client asks for another one: the requested name wins there.
 
         Raises:

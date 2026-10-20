@@ -289,21 +289,24 @@ def test_validate_rejects_secret_without_name(
     assert str(exc_info.value) == reason
 
 
-def test_forwarded_reads_client_prefixed_keys(harness: Harness[MongoTestCharm]):
+def test_forwarded_reads_library_keys(harness: Harness[MongoTestCharm]):
     permissions = [{"resource_name": "blog", "resource_type": "db", "privileges": ["find"]}]
     with harness.hooks_disabled():
         harness.set_leader(True)
         rel_id = harness.add_relation("cluster", "mongos")
         harness.add_relation_unit(rel_id, "mongos/0")
+        # The mongos shares the name of its client in a secret of its own.
+        secret_id = harness.add_model_secret("mongos", {"entity-name": GROUP_DN})
+        harness.grant_secret(secret_id, harness.charm.app.name)
         harness.update_relation_data(
             rel_id,
             "mongos",
             {
                 "database": "blog",
-                "client-entity-type": "GROUP",
-                "client-extra-group-roles": "admin",
-                "client-entity-permissions": json.dumps(permissions),
-                "client-entity-name": GROUP_DN,
+                "entity-type": "GROUP",
+                "extra-group-roles": "admin",
+                "entity-permissions": json.dumps(permissions),
+                "requested-entity-secret": secret_id,
             },
         )
     state = EntityState(
@@ -328,10 +331,9 @@ def test_forwarded_reads_client_prefixed_keys(harness: Harness[MongoTestCharm]):
     state.entity_name = "ou=previous"
     assert state.name == GROUP_DN
 
-    with harness.hooks_disabled():
-        harness.update_relation_data(rel_id, "mongos", {"client-entity-name": ""})
+    harness.revoke_secret(secret_id, harness.charm.app.name)
 
     with pytest.raises(InvalidEntityRequestError) as exc_info:
         state.validate()
 
-    assert str(exc_info.value) == "entity-name is empty"
+    assert str(exc_info.value) == "cannot read requested-entity-secret"

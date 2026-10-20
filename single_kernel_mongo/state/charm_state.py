@@ -443,6 +443,7 @@ class CharmState(Object, AbstractStatusesState):
             relation=self.mongos_cluster_relation,
             data_interface=self.cluster_requirer_data_interface,
             component=self.model.app,
+            model=self.model,
         )
 
     @property

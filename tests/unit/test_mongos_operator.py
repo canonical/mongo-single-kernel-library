@@ -6,6 +6,7 @@ from pathlib import PosixPath
 
 import pytest
 from data_platform_helpers.advanced_statuses.utils import as_status
+from ops.model import SecretNotFoundError
 from ops.testing import Harness
 
 from single_kernel_mongo.config.relations import RelationNames
@@ -220,11 +221,10 @@ GROUP_REQUEST = {
     "extra-group-roles": "monitor, admin",
     "entity-permissions": PERMISSIONS,
 }
-CLIENT_ENTITY_KEYS = (
-    ClusterStateKeys.CLIENT_ENTITY_TYPE.value,
-    ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value,
-    ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value,
-    ClusterStateKeys.CLIENT_ENTITY_NAME.value,
+FORWARDED_KEYS = (
+    ClusterStateKeys.ENTITY_TYPE.value,
+    ClusterStateKeys.EXTRA_GROUP_ROLES.value,
+    ClusterStateKeys.ENTITY_PERMISSIONS.value,
 )
 
 
@@ -276,77 +276,127 @@ def _cluster_data(mongos_harness: Harness[MongosTestCharm], cluster_id: int) -> 
     return dict(mongos_harness.get_relation_data(cluster_id, mongos_harness.charm.app.name))
 
 
-@pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_forward_entity_request_writes_client_keys(mongos_harness: Harness[MongosTestCharm]):
+def _vm_proxy(mongos_harness: Harness[MongosTestCharm]) -> int:
+    """A VM mongos leader which received its router credentials from the config-server.
+
+    Returns:
+        The id of the cluster relation.
+    """
     cluster_id = _mongos_leader(mongos_harness)
+    mongos_harness.charm.operator.cluster_manager.share_credentials_to_clients(
+        f"relation-{cluster_id}", "password"
+    )
+    return cluster_id
+
+
+def _forwarded(mongos_harness: Harness[MongosTestCharm], cluster_id: int) -> dict[str, str]:
+    """The entity request this mongos forwards, the name read from its secret."""
+    data = _cluster_data(mongos_harness, cluster_id)
+    request = {key: data[key] for key in FORWARDED_KEYS if key in data}
+    if secret_id := data.get(ClusterStateKeys.REQUESTED_ENTITY_SECRET.value):
+        secret = mongos_harness.model.get_secret(id=secret_id)
+        request["entity-name"] = secret.get_content(refresh=True)["entity-name"]
+    return request
+
+
+def _config_server_sees(mongos_harness: Harness[MongosTestCharm], cluster_id: int) -> None:
+    """The config-server processes the mongos data: its library keeps it under `data`."""
+    data = _cluster_data(mongos_harness, cluster_id)
+    data.pop("data", None)
+    with mongos_harness.hooks_disabled():
+        mongos_harness.update_relation_data(cluster_id, "mongodb", {"data": json.dumps(data)})
+
+
+def _no_ip_update(mocker) -> None:
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.MongosOperator.update_ips_in_databag"
+    )
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_forward_entity_request_keeps_library_keys(mongos_harness: Harness[MongosTestCharm]):
+    cluster_id = _vm_proxy(mongos_harness)
 
     _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
 
+    assert _forwarded(mongos_harness, cluster_id) == {
+        "entity-type": "GROUP",
+        "extra-group-roles": "monitor, admin",
+        "entity-permissions": PERMISSIONS,
+        "entity-name": GROUP_DN,
+    }
     data = _cluster_data(mongos_harness, cluster_id)
-    assert data[ClusterStateKeys.CLIENT_ENTITY_TYPE.value] == "GROUP"
-    assert data[ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value] == "monitor, admin"
-    assert data[ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value] == PERMISSIONS
-    assert data[ClusterStateKeys.CLIENT_ENTITY_NAME.value] == GROUP_DN
     assert data["database"] == "superdb"
-    # The library's own names would turn the router user request into an entity request.
-    for library_key in ("entity-type", "extra-group-roles", "entity-permissions"):
-        assert library_key not in data
+    # The mongos cannot grant the secret of its client: it shares the name in its own.
+    secret_id = data[ClusterStateKeys.REQUESTED_ENTITY_SECRET.value]
+    assert mongos_harness.get_secret_grants(secret_id, cluster_id) == {"mongodb"}
+    assert not [key for key in data if key.startswith("client-")]
+
+
+@pytest.mark.skip_if_substrate(Substrate.k8s)
+def test_forward_entity_request_waits_for_router_credentials(
+    mongos_harness: Harness[MongosTestCharm], mocker, caplog
+):
+    cluster_id = _mongos_leader(mongos_harness)
+    _no_ip_update(mocker)
+
+    _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
+
+    # With `entity-type` on the relation the library would not emit `database_created`,
+    # which delivers the router credentials.
+    assert _forwarded(mongos_harness, cluster_id) == {}
+    assert _cluster_data(mongos_harness, cluster_id)["database"] == "superdb"
+    assert "router credentials not received yet" in caplog.text
+
+    mongos_harness.charm.operator.cluster_manager.share_credentials_to_clients(
+        f"relation-{cluster_id}", "password"
+    )
+    mongos_harness.charm.operator.share_connection_info()
+
+    assert _forwarded(mongos_harness, cluster_id)["entity-name"] == GROUP_DN
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_forward_entity_request_unreadable_secret_forwards_nothing(
     mongos_harness: Harness[MongosTestCharm], caplog
 ):
-    cluster_id = _mongos_leader(mongos_harness)
+    cluster_id = _vm_proxy(mongos_harness)
 
     rel_id = _client_relation(
         mongos_harness, GROUP_REQUEST | {"requested-entity-secret": "secret:nope"}
     )
 
-    data = _cluster_data(mongos_harness, cluster_id)
-    assert not [key for key in CLIENT_ENTITY_KEYS if key in data]
-    assert data["database"] == "superdb"
+    assert _forwarded(mongos_harness, cluster_id) == {}
+    assert _cluster_data(mongos_harness, cluster_id)["database"] == "superdb"
     assert f"Cannot forward the entity request of relation {rel_id}" in caplog.text
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_forward_entity_request_invalid_request_forwards_nothing(
-    mongos_harness: Harness[MongosTestCharm], caplog
-):
-    cluster_id = _mongos_leader(mongos_harness)
-
-    rel_id = _client_relation(mongos_harness, GROUP_REQUEST | {"entity-type": "USER"})
-
-    data = _cluster_data(mongos_harness, cluster_id)
-    assert not [key for key in data if key.startswith("client-")]
-    # The mongos reports why, the config-server never sees the request.
-    assert f"Cannot forward the entity request of relation {rel_id}" in caplog.text
-    assert "entity-type 'USER' is not supported" in caplog.text
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value in _app_statuses(mongos_harness)
-
-
-@pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_invalid_forwarded_request_status_cleared_once_valid(
+def test_forward_entity_request_forwards_invalid_request_as_is(
     mongos_harness: Harness[MongosTestCharm],
 ):
-    _mongos_leader(mongos_harness)
-    rel_id = _client_relation(mongos_harness, GROUP_REQUEST | {"entity-type": "USER"})
+    cluster_id = _vm_proxy(mongos_harness)
+    invalid = GROUP_REQUEST | {"entity-type": "USER", "entity-permissions": "not json"}
+
+    _client_relation(mongos_harness, invalid, name="charmed-operator")
+
+    # The config-server judges the request and blocks.
+    assert _forwarded(mongos_harness, cluster_id) == {
+        "entity-type": "USER",
+        "extra-group-roles": "monitor, admin",
+        "entity-permissions": "not json",
+        "entity-name": "charmed-operator",
+    }
     operator = mongos_harness.charm.operator
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value in _app_statuses(mongos_harness)
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value in operator.get_statuses(
+    assert MongodStatuses.INVALID_ENTITY_REQUEST.value not in _app_statuses(mongos_harness)
+    assert MongodStatuses.INVALID_ENTITY_REQUEST.value not in operator.get_statuses(
         scope="app", recompute=True
     )
-
-    with mongos_harness.hooks_disabled():
-        mongos_harness.update_relation_data(rel_id, "client-app", {"entity-type": "GROUP"})
-    mongos_harness.charm.on.update_status.emit()
-
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value not in _app_statuses(mongos_harness)
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_forward_entity_request_rewrites_changed_fields(mongos_harness: Harness[MongosTestCharm]):
-    cluster_id = _mongos_leader(mongos_harness)
+    cluster_id = _vm_proxy(mongos_harness)
     rel_id = _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
     secret_id = mongos_harness.add_model_secret("client-app", {"entity-name": "ou=villains"})
     mongos_harness.grant_secret(secret_id, mongos_harness.charm.app.name)
@@ -359,39 +409,49 @@ def test_forward_entity_request_rewrites_changed_fields(mongos_harness: Harness[
     )
 
     # Not answered yet: the name is copied whenever it changes, like the other fields.
-    data = _cluster_data(mongos_harness, cluster_id)
-    assert data[ClusterStateKeys.CLIENT_ENTITY_NAME.value] == "ou=villains"
-    assert data[ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value] == new_permissions
+    forwarded = _forwarded(mongos_harness, cluster_id)
+    assert forwarded["entity-name"] == "ou=villains"
+    assert forwarded["entity-permissions"] == new_permissions
 
     # A field the request no longer carries is not kept.
     mongos_harness.update_relation_data(rel_id, "client-app", {"extra-group-roles": ""})
-    data = _cluster_data(mongos_harness, cluster_id)
-    assert ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value not in data
+    assert "extra-group-roles" not in _forwarded(mongos_harness, cluster_id)
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_invalid_request_clears_forwarded_request(mongos_harness: Harness[MongosTestCharm]):
-    cluster_id = _mongos_leader(mongos_harness)
+def test_forward_entity_request_replaces_roles_once_the_config_server_saw_the_clear(
+    mongos_harness: Harness[MongosTestCharm], mocker
+):
+    cluster_id = _vm_proxy(mongos_harness)
+    _no_ip_update(mocker)
     rel_id = _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
-    secret_id = mongos_harness.add_model_secret("client-app", {"entity-name": "charmed-operator"})
-    mongos_harness.grant_secret(secret_id, mongos_harness.charm.app.name)
+    _config_server_sees(mongos_harness, cluster_id)
+    operator = mongos_harness.charm.operator
 
-    mongos_harness.update_relation_data(
-        rel_id, "client-app", {"requested-entity-secret": secret_id}
+    # A replacement client of this subordinate asks for other roles.
+    mongos_harness.remove_relation(rel_id)
+    _client_relation(
+        mongos_harness, GROUP_REQUEST | {"extra-group-roles": "monitor"}, GROUP_DN, "new-app"
     )
 
-    assert not [
-        key for key in CLIENT_ENTITY_KEYS if key in _cluster_data(mongos_harness, cluster_id)
-    ]
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value in _app_statuses(mongos_harness)
+    # The library of the config-server refuses a changed value: the request is cleared first.
+    assert _forwarded(mongos_harness, cluster_id) == {}
+    operator.share_connection_info()
+    assert _forwarded(mongos_harness, cluster_id) == {}
+
+    _config_server_sees(mongos_harness, cluster_id)
+    operator.share_connection_info()
+
+    assert _forwarded(mongos_harness, cluster_id)["extra-group-roles"] == "monitor"
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_user_client_after_entity_client_clears_forwarded_request(
     mongos_harness: Harness[MongosTestCharm],
 ):
-    cluster_id = _mongos_leader(mongos_harness)
+    cluster_id = _vm_proxy(mongos_harness)
     rel_id = _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
+    secret_id = _cluster_data(mongos_harness, cluster_id)["requested-entity-secret"]
     # The remote data may be unreadable in relation-broken: a removal changes nothing, the
     # config-server ends the request once the mongos units are gone.
     with mongos_harness.hooks_disabled():
@@ -399,61 +459,41 @@ def test_user_client_after_entity_client_clears_forwarded_request(
             rel_id, "client-app", dict.fromkeys([*GROUP_REQUEST, "requested-entity-secret"], "")
         )
     mongos_harness.remove_relation(rel_id)
-    assert all(key in _cluster_data(mongos_harness, cluster_id) for key in CLIENT_ENTITY_KEYS)
+    assert _forwarded(mongos_harness, cluster_id)["entity-name"] == GROUP_DN
 
     _client_relation(mongos_harness, {"database": "plaindb"}, app="plain-app")
 
-    assert not [
-        key for key in CLIENT_ENTITY_KEYS if key in _cluster_data(mongos_harness, cluster_id)
-    ]
+    assert _forwarded(mongos_harness, cluster_id) == {}
+    with pytest.raises(SecretNotFoundError):
+        mongos_harness.model.get_secret(id=secret_id)
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_user_client_keeps_request_of_another_relation(mongos_harness: Harness[MongosTestCharm]):
-    cluster_id = _mongos_leader(mongos_harness)
+    cluster_id = _vm_proxy(mongos_harness)
     _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
 
     _client_relation(mongos_harness, {"database": "plaindb"}, app="plain-app")
 
-    assert all(key in _cluster_data(mongos_harness, cluster_id) for key in CLIENT_ENTITY_KEYS)
-
-
-@pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_invalid_change_of_answered_request_keeps_forwarded_request(
-    mongos_harness: Harness[MongosTestCharm],
-):
-    cluster_id = _mongos_leader(mongos_harness)
-    rel_id = _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
-    relation = mongos_harness.model.get_relation(RelationNames.MONGOS_PROXY.value, rel_id)
-    # Answered: the role exists and its name is published to the client.
-    mongos_harness.charm.operator.state.entity_state(relation).entity_name = GROUP_DN
-
-    mongos_harness.update_relation_data(rel_id, "client-app", {"entity-permissions": "not json"})
-
-    assert all(key in _cluster_data(mongos_harness, cluster_id) for key in CLIENT_ENTITY_KEYS)
-    assert MongodStatuses.INVALID_ENTITY_REQUEST.value in _app_statuses(mongos_harness)
+    assert _forwarded(mongos_harness, cluster_id)["entity-name"] == GROUP_DN
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_share_configuration_clears_stale_forwarded_request(
     mongos_harness: Harness[MongosTestCharm], mocker
 ):
-    cluster_id = _mongos_leader(mongos_harness)
+    cluster_id = _vm_proxy(mongos_harness)
     with mongos_harness.hooks_disabled():
         _client_relation(mongos_harness, {"database": "plaindb"}, app="plain-app")
         # Left by a previous client: the clear on this relation's events was missed.
         cluster = mongos_harness.charm.operator.state.cluster
-        cluster.client_entity_type = "GROUP"
-        cluster.client_entity_name = GROUP_DN
-    mocker.patch(
-        "single_kernel_mongo.managers.mongos_operator.MongosOperator.update_ips_in_databag"
-    )
+        cluster.entity_type = "GROUP"
+        cluster.requested_entity_name = GROUP_DN
+    _no_ip_update(mocker)
 
     mongos_harness.charm.operator.share_connection_info()
 
-    assert not [
-        key for key in CLIENT_ENTITY_KEYS if key in _cluster_data(mongos_harness, cluster_id)
-    ]
+    assert _forwarded(mongos_harness, cluster_id) == {}
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)
@@ -467,20 +507,20 @@ def test_share_connection_info_forwards_request_of_earlier_client(
         _client_relation(mongos_harness, GROUP_REQUEST, name=GROUP_DN)
     cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
     mongos_harness.add_relation_unit(cluster_id, "mongodb/0")
-    assert not [
-        key for key in CLIENT_ENTITY_KEYS if key in _cluster_data(mongos_harness, cluster_id)
-    ]
-    mocker.patch(
-        "single_kernel_mongo.managers.mongos_operator.MongosOperator.update_ips_in_databag"
+    mongos_harness.charm.operator.cluster_manager.share_credentials_to_clients(
+        f"relation-{cluster_id}", "password"
     )
+    assert _forwarded(mongos_harness, cluster_id) == {}
+    _no_ip_update(mocker)
 
     mongos_harness.charm.operator.share_connection_info()
 
-    data = _cluster_data(mongos_harness, cluster_id)
-    assert data[ClusterStateKeys.CLIENT_ENTITY_TYPE.value] == "GROUP"
-    assert data[ClusterStateKeys.CLIENT_EXTRA_GROUP_ROLES.value] == "monitor, admin"
-    assert data[ClusterStateKeys.CLIENT_ENTITY_PERMISSIONS.value] == PERMISSIONS
-    assert data[ClusterStateKeys.CLIENT_ENTITY_NAME.value] == GROUP_DN
+    assert _forwarded(mongos_harness, cluster_id) == {
+        "entity-type": "GROUP",
+        "extra-group-roles": "monitor, admin",
+        "entity-permissions": PERMISSIONS,
+        "entity-name": GROUP_DN,
+    }
 
 
 @pytest.mark.skip_if_substrate(Substrate.k8s)

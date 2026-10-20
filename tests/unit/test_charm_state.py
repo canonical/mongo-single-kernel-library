@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from ops.model import SecretNotFoundError
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -356,7 +357,7 @@ def test_entity_relations_on_config_server_are_cluster_relations(
 ):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
-    request = {"database": "d", "client-entity-type": "GROUP"}
+    request = {"database": "d", "entity-type": "GROUP"}
     cluster_id = harness.add_relation("cluster", "mongos")
     harness.add_relation_unit(cluster_id, "mongos/0")
     harness.update_relation_data(cluster_id, "mongos", request)
@@ -402,7 +403,7 @@ def test_managed_entities_roundtrip(harness: Harness[MongoTestCharm]):
 def test_orphaned_entity_ids(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
-    request = {"client-entity-type": "GROUP"}
+    request = {"entity-type": "GROUP"}
     with harness.hooks_disabled():
         client_id = harness.add_relation(RelationNames.DATABASE.value, "client-app")
         cluster_id = harness.add_relation(RelationNames.CLUSTER.value, "mongos")
@@ -427,28 +428,62 @@ def test_orphaned_entity_ids(harness: Harness[MongoTestCharm]):
     assert {relation.id for relation in state.entity_relations} == {cluster_id}
 
 
-def test_cluster_state_client_entity_fields(mongos_harness: Harness[MongosTestCharm]):
+def test_cluster_state_entity_request_fields(mongos_harness: Harness[MongosTestCharm]):
     mongos_harness.set_leader(True)
     rel_id = mongos_harness.add_relation("cluster", "mongodb")
     state = mongos_harness.charm.operator.state.cluster
 
-    assert state.client_entity_type == ""
-    assert state.client_extra_group_roles == ""
-    assert state.client_entity_permissions == ""
-    assert state.client_entity_name == ""
+    assert state.entity_type == ""
+    assert state.extra_group_roles == ""
+    assert state.entity_permissions == ""
+    assert state.requested_entity_name == ""
     assert state.entity_name == ""
 
-    state.client_entity_type = "GROUP"
-    state.client_extra_group_roles = "default"
-    state.client_entity_permissions = "[]"
-    state.client_entity_name = GROUP_DN
+    state.entity_type = "GROUP"
+    state.extra_group_roles = "default"
+    state.entity_permissions = "[]"
+    state.requested_entity_name = GROUP_DN
 
-    data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
-    assert data["client-entity-type"] == "GROUP"
-    assert data["client-extra-group-roles"] == "default"
-    assert data["client-entity-permissions"] == "[]"
-    assert data["client-entity-name"] == GROUP_DN
-    assert state.client_entity_type == "GROUP"
+    def data() -> dict[str, str]:
+        return dict(mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name))
+
+    # The data_interfaces names; the name in a secret of the mongos granted to the config-server.
+    assert data()["entity-type"] == "GROUP"
+    assert data()["extra-group-roles"] == "default"
+    assert data()["entity-permissions"] == "[]"
+    secret_id = data()["requested-entity-secret"]
+    assert mongos_harness.get_secret_grants(secret_id, rel_id) == {"mongodb"}
+    assert mongos_harness.model.get_secret(id=secret_id).get_content() == {"entity-name": GROUP_DN}
+    assert state.entity_type == "GROUP"
+    assert state.requested_entity_name == GROUP_DN
+
+    # Another name gets another secret: the new id tells the config-server.
+    state.requested_entity_name = "ou=villains"
+    new_secret_id = data()["requested-entity-secret"]
+    assert new_secret_id != secret_id
+    assert state.requested_entity_name == "ou=villains"
+    with pytest.raises(SecretNotFoundError):
+        mongos_harness.model.get_secret(id=secret_id)
+
+    state.requested_entity_name = ""
+    assert "requested-entity-secret" not in data()
+    assert state.requested_entity_name == ""
+    with pytest.raises(SecretNotFoundError):
+        mongos_harness.model.get_secret(id=new_secret_id)
 
     mongos_harness.update_relation_data(rel_id, "mongodb", {"entity-name": "x"})
     assert mongos_harness.charm.operator.state.cluster.entity_name == "x"
+
+
+def test_cluster_state_seen_request(mongos_harness: Harness[MongosTestCharm]):
+    mongos_harness.set_leader(True)
+    rel_id = mongos_harness.add_relation("cluster", "mongodb")
+    state = mongos_harness.charm.operator.state.cluster
+    assert state.seen_request == {}
+
+    # The library of the config-server keeps what it last processed under `data`.
+    mongos_harness.update_relation_data(
+        rel_id, "mongodb", {"data": json.dumps({"entity-type": "GROUP"})}
+    )
+
+    assert state.seen_request == {"entity-type": "GROUP"}

@@ -36,7 +36,7 @@ from single_kernel_mongo.config.relations import (
     PeerRelationNames,
     RelationNames,
 )
-from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -591,16 +591,16 @@ class MongosOperator(OperatorProtocol, Object):
         """Actually shares the configuration according to the substrate."""
         match self.substrate:
             case Substrates.VM:
-                # Mirrored here too, so that a request of a client integrated before the
-                # config-server, or kept across a re-integration, reaches the config-server,
-                # and a clear that failed or was missed converges.
-                for relation in self.state.client_relations:
-                    self._forward_entity_request(relation)
                 # We can't build the config if those are missing so we get it beforehand.
                 username, password = self.state.get_user_credentials()
                 if not username or not password:
                     logger.info("Credentials not received yet, not sharing them with clients.")
                     return
+                # Mirrored here too, so that a request of a client integrated before the
+                # config-server, or kept across a re-integration, reaches the config-server,
+                # and a clear that failed, was missed or waits for the config-server converges.
+                for relation in self.state.client_relations:
+                    self._forward_entity_request(relation)
                 # We'll always have only one client relation as VM because
                 # we're a subordinate charm, so these loops will run at most once
                 # in total. For consistency however it's easier to "just" loop on
@@ -623,7 +623,7 @@ class MongosOperator(OperatorProtocol, Object):
         """
         cluster = self.state.cluster
         name = cluster.entity_name
-        if not name or name != cluster.client_entity_name:
+        if not name or name != cluster.requested_entity_name:
             # Right after a new request, the config-server may still show the previous name.
             logger.info(
                 "The config-server has not answered the entity request of relation %s yet.",
@@ -674,18 +674,20 @@ class MongosOperator(OperatorProtocol, Object):
         self._forward_entity_request(relation)
 
     def _forward_entity_request(self, relation: Relation) -> None:
-        """Mirrors the entity request of the client on the cluster relation.
+        """Forwards the entity request of the client on the cluster relation, as it is.
 
-        A VM mongos cannot create roles, its config-server creates them. The request
-        fields, the name included, are copied as raw strings under `client-` prefixed keys,
-        each written when different. A relation without a valid request clears them, unless
-        its role exists (its name is published) or another client relation requests an
-        entity, so that the config-server drops the role of a previous client instead of
-        serving it to one that did not ask. The request is validated first, which resolves
-        the name: an invalid request, or one whose secret cannot be read, is logged and
-        reported with a Blocked status here. A removed relation changes nothing: the
-        config-server drops the role at its next update-status once the mongos units, which
-        vanish with the client relation, are gone.
+        A VM mongos cannot create roles, its config-server validates and creates them. The
+        request fields keep their data_interfaces names and raw values; the name goes in a
+        secret of the mongos, which cannot grant the secret of its client. A relation without
+        a request clears them, unless another client relation requests an entity, so that the
+        config-server drops the role of a previous client instead of serving it to one that
+        did not ask. Nothing is forwarded before the router credentials arrive: once
+        `entity-type` is on the relation, the library no longer emits the `database_created`
+        event that delivers them. The library of the config-server refuses a changed
+        `entity-type` or `extra-group-roles`, so another value is written only once the
+        config-server has processed the clear of the previous one. A removed relation changes
+        nothing: the config-server drops the role at its next update-status once the mongos
+        units, which vanish with the client relation, are gone.
 
         Args:
             relation: The client relation carrying the entity request.
@@ -699,45 +701,58 @@ class MongosOperator(OperatorProtocol, Object):
                 relation.id,
             )
             return
+        username, password = self.state.get_user_credentials()
+        if not username or not password:
+            logger.info(
+                "Not forwarding the entity request of relation %s: router credentials not "
+                "received yet.",
+                relation.id,
+            )
+            return
         entity = self.state.entity_state(relation)
         entity_type = extra_group_roles = permissions = name = ""
         if not entity.requested:
             logger.debug("Relation %s does not request an entity.", relation.id)
         else:
             try:
-                entity.validate()
+                # The published name once answered: the client may then remove its secret.
                 name = entity.name
                 entity_type = entity.entity_type
                 extra_group_roles = entity.field(EntityStateKeys.EXTRA_GROUP_ROLES)
                 permissions = entity.field(EntityStateKeys.ENTITY_PERMISSIONS)
             except InvalidEntityRequestError as e:
                 logger.error("Cannot forward the entity request of relation %s: %s", relation.id, e)
-                self.state.statuses.add(
-                    MongodStatuses.INVALID_ENTITY_REQUEST.value, scope="app", component=self.name
-                )
-        # Kept while the role of this relation exists, its name published (an invalid change
-        # of an answered request), or while another client relation requests an entity.
-        if not name and (
-            entity.entity_name
-            or any(other.id != relation.id for other in self.state.entity_relations)
-        ):
+        if not name and any(other.id != relation.id for other in self.state.entity_relations):
             logger.info(
-                "Keeping the forwarded entity request: the role of relation %s exists or another "
-                "client relation requests one.",
+                "Keeping the forwarded entity request: another client relation than %s requests "
+                "one.",
                 relation.id,
             )
             return
 
-        # An empty value deletes the key.
         cluster = self.state.cluster
-        if cluster.client_entity_type != entity_type:
-            cluster.client_entity_type = entity_type
-        if cluster.client_extra_group_roles != extra_group_roles:
-            cluster.client_extra_group_roles = extra_group_roles
-        if cluster.client_entity_permissions != permissions:
-            cluster.client_entity_permissions = permissions
-        if cluster.client_entity_name != name:
-            cluster.client_entity_name = name
+        seen = cluster.seen_request
+        if any(
+            seen.get(key.value) and value and seen[key.value] != value
+            for key, value in (
+                (EntityStateKeys.ENTITY_TYPE, entity_type),
+                (EntityStateKeys.EXTRA_GROUP_ROLES, extra_group_roles),
+            )
+        ):
+            logger.info(
+                "Relation %s requests another entity type or roles than the config-server has "
+                "seen: clearing the forwarded request first.",
+                relation.id,
+            )
+            entity_type = extra_group_roles = permissions = name = ""
+
+        # An empty value deletes the key; an unchanged one changes nothing. Each new name gets
+        # a new secret, so the name is compared first.
+        cluster.entity_type = entity_type
+        cluster.extra_group_roles = extra_group_roles
+        cluster.entity_permissions = permissions
+        if cluster.requested_entity_name != name:
+            cluster.requested_entity_name = name
 
     @override
     def reconcile_entities(self) -> None:
@@ -916,16 +931,6 @@ class MongosOperator(OperatorProtocol, Object):
         # A mongos-k8s router creates the roles requested by its clients.
         if scope == "app" and self.substrate == Substrates.K8S and self.state.db_initialised:
             charm_statuses += self.mongo_manager.get_statuses("app", recompute=True)
-
-        # A VM mongos forwards them, unless they are invalid.
-        if scope == "app" and self.substrate == Substrates.VM:
-            for relation in self.state.entity_relations:
-                try:
-                    self.state.entity_state(relation).validate()
-                except InvalidEntityRequestError as e:
-                    logger.warning("Invalid entity request on relation %s: %s", relation.id, e)
-                    charm_statuses.append(MongodStatuses.INVALID_ENTITY_REQUEST.value)
-                    break
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
