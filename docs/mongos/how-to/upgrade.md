@@ -42,12 +42,12 @@ Run the pre-refresh-check action against the leader unit of your Mongos applicat
 ```{tab-item} VM
 :sync: vm
 
-    juju mongos/leader pre-refresh-check
+    juju run mongos/leader pre-refresh-check
 ```
 ```{tab-item} K8s
 :sync: k8s
 
-    juju mongos-k8s/leader pre-refresh-check
+    juju run mongos-k8s/leader pre-refresh-check
 ```
 ````  
 
@@ -99,7 +99,7 @@ Using the revision from {ref}`Step 3 <step-3-determine-new-revision>`, upgrade y
 ```{tab-item} K8s
 :sync: k8s
 
-    juju refresh mongos --revision=<revision number>
+    juju refresh mongos-k8s --revision=<revision number>
 ```
 ````
 

@@ -60,7 +60,7 @@ Then SSH into the unit and access the `mongo` shell:
 :sync: vm
 
     juju ssh mongos/0
-    mongosh <URI>
+    charmed-mongodb.mongosh <URI>
 ```
 
 ```{tab-item} K8s
