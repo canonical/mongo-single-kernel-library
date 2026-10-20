@@ -25,7 +25,7 @@ To deploy `mongos` and `data-integrator`, run
 ```
 ````
 
-When the status of the `mongos` application becomes `idle`, integrate `mongos` with `data-integrator` and with the `mongodb` application running as `config-server`:
+Integrate `mongos` with `data-integrator` and with the `mongodb` application running as `config-server`:
 
 ````{tab-set}
 ```{tab-item} VM

@@ -7,19 +7,17 @@ If the sharded MongoDB cluster has TLS enabled, `mongos` must also enable TLS. E
 ```{tab-item} VM
 :sync: vm
 
-    juju integrate mongos <tls-application>
+    juju integrate mongos:peer-certificates <tls-application>
+    juju integrate mongos:client-certificates <tls-application>
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
-    juju integrate mongos-k8s <tls-application>
+    juju integrate mongos-k8s:peer-certificates <tls-application>
+    juju integrate mongos-k8s:client-certificates <tls-application>
 ```
 ````
-
-```shell
-
-```
 
 `<tls-application` must be the same TLS application that the sharded MongoDB cluster is integrated to. 
 
