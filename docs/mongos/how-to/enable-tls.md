@@ -43,7 +43,7 @@ To remove a `mongos` connection to the sharded cluster, run:
 
 When`mongos` is removed from the sharded cluster, the client is removed as well.
 
-## External connections (VM-only)
+## External connections (Kubernetes-only)
 <!--TODO: K8s -->
 
 If you would like to connect the sharded MongoDB K8s cluster outside of Juju, this is possible with the configuration expose-external in the mongos-k8s charm.

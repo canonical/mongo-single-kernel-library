@@ -1,7 +1,7 @@
 (deploy-mongos)=
 # How to deploy Mongos
 
-The following steps will guide you through briefly creating a client connection to a sharded MongoDB cluster via `mongos`. 
+The following steps will guide you through briefly creating a client connection to a sharded MongoDB cluster via `mongos`, the router for queries and write operations in shared clusters.
 
 You'll need a Juju environment and a {ref}`MongoDB application deployed as a sharded cluster <deploy-a-sharded-cluster>`.
 
