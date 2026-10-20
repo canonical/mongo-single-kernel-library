@@ -52,7 +52,7 @@ If you would like to connect the sharded MongoDB K8s cluster outside of Juju, th
 
 Simply configure the charm to use `nodeport`:
 
-```{shell}
+```
 juju config mongos-k8s expose-external=nodeport
 ```
 
@@ -60,7 +60,7 @@ This will make the mongos router accessible outside of Juju and will provide you
 
 For example, if you run
 
-```{shell}
+```
 juju run data-integrator get-credentials
 ```
 
@@ -68,6 +68,6 @@ You will see that the URI has changed.
 
 To reconfigure the charm to have internal access only, run:
 
-```{shell}
+```
 juju config mongos-k8s expose-external=none
 ```
