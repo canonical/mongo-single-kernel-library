@@ -326,13 +326,10 @@ def test_config_server_get_status_shard_draining(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
-        return_value={"shard", "shard0"},
-    )
-    mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.cluster_password_synced",
         return_value=True,
     )
+    harness.charm.operator.state.app_peer_data.shards_pending_removal = {"shard0"}
 
     statuses = harness.charm.operator.config_server_manager.get_statuses(
         scope=Scope.UNIT, recompute=True
