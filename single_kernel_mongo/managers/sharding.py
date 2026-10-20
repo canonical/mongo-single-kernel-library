@@ -403,6 +403,13 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         config-server from running additional operations. Furthermore we cannot
         defer relation-broken events.
         """
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            logger.info(
+                "Skipping shard removal reconciliation: a related application has a "
+                "mismatched revision, likely mid-upgrade."
+            )
+            return
+
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
 
