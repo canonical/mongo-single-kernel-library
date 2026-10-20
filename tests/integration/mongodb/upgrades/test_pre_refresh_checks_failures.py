@@ -100,7 +100,7 @@ def test_preflight_check_fails_during_backup(juju: jubilant.Juju, cloud_configs:
 
     logger.info("Calling pre-refresh-check")
     with pytest.raises(jubilant.TaskError) as error:
-        juju.run(leader_unit, "pre-refresh-check")
+        juju.run(leader_unit, "pre-refresh-check", wait=120)
     assert error.value.task.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     juju.remove_relation(f"{app_name}:{S3_ENDPOINT}", f"{S3_APP_NAME}:{S3_ENDPOINT}")
