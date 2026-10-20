@@ -5,7 +5,7 @@
 
 This refers to an upgrade from MongoDB 6 to MongoDB 8.
 
-After having upgraded your sharded cluster with (see {ref}`MongoDB - How to upgrade <how-to-upgrade>`), you can proceed to deploy a new Mongos VM application (see: {ref}`Mongos - How to deploy <deploy-mongos>`)) and relate it with the `config-server`.
+After having upgraded your sharded cluster with (see {ref}`MongoDB - How to upgrade <minor-version-upgrade>`), you can proceed to deploy a new Mongos VM application (see: {ref}`Mongos - How to deploy <deploy-mongos>`)) and relate it with the `config-server`.
 
 Please note that **Mongos 6 and MongoDB 8 are not compatible, so you have to update them separately**.
 
@@ -38,6 +38,7 @@ Before refreshing, the charm needs to perform some preparatory tasks to define t
 
 Run the pre-refresh-check action against the leader unit of your Mongos application:
 
+````{tab-set}
 ```{tab-item} VM
 :sync: vm
 
@@ -48,6 +49,7 @@ Run the pre-refresh-check action against the leader unit of your Mongos applicat
 
     juju mongos-k8s/leader pre-refresh-check
 ```
+````  
 
 ```{warning} 
 Do not proceed if this action is unsuccessful.

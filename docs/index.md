@@ -4,7 +4,7 @@ myst:
   html_meta:
     description: "Official documentation for Charmed MongoDB. Deploy and manage MongoDB on bare metal/virtual machines and Kubernetes using Juju."
 ---
-
+(mongodb)=
 # Charmed MongoDB documentation
 
 Charmed MongoDB is an open-source software operator that deploys and operates [MongoDB](https://www.mongodb.com/) databases on IAAS/VM and Kubernetes. In addition to MongoDB's essential operations for managing production-grade deployments, Charmed MongoDB offers advanced features such as backup and restores, monitoring, easy application integrations, sharding, and encryption.
