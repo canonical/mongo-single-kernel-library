@@ -135,4 +135,3 @@ While documentation is available in the library, keep these key points in mind:
 * Ensure your manager inherits from the `ManagerStatusProtocol`.
 * Implement the `get_statuses(scope, recompute)` method within your manager.
 * Add your manager to the list of those that report statuses in `src/charm.py`.
-

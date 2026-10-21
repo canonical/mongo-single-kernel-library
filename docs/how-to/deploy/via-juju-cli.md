@@ -37,6 +37,7 @@ To deploy a MongoDB replica set via the command line, run
 ```
 ````
 
+(deploy-a-sharded-cluster)=
 ## Deploy a sharded cluster
 
 To create a sharded cluster, deploy each cluster component separately with a manually defined role, then integrate them.
