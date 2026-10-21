@@ -315,6 +315,28 @@ def test_conflict_keeps_existing_ldap_credentials_and_certificates(
         restart.assert_not_called()
 
 
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_conflict_prevents_oauth_certificate_removal(mongodb_ctx, mongo_auth_state, mocker, role):
+    state = mongo_auth_state(
+        role=role,
+        relations={
+            Relation(endpoint="oauth", remote_app_name="hydra"),
+            Relation(endpoint="ldap", remote_app_name="glauth"),
+        },
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.workload, "exists", return_value=True)
+        delete = mocker.patch.object(operator.workload, "delete")
+        publish = mocker.patch.object(operator.cluster_manager, "update_oauth_ca_to_mongos")
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
+            operator.oauth_manager.remove_certificates()
+
+        delete.assert_not_called()
+        publish.assert_not_called()
+        restart.assert_not_called()
 def test_ldap_unavailable_defers_during_authentication_conflict(
     mongodb_ctx, conflicting_authentication, mocker
 ):

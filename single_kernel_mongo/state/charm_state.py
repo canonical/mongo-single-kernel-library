@@ -390,6 +390,7 @@ class CharmState(Object, AbstractStatusesState):
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
                 ClusterStateKeys.EXT_CA_SECRET.value,
+                ClusterStateKeys.OAUTH_CA.value,
                 ClusterStateKeys.CLUSTER_ID.value,
             ],
         )

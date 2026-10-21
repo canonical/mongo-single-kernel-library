@@ -661,6 +661,24 @@ class AuthStatuses(Enum):
 class OAuthStatuses(Enum):
     """OIDC integration statuses."""
 
+    INVALID_DISCOVERY = StatusObject(
+        status="blocked",
+        message="OAuth issuer discovery endpoint did not return valid OIDC metadata.",
+    )
+    DISCOVERY_MISMATCH = StatusObject(
+        status="blocked",
+        message="OIDC discovery metadata does not match the OAuth relation.",
+    )
+    ISSUER_TLS_ERROR = StatusObject(
+        status="blocked",
+        message="Cannot verify the OAuth issuer's TLS certificate.",
+        action="Provide the issuer CA through oauth-certificate-transfer.",
+    )
+    ISSUER_UNREACHABLE = StatusObject(
+        status="waiting",
+        message="Cannot reach the OAuth issuer.",
+    )
+
     INVALID_OAUTH_REL_ON_SHARD = StatusObject(
         status="blocked",
         message="Cannot integrate OIDC with shard.",

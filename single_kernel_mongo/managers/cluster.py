@@ -150,6 +150,9 @@ class ClusterProvider(Object):
         if issuer := self.state.app_peer_data.oauth_issuer:
             relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = issuer
 
+        if certificates := self.dependent.oauth_manager.certificate_transfer.get_all_certificates():
+            relation_data[ClusterStateKeys.OAUTH_CA.value] = "\n".join(sorted(certificates))
+
         if cluster_id := self.state.get_cluster_id():
             relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
 
@@ -235,6 +238,22 @@ class ClusterProvider(Object):
             else:
                 self.data_interface.delete_relation_data(
                     relation.id, [ClusterStateKeys.OAUTH_ISSUER.value]
+                )
+
+    def update_oauth_ca_to_mongos(self, bundle: str) -> None:
+        """Publish the identity provider CA bundle on established mongos relations."""
+        self.assert_pass_hook_checks()
+        for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
+            if bundle:
+                self.data_interface.update_relation_data(
+                    relation.id, {ClusterStateKeys.OAUTH_CA.value: bundle}
+                )
+            else:
+                self.data_interface.delete_relation_data(
+                    relation.id, [ClusterStateKeys.OAUTH_CA.value]
                 )
 
     def update_ldap_hash_to_mongos(self, hashed_data: str) -> None:
@@ -502,6 +521,11 @@ class ClusterRequirer(Object):
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
         self.assert_pass_hook_checks()
+
+        if oauth_ca := self.state.cluster.oauth_ca:
+            self.workload.write(self.workload.paths.oauth_ca_file, oauth_ca)
+        elif self.workload.exists(self.workload.paths.oauth_ca_file):
+            self.workload.delete(self.workload.paths.oauth_ca_file)
 
         self.state.statuses.delete(
             MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
