@@ -171,6 +171,11 @@ class MachineUpgrade(AbstractUpgrade):
         if dependent.name == CharmKind.MONGOD:
             dependent._restart_related_services()  # type: ignore[attr-defined]
 
+            # Update the roles and information on mongos and shards
+            dependent.config_server_manager.update_mongos_hosts()  # type: ignore[attr-defined]
+
+            dependent.shard_manager.reconcile_shard_state()  # type: ignore[attr-defined]
+
         self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
         logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
 

@@ -25,6 +25,7 @@ class AppPeerDataKeys(str, Enum):
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
     MONGOS_HOSTS = "mongos_hosts"
+    SHARDS_PENDING_REMOVAL = "shards-pending-removal"
 
     # Shared
     ROLE = "role"
@@ -134,6 +135,22 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def mongos_hosts(self, value: list[str]):
         """Stores the mongos hosts in the databag."""
         self.update({AppPeerDataKeys.MONGOS_HOSTS.value: json.dumps(sorted(value))})
+
+    @property
+    def shards_pending_removal(self) -> set[str]:
+        """Shard names that config-server has actually started removing.
+
+        Populated only when a shard relation actually breaks.
+        """
+        if not self.relation:
+            return set()
+        return set(
+            json.loads(self.relation_data.get(AppPeerDataKeys.SHARDS_PENDING_REMOVAL.value, "[]"))
+        )
+
+    @shards_pending_removal.setter
+    def shards_pending_removal(self, value: set[str]) -> None:
+        self.update({AppPeerDataKeys.SHARDS_PENDING_REMOVAL.value: json.dumps(sorted(value))})
 
     def set_user_created(self, user: str):
         """Stores the flag stating if user was created."""
