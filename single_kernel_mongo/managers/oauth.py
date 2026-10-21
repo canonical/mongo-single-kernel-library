@@ -47,7 +47,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
                 redirect_uri="https://mongodb.invalid/oauth/callback",
                 audience=["mongodb"],
                 grant_types=["client_credentials"],
-                scope="openid",
+                scope="openid profile",
                 token_endpoint_auth_method="client_secret_basic",
             ),
             relation_name=self.name,
