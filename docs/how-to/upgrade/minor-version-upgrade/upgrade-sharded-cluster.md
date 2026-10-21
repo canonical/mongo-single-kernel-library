@@ -41,6 +41,4 @@ Do not proceed if an upgrade of a shard fails. If an upgrade fails, {ref}`roll b
 
 Next, upgrade any integrated mongos application.
 
-See:
-* [Charmed Mongos VM > How to perform a minor upgrade](https://charmhub.io/mongos/docs/h-minor-upgrade)
-* [Charmed Mongos K8s > How to perform a minor upgrade](https://charmhub.io/mongos-k8s/docs/h-minor-upgrade)
+See: {ref}`upgrade-mongos`.

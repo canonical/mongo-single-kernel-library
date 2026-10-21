@@ -72,7 +72,6 @@ Check the restored data by ensuring that:
 * the data size is correct
 * the data matches what you expected in the backup
 
-
 ## Read the rollback instructions
 
 In the event that something goes wrong (e.g. the refresh fails, the new version of MongoDB is not meeting performance requirements, a database client is incompatible with the new version), you may want to quickly roll back.
