@@ -679,7 +679,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
             return
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
-        for relation in self.state.client_relations:
+        for relation in self.state.user_relations:
             if new_ca:
                 self.state.client_data_interface.set_tls(relation.id, "True")
                 self.state.client_data_interface.set_tls_ca(relation.id, new_ca)

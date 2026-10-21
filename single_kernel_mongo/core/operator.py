@@ -40,6 +40,7 @@ from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
+from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import (
     OS_REQUIREMENTS,
@@ -246,6 +247,22 @@ class OperatorProtocol(
             raise RelationBrokenDuringScaleDownError(
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
+
+    def reconcile_entities(self) -> None:
+        """Creates the requested entity roles and drops those of orphaned relations.
+
+        A failure on one relation is logged and does not stop the others.
+        """
+        for relation in self.state.entity_relations:
+            try:
+                self.mongo_manager.add_entity(relation)
+            except PyMongoError as e:
+                logger.warning("Failed to create the role of relation %s: %s", relation.id, e)
+        for relation_id in self.state.orphaned_entity_ids:
+            try:
+                self.mongo_manager.remove_entity(relation_id)
+            except PyMongoError as e:
+                logger.warning("Failed to drop the role of relation %s: %s", relation_id, e)
 
     def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent) -> None:
         """Checks relation departed event is the result of removed relation or scale down.

@@ -8,7 +8,9 @@ from urllib.parse import quote_plus
 import jubilant
 
 from tests.integration.helpers.constants import (
+    BASE,
     CHARMED_OPERATOR_USERNAME,
+    DATA_INTEGRATOR_APP_NAME,
     MONGOD_PORT,
     MONGOS_PORT,
     TIMEOUT,
@@ -36,6 +38,11 @@ LDAP_UTILS_APP_NAME = "glauth-utils"
 TRAEFIK_CHARM = "traefik-k8s"
 LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
+
+# Roles requested through data-integrator as GROUP entities. The `ou` attribute of the
+# `ldap-query-template` makes PSMDB map the superheroes LDAP group to the role `superheroes`.
+LDAP_GROUP_ROLE = "superheroes"
+LDAP_CLASH_ROLE = "clash"
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +196,40 @@ def create_mongodb_user_roles(
     assert result.succeeded, "Failed to create role"
 
 
+def drop_mongodb_role(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    role_name: str,
+    mongos: bool = False,
+    tls: bool = False,
+) -> None:
+    """Drops the role role_name, e.g. one made by create_mongodb_user_roles."""
+    _, leader_unit_info = find_leader(juju=juju, app_name=app_name)
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    ip_address = get_ip_from_unit(substrate=substrate, unit_info=leader_unit_info)
+
+    uri = unit_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        ip_address=ip_address,
+        password=password,
+        replica_set=app_name,
+        mongos=mongos,
+    )
+
+    result = execute_on_mongod(
+        juju,
+        substrate,
+        app_name,
+        uri=uri,
+        command=f"db.dropRole('{role_name}')",
+        tls=tls,
+    )
+    assert result.succeeded, "Failed to drop role"
+
+
 def generate_mongodb_ldap_client(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -208,3 +249,69 @@ def generate_mongodb_ldap_client(
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = ",".join([f"{host}:{port}" for host in _hosts])
     return f"mongodb://{quote_plus(username)}:{quote_plus(password)}@{hosts}/{database}?authSource=\\$external&authMechanism=PLAIN"
+
+
+def request_ldap_group_role(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    role_name: str = LDAP_GROUP_ROLE,
+    permissions: str = "",
+    mongos: bool = False,
+    wait: bool = True,
+) -> None:
+    """Asks for the role `role_name` as a GROUP entity through data-integrator.
+
+    data-integrator takes the requested name from the first key of the user secret set as its
+    `requested-entities-secret`. It relates to `app_name:database`, or to
+    `app_name:mongos_proxy` when `mongos` is set; a VM mongos is a subordinate whose
+    `mongos_proxy` endpoint requires `mongos_client`, which data-integrator provides on its
+    `mongos` endpoint. With `wait`, returns once data-integrator is Active, which it turns once
+    the provider published the entity name, i.e. created the role.
+    """
+    config: dict[str, jubilant.ConfigValue] = {
+        "database-name": "superdb",
+        "entity-type": "GROUP",
+        "entity-permissions": permissions,
+    }
+    if DATA_INTEGRATOR_APP_NAME not in juju.status().apps:
+        juju.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", base=BASE, config=config)
+    else:
+        juju.config(DATA_INTEGRATOR_APP_NAME, config)
+
+    # One secret per role name, kept from an earlier request of the same name.
+    secret_name = f"{role_name}-role"
+    uri = next((secret.uri for secret in juju.secrets() if secret.name == secret_name), None)
+    if uri is None:
+        uri = juju.add_secret(secret_name, {role_name: "None"})
+        juju.grant_secret(uri, DATA_INTEGRATOR_APP_NAME)
+    juju.config(DATA_INTEGRATOR_APP_NAME, {"requested-entities-secret": str(uri)})
+
+    # data-integrator refreshes its status on config-changed and update-status only: without
+    # this, a request identical to the previous one could be judged on that one's Active status.
+    juju.wait(
+        lambda status: not jubilant.all_active(status, DATA_INTEGRATOR_APP_NAME),
+        timeout=TIMEOUT,
+    )
+
+    if not mongos:
+        juju.integrate(f"{DATA_INTEGRATOR_APP_NAME}:mongodb", f"{app_name}:database")
+    elif substrate == Substrate.lxd:
+        juju.integrate(f"{DATA_INTEGRATOR_APP_NAME}:mongos", f"{app_name}:mongos_proxy")
+    else:
+        juju.integrate(f"{DATA_INTEGRATOR_APP_NAME}:mongodb", f"{app_name}:mongos_proxy")
+    if not wait:
+        return
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            DATA_INTEGRATOR_APP_NAME,
+            app_name,
+            idle_period=30,
+            unit_count={DATA_INTEGRATOR_APP_NAME: 1},
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
