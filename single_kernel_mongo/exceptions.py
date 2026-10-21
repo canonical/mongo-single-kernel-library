@@ -269,6 +269,10 @@ class InvalidLdapHashError(DeferrableError):
     """Raised when the hash shared by config server is invalid."""
 
 
+class InvalidOAuthWithShardError(NonDeferrableFailedHookChecksError):
+    """Raised when a shard is integrated with OAuth."""
+
+
 class InvalidPasswordError(Exception):
     """Raised when an invalid password is found in the system-users config secret."""
 

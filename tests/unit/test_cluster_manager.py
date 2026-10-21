@@ -182,6 +182,79 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
     assert data.get("ldap-user-to-dn-mapping") == json.dumps(valid_mapping)
 
 
+@pytest.fixture
+def config_server(harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs")
+    return harness
+
+
+def test_share_secret_to_mongos_shares_the_oauth_ca_bundle(config_server):
+    manager = config_server.charm.operator.cluster_manager
+    config_server.charm.operator.state.oauth.chain = ["PEM-ONE", "PEM-TWO"]
+
+    rel_id = config_server.add_relation(RelationNames.CLUSTER.value, "test-mongos")
+    config_server.add_relation_unit(rel_id, "test-mongos/0")
+    config_server.update_relation_data(rel_id, "test-mongos", {"database": "test_mongos"})
+
+    assert manager.data_interface.as_dict(rel_id).get("oauth-ca-secret") == "PEM-ONE\nPEM-TWO"
+
+
+def test_update_oauth_ca_to_mongos(config_server):
+    manager = config_server.charm.operator.cluster_manager
+    rel_id = config_server.add_relation(RelationNames.CLUSTER.value, "test-mongos")
+    config_server.add_relation_unit(rel_id, "test-mongos/0")
+    config_server.update_relation_data(rel_id, "test-mongos", {"database": "test_mongos"})
+    assert manager.data_interface.as_dict(rel_id).get("oauth-ca-secret") is None
+
+    # CA relation added: the bundle is published.
+    config_server.charm.operator.state.oauth.chain = ["PEM"]
+    manager.update_oauth_ca_to_mongos()
+    assert manager.data_interface.as_dict(rel_id).get("oauth-ca-secret") == "PEM"
+
+    # CA relation gone: the bundle disappears, the keyfile stays.
+    config_server.charm.operator.state.oauth.chain = None
+    manager.update_oauth_ca_to_mongos()
+    data = manager.data_interface.as_dict(rel_id)
+    assert data.get("oauth-ca-secret") is None
+    assert data.get("key-file")
+
+
+def test_update_oauth_ca_to_mongos_removes_the_bundle_from_the_juju_secret(
+    config_server, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setenv("JUJU_VERSION", "3.6.0")  # Harness defaults to 0.0.0: no secrets.
+    manager = config_server.charm.operator.cluster_manager
+    config_server.charm.operator.state.oauth.chain = ["PEM"]
+    rel_id = config_server.add_relation(RelationNames.CLUSTER.value, "test-mongos")
+    config_server.add_relation_unit(rel_id, "test-mongos/0")
+    requested = ["key-file", "config-server-db", "int-ca-secret", "ext-ca-secret", "cluster-id"]
+    config_server.update_relation_data(
+        rel_id,
+        "test-mongos",
+        {
+            "database": "test_mongos",
+            "requested-secrets": json.dumps([*requested, "oauth-ca-secret"]),
+        },
+    )
+
+    def secret_content() -> dict[str, str]:
+        databag = config_server.get_relation_data(rel_id, config_server.charm.app.name)
+        assert "oauth-ca-secret" not in databag  # it travels in the Juju secret
+        return config_server.model.get_secret(id=databag["secret-extra"]).peek_content()
+
+    assert secret_content().get("oauth-ca-secret") == "PEM"
+
+    # CA relation gone: the bundle leaves the Juju secret, the keyfile stays.
+    config_server.charm.operator.state.oauth.chain = None
+    manager.update_oauth_ca_to_mongos()
+    assert "oauth-ca-secret" not in secret_content()
+    assert "key-file" in secret_content()
+
+
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
