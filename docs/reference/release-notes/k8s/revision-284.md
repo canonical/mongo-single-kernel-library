@@ -1,11 +1,11 @@
-(revision-YYY)=
+(revision-284)=
 
-# Revision YYY
+# Revision 284
 
-<sub>NN October 2026</sub>
+<sub>XX October 2026</sub>
 
-Charmed MongoDB Revision YYY has been deployed to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
-It pairs with Charmed Mongos revision ZZZ that has been release to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
+Charmed MongoDB K8s revision 284 has been release to the [`6/stable` channel](https://charmhub.io/mongodb-k8s?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos K8s revision 230 that has been release to the [`6/stable` channel](https://charmhub.io/mongos-k8s?channel=6/stable) on Charmhub.
 
 ## Highlights
 
@@ -28,11 +28,11 @@ See {ref}`system-requirements` for more information about software and hardware 
 
 ## Integrations
 
-See the [Integrations page](https://charmhub.io/mongodb/integrations) for a list of all interfaces and compatible charms.
+See the [Integrations page](https://charmhub.io/mongodb-k8s/integrations) for a list of all interfaces and compatible charms.
 
 ## Software contents
 
-This charm is based on the Canonical [charmed-mongodb-snap](https://github.com/canonical/charmed-mongodb-snap/?channel=6/stable). It packages:
+This charm is based on the Canonical [charmed mongodb rock](https://ghcr.io/canonical/charmed-mongodb@sha256:b6600ef095cb4aeb6f2f8340af0690ca7a436058c2f734413d5169475e5f6b6c). It packages:
 
 * Percona Server for MongoDB `v6.0.28-22`
 * MongoDB Exporter `v0.51.0`
