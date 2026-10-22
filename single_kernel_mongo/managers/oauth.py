@@ -65,7 +65,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         )
 
     def store_certificates(self, certificates: set[str]) -> None:
-        """Publish the CA in the peer secret and reconcile it on the leader."""
+        """Publish the CA in the peer secret and reconcile it on the leader.
+
+        Raises:
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
+        """
         if not self.charm.unit.is_leader():
             return
         self.assert_pass_hook_checks()
@@ -76,25 +81,35 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         self.state.app_peer_data.oauth_ca = bundle
         self.reconcile_certificates()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            self.dependent.cluster_manager.update_oauth_ca_to_mongos(bundle)  # type: ignore[attr-defined]
+            self.dependent.cluster_manager.update_oauth_ca_to_mongos()  # type: ignore[attr-defined]
         provider = self.oauth_requirer.get_provider_info()
         if provider and not self._validate_and_store_issuer(provider.issuer_url):
             return
         self.restart_when_ready()
 
     def remove_certificates(self) -> None:
-        """Withdraw the CA from the peer secret and reconcile it on the leader."""
+        """Withdraw the CA from the peer secret and reconcile it on the leader.
+
+        Raises:
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
+        """
         if not self.charm.unit.is_leader():
             return
         self.assert_pass_hook_checks()
         self.state.app_peer_data.oauth_ca = None
         self.reconcile_certificates()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            self.dependent.cluster_manager.update_oauth_ca_to_mongos("")  # type: ignore[attr-defined]
+            self.dependent.cluster_manager.update_oauth_ca_to_mongos()  # type: ignore[attr-defined]
         self.restart_when_ready()
 
     def reconcile_certificates(self) -> None:
-        """Reconcile the replica's CA file with the application peer secret."""
+        """Reconcile the replica's CA file with the application peer secret.
+
+        Raises:
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
+        """
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
         self.assert_pass_hook_checks()
@@ -107,8 +122,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def check_issuer_connection(self, issuer: str) -> StatusObject | None:
         """Verify HTTPS discovery metadata against the OAuth relation."""
         try:
-            endpoint = urlsplit(issuer)
-            if endpoint.scheme != "https" or not endpoint.hostname:
+            if urlsplit(issuer).scheme != "https":
                 return OAuthStatuses.ISSUER_TLS_ERROR.value
             context = self._issuer_ssl_context()
             discovery_url = f"{issuer.rstrip('/')}/.well-known/openid-configuration"
@@ -117,12 +131,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return self._discovery_status(document, issuer)
         except (json.JSONDecodeError, UnicodeDecodeError, HTTPError):
             return OAuthStatuses.INVALID_DISCOVERY.value
+        except (ssl.SSLError, ValueError):
+            return OAuthStatuses.ISSUER_TLS_ERROR.value
         except URLError as err:
             if isinstance(err.reason, ssl.SSLError):
                 return OAuthStatuses.ISSUER_TLS_ERROR.value
             return OAuthStatuses.ISSUER_UNREACHABLE.value
-        except (ssl.SSLError, ValueError):
-            return OAuthStatuses.ISSUER_TLS_ERROR.value
         except (OSError, WorkloadServiceError):
             return OAuthStatuses.ISSUER_UNREACHABLE.value
 
@@ -130,27 +144,27 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         """Compare required discovery fields with the corresponding relation fields."""
         if not isinstance(document, dict):
             return OAuthStatuses.INVALID_DISCOVERY.value
-        expected = {"issuer": issuer}
-        if provider := self.oauth_requirer.get_provider_info():
-            expected.update(token_endpoint=provider.token_endpoint, jwks_uri=provider.jwks_endpoint)
-        if any(
-            not isinstance(document.get(key), str) or not document[key]
-            for key in ("issuer", "token_endpoint", "jwks_uri")
-        ):
+
+        for key in ("issuer", "token_endpoint", "jwks_uri"):
+            value = document.get(key)
+            if not isinstance(value, str) or not value:
+                return OAuthStatuses.INVALID_DISCOVERY.value
+
+        if document["issuer"] != issuer:
             return OAuthStatuses.INVALID_DISCOVERY.value
-        if any(document[key] != value for key, value in expected.items()):
-            return OAuthStatuses.INVALID_DISCOVERY.value
+
+        provider = self.oauth_requirer.get_provider_info()
+        if provider:
+            if document["token_endpoint"] != provider.token_endpoint:
+                return OAuthStatuses.INVALID_DISCOVERY.value
+            if document["jwks_uri"] != provider.jwks_endpoint:
+                return OAuthStatuses.INVALID_DISCOVERY.value
+
         return None
 
     def _issuer_ssl_context(self) -> ssl.SSLContext:
         """Use transferred CA certificates when available, or system trust otherwise."""
-        workload = self.dependent.workload
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            ca = self.state.app_peer_data.oauth_ca or ""
-        elif workload.exists(workload.paths.oauth_ca_file):
-            ca = "\n".join(workload.read(workload.paths.oauth_ca_file))
-        else:
-            ca = ""
+        ca = self.state.app_peer_data.oauth_ca
         return ssl.create_default_context(cadata=ca) if ca else ssl.create_default_context()
 
     def assert_pass_hook_checks(self) -> None:

@@ -240,9 +240,10 @@ class ClusterProvider(Object):
                     relation.id, [ClusterStateKeys.OAUTH_ISSUER.value]
                 )
 
-    def update_oauth_ca_to_mongos(self, bundle: str) -> None:
-        """Publish the identity provider CA bundle on established mongos relations."""
+    def update_oauth_ca_to_mongos(self) -> None:
+        """Publish or withdraw the peer CA bundle on established mongos relations."""
         self.assert_pass_hook_checks()
+        bundle = self.state.app_peer_data.oauth_ca
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):
                 logger.info("Database Requested has not run yet, skipping.")
