@@ -249,6 +249,28 @@ class CharmState(Object, AbstractStatusesState):
         return self.model.get_relation(ExternalRequirerRelations.GCS_CREDENTIALS.value)
 
     @property
+    def authentication_conflict(self) -> bool:
+        """Whether LDAP and OIDC setups coexist, even when incomplete."""
+        ldap_configured = bool(
+            self.ldap_relation
+            or self.ldap_cert_relation
+            or self.config.ldap_user_to_dn_mapping
+            or self.config.ldap_query_template
+        )
+        oauth_configured = bool(
+            self.oauth_relation
+            or (self.charm_role.name == CharmKind.MONGOS and self.cluster.oauth_issuer)
+        )
+        return ldap_configured and oauth_configured
+
+    @property
+    def oauth_relation(self) -> Relation | None:
+        """The OAuth relation if it exists."""
+        if ExternalRequirerRelations.OAUTH.value not in self.model.relations:
+            return None
+        return self.model.get_relation(ExternalRequirerRelations.OAUTH.value)
+
+    @property
     def ldap_relation(self) -> Relation | None:
         """The LDAP relation if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.LDAP.value)
