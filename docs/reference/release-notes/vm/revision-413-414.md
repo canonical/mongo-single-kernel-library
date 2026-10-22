@@ -1,32 +1,29 @@
-(revision-YYY-ZZZ)=
+(revision-413-414)=
 
-# Revision YYY, ZZZ
+# Revision 413, 414
 
 <sub>16 October 2026</sub>
 
-This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, new versions of MongoDB, mongosh, PBM, mongodb_exporter. It features encryption at rest, GCS backup support, rolling operations, and many bug fixes. It also feature some new updated and refined Terraform modules
+This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, new versions of MongoDB, mongosh, PBM, mongodb_exporter. It features encryption at rest, juju spaces support, GCS backup support, rolling operations, and many bug fixes. It also feature some new updated and refined Terraform modules
 
 ## Compatibility
 
-| Charm   | Architecture | Charm revision | OCI Image revision* | MongoDB version | Min. recommended Juju version |
-|-------- | ------------ | -------------- |-------------------- | --------------- | ----------------------------- |
-| MongoDB |   `amd64`    | XXX            |  50                 |    8.0.28-12    |        3.6.29+                |
-| MongoDB |   `arm64`    | YYY            |  50                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `amd64`    | ...            |  20                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `arm64`    | ...            |  20                 |    8.0.28-12    |        3.6.29+                |
-
-\*OCI image resources:
-
-* `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:4f3fda68dc0739baf3e8bb29d326ae94ff82db78562c9a5dc647e32ad84c047b`
+| Charm   | Architecture | Charm revision | Snap version | MongoDB version | Min. recommended Juju version |
+|-------- | ------------ | -------------- |------------- | --------------- | ----------------------------- |
+| MongoDB |   `amd64`    | 413            |  358         |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `arm64`    | 414            |  359         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `amd64`    | 219            |  358         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `arm64`    | 220            |  359         |    8.0.28-12    |        3.6.29+                |
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
 ## Features
 
-* Build and test ARM64 architecture ([PR #203](https://github.com/canonical/mongo-single-kernel-library/pull/203))
+* ARM64 Support ([PR #203](https://github.com/canonical/mongo-single-kernel-library/pull/203))
 * MongoDB 8.0.28 and PBM Agent log file ([PR #414](https://github.com/canonical/mongo-single-kernel-library/pull/414))
 * MongoDB Encryption At Rest ([PR #258](https://github.com/canonical/mongo-single-kernel-library/pull/258))
 * GCS Backup support ([PR #218](https://github.com/canonical/mongo-single-kernel-library/pull/218))
+* Juju spaces support for MongoDB ([PR #244](https://github.com/canonical/mongo-single-kernel-library/pull/244))
 * Async restarts using `charmlibs-rollingops` ([PR #319](https://github.com/canonical/mongo-single-kernel-library/pull/319))
 * New Terraform Modules:
   * You can find updated and better terraform modules for [Charmed MongoDB](https://github.com/canonical/mongodb-operator/tree/8/edge/terraform), [Charmed MongoDB K8s](https://github.com/canonical/mongodb-k8s-operator/tree/8/edge/terraform), [Charmed Mongos](https://github.com/canonical/mongos-operator/tree/8/edge/terraform) and [Charmed Mongos K8S](https://github.com/canonical/mongos-k8s-operator/tree/8/edge/terraform)
