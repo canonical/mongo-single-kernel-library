@@ -150,8 +150,8 @@ class ClusterProvider(Object):
         if issuer := self.state.app_peer_data.oauth_issuer:
             relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = issuer
 
-        if certificates := self.dependent.oauth_manager.certificate_transfer.get_all_certificates():
-            relation_data[ClusterStateKeys.OAUTH_CA.value] = "\n".join(sorted(certificates))
+        if bundle := self.state.app_peer_data.oauth_ca:
+            relation_data[ClusterStateKeys.OAUTH_CA.value] = bundle
 
         if cluster_id := self.state.get_cluster_id():
             relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id

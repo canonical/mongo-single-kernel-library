@@ -65,37 +65,44 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         )
 
     def store_certificates(self, certificates: set[str]) -> None:
-        """Write the CA bundle on replica sets or share it with mongos from a config server."""
+        """Publish the CA in the peer secret and reconcile it on the leader."""
+        if not self.charm.unit.is_leader():
+            return
         self.assert_pass_hook_checks()
         if not certificates:
             self.remove_certificates()
             return
         bundle = "\n".join(sorted(certificates))
+        self.state.app_peer_data.oauth_ca = bundle
+        self.reconcile_certificates()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            if self.charm.unit.is_leader():
-                self.dependent.cluster_manager.update_oauth_ca_to_mongos(bundle)  # type: ignore[attr-defined]
-        elif self.state.is_role(MongoDBRoles.REPLICATION):
-            self.dependent.workload.write(self.dependent.workload.paths.oauth_ca_file, bundle)
-        else:
-            return
+            self.dependent.cluster_manager.update_oauth_ca_to_mongos(bundle)  # type: ignore[attr-defined]
         provider = self.oauth_requirer.get_provider_info()
         if provider and not self._validate_and_store_issuer(provider.issuer_url):
             return
         self.restart_when_ready()
 
     def remove_certificates(self) -> None:
-        """Remove the CA bundle locally or withdraw it from mongos relations."""
-        self.assert_pass_hook_checks()
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            if self.charm.unit.is_leader():
-                self.dependent.cluster_manager.update_oauth_ca_to_mongos("")  # type: ignore[attr-defined]
+        """Withdraw the CA from the peer secret and reconcile it on the leader."""
+        if not self.charm.unit.is_leader():
             return
+        self.assert_pass_hook_checks()
+        self.state.app_peer_data.oauth_ca = None
+        self.reconcile_certificates()
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.dependent.cluster_manager.update_oauth_ca_to_mongos("")  # type: ignore[attr-defined]
+        self.restart_when_ready()
+
+    def reconcile_certificates(self) -> None:
+        """Reconcile the replica's CA file with the application peer secret."""
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
+        self.assert_pass_hook_checks()
         workload = self.dependent.workload
-        if workload.exists(workload.paths.oauth_ca_file):
+        if bundle := self.state.app_peer_data.oauth_ca:
+            workload.write(workload.paths.oauth_ca_file, bundle)
+        elif workload.exists(workload.paths.oauth_ca_file):
             workload.delete(workload.paths.oauth_ca_file)
-        self.restart_when_ready()
 
     def check_issuer_connection(self, issuer: str) -> StatusObject | None:
         """Verify HTTPS discovery metadata against the OAuth relation."""
@@ -139,7 +146,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         """Use transferred CA certificates when available, or system trust otherwise."""
         workload = self.dependent.workload
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            ca = "\n".join(sorted(self.certificate_transfer.get_all_certificates()))
+            ca = self.state.app_peer_data.oauth_ca or ""
         elif workload.exists(workload.paths.oauth_ca_file):
             ca = "\n".join(workload.read(workload.paths.oauth_ca_file))
         else:

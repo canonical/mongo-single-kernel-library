@@ -18,10 +18,12 @@ from charmlibs.interfaces.oauth import (
     OAuthInfoRemovedEvent,
 )
 from charmlibs.rollingops import RollingOpsNoRelationError
-from ops.charm import RelationChangedEvent
+from ops.charm import RelationChangedEvent, SecretChangedEvent, UpdateStatusEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -57,13 +59,24 @@ class OAuthEventHandler(Object):
             self.manager.certificate_transfer.on.certificates_removed,
             self._on_certificate_removed,
         )
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
+        self.framework.observe(self.charm.on.update_status, self._on_peer_relation_changed)
         self.framework.observe(
             self.charm.on[self.charm.peer_rel_name.value].relation_changed,
             self._on_peer_relation_changed,
         )
 
+    def _on_secret_changed(self, event: SecretChangedEvent) -> None:
+        """Reconcile CA rotations in the application peer secret."""
+        label = generate_secret_label(
+            self.charm.app.name, Scope.APP, self.charm.peer_rel_name.value
+        )
+        if event.secret.label != label:
+            return
+        self._on_peer_relation_changed(event)
+
     def _on_certificate_available(self, event: CertificatesAvailableEvent) -> None:
-        """Store the identity provider certificates on replica-set units."""
+        """Publish and reconcile the identity provider CA on the leader."""
         try:
             self.manager.store_certificates(event.certificates)
         except (
@@ -76,7 +89,7 @@ class OAuthEventHandler(Object):
             logger.error("%s", err)
 
     def _on_certificate_removed(self, event: CertificatesRemovedEvent) -> None:
-        """Delete the identity provider certificates on replica-set units."""
+        """Withdraw and reconcile the identity provider CA on the leader."""
         try:
             self.manager.remove_certificates()
         except (
@@ -88,13 +101,20 @@ class OAuthEventHandler(Object):
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Reconcile the shared issuer on follower units."""
+    def _on_peer_relation_changed(
+        self, event: RelationChangedEvent | SecretChangedEvent | UpdateStatusEvent
+    ) -> None:
+        """Reconcile the shared issuer and CA on follower units."""
         if self.charm.unit.is_leader():
             return
         try:
+            self.manager.reconcile_certificates()
             self.manager.restart_when_ready()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
@@ -103,7 +123,11 @@ class OAuthEventHandler(Object):
         """Handle available or updated provider information."""
         try:
             self.manager.configure()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
@@ -112,7 +136,11 @@ class OAuthEventHandler(Object):
         """Handle removal of provider information."""
         try:
             self.manager.remove()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
