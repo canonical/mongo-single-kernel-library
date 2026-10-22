@@ -83,7 +83,9 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.dependent.cluster_manager.update_oauth_ca_to_mongos()  # type: ignore[attr-defined]
         provider = self.oauth_requirer.get_provider_info()
-        if provider and not self._validate_and_store_issuer(provider.issuer_url):
+        if provider and not self._validate_and_store_issuer(
+            provider.issuer_url, provider.client_id
+        ):
             return
         self.restart_when_ready()
 
@@ -192,7 +194,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def configure(self) -> None:
         """Store and propagate the OAuth issuer on the leader.
 
-        The leader stores the issuer in application peer databag.
+        The leader stores the validated issuer and client ID in the application peer databag.
 
         Config servers propagate the issuer to Mongos through the cluster relation.
         Replica sets request an asynchronous rolling restart if the configuration
@@ -211,17 +213,18 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         provider = self.oauth_requirer.get_provider_info()
         if provider is None or not provider.issuer_url:
             raise DeferrableFailedHookChecksError("Waiting for OAuth issuer information.")
-        if self._validate_and_store_issuer(provider.issuer_url):
+        if self._validate_and_store_issuer(provider.issuer_url, provider.client_id):
             self.restart_when_ready()
 
-    def _validate_and_store_issuer(self, issuer: str) -> bool:
-        """Validate the issuer and store/share it only after successful validation."""
+    def _validate_and_store_issuer(self, issuer: str, client_id: str | None) -> bool:
+        """Validate the issuer, then store its client ID and store/share the issuer."""
         self._clear_issuer_statuses()
         if status := self.check_issuer_connection(issuer):
             self.state.statuses.add(status, scope="unit", component=self.name)
             return False
         if self.charm.unit.is_leader():
             self.state.app_peer_data.oauth_issuer = issuer
+            self.state.app_peer_data.oauth_client_id = client_id
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
         return True
@@ -238,7 +241,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def remove(self) -> None:
         """Remove and propagate the OAuth issuer on the leader.
 
-        The leader clears the issuer from application peer databag.
+        The leader clears the issuer and client ID from the application peer databag.
         Config servers withdraw it from Mongos through the cluster relation.
         Replica sets request an asynchronous rolling restart if the configuration
         has changed. Followers reconcile through peer relation events.
@@ -254,6 +257,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         self.assert_pass_hook_checks()
 
         self.state.app_peer_data.oauth_issuer = None
+        self.state.app_peer_data.oauth_client_id = None
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
         self.restart_when_ready()

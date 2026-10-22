@@ -78,6 +78,7 @@ def oauth_relation(issuer="https://issuer.example", **kwargs):
         remote_app_name="hydra",
         remote_app_data={
             "issuer_url": issuer,
+            "client_id": "client-id",
             "authorization_endpoint": f"{issuer}/authorize",
             "token_endpoint": f"{issuer}/token",
             "introspection_endpoint": f"{issuer}/introspect",

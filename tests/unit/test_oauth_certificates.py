@@ -109,7 +109,7 @@ def test_replica_set_receives_pem_chain_in_peer_secret(
     relation = certificate_relation(certificates)
     state_in = mongo_state(
         mongodb_container,
-        peer_data={"oauth-issuer": "https://issuer.example"},
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         relations={relation},
     )
     with mongodb_ctx(
@@ -140,7 +140,7 @@ def test_ca_rotation_preserves_config_with_real_certificates(
     relation = certificate_relation(certificates, certificates.rotated)
     state_in = mongo_state(
         mongodb_container,
-        peer_data={"oauth-issuer": "https://issuer.example"},
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         relations={relation},
     )
     with mongodb_ctx(
@@ -339,7 +339,10 @@ def test_mongos_stores_oauth_ca_from_cluster_relation(
 def test_replica_set_oidc_provider_uses_local_ca(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
-    state_in = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
+    state_in = mongo_state(
+        mongodb_container,
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
@@ -354,7 +357,10 @@ def test_replica_set_oidc_provider_uses_local_ca(
 def test_replica_set_oidc_provider_omits_missing_ca(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
-    state_in = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
+    state_in = mongo_state(
+        mongodb_container,
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=False)
@@ -386,7 +392,7 @@ def test_mongos_oidc_provider_uses_local_ca(mock_issuer_tls, mongos_ctx, mongodb
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="config-server",
-        remote_app_data={"oauth-issuer": "https://issuer.example"},
+        remote_app_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
     )
     state_in = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
@@ -406,7 +412,7 @@ def test_mongos_oidc_provider_omits_missing_ca(
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="config-server",
-        remote_app_data={"oauth-issuer": "https://issuer.example"},
+        remote_app_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
     )
     state_in = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
@@ -455,7 +461,9 @@ def test_replica_set_ca_removal_requests_restart(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, oauth_workload_files
 ):
     state_in = mongo_state(
-        mongodb_container, leader=True, peer_data={"oauth-issuer": "https://issuer.example"}
+        mongodb_container,
+        leader=True,
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
     )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -479,6 +487,7 @@ def mongos_ca_restart(mongos_ctx, mongodb_container, mocker, oauth_workload_file
             remote_app_name="config-server",
             remote_app_data={
                 "oauth-issuer": "https://issuer.example",
+                "oauth-client-id": "client-id",
                 "oauth-ca": bundle,
                 "ext-ca-secret": external_ca,
                 "key-file": "keyfile",
@@ -735,7 +744,7 @@ def test_peer_change_writes_follower_ca_and_requests_restart(
         mongo_state(
             mongodb_container,
             leader=False,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets={secret},
     )
@@ -766,7 +775,7 @@ def test_peer_secret_rotation_updates_follower_ca_without_restart(
         mongo_state(
             mongodb_container,
             leader=False,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets={secret},
     )
@@ -788,7 +797,9 @@ def test_peer_change_removes_follower_ca_and_requests_restart(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, oauth_workload_files
 ):
     state_in = mongo_state(
-        mongodb_container, leader=False, peer_data={"oauth-issuer": "https://issuer.example"}
+        mongodb_container,
+        leader=False,
+        peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
     )
     original_peer = get_relation(state_in, PeerRelationNames.PEERS.value)
     peer = replace(original_peer, peers_data={1: {}})

@@ -150,6 +150,9 @@ class ClusterProvider(Object):
         if issuer := self.state.app_peer_data.oauth_issuer:
             relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = issuer
 
+        if client_id := self.state.app_peer_data.oauth_client_id:
+            relation_data[ClusterStateKeys.OAUTH_CLIENT_ID.value] = client_id
+
         if bundle := self.state.app_peer_data.oauth_ca:
             relation_data[ClusterStateKeys.OAUTH_CA.value] = bundle
 
@@ -219,26 +222,26 @@ class ClusterProvider(Object):
             )
 
     def update_oauth_issuer_to_mongos(self) -> None:
-        """Publish or remove the OAuth issuer on established mongos relations.
+        """Publish or remove the OAuth issuer and client ID on established mongos relations.
 
         Raises:
             DeferrableFailedHookChecksError: If the checks fail but can be retried later.
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
         """
         self.assert_pass_hook_checks()
-        issuer = self.state.app_peer_data.oauth_issuer
+        oauth_data = {
+            ClusterStateKeys.OAUTH_ISSUER.value: self.state.app_peer_data.oauth_issuer,
+            ClusterStateKeys.OAUTH_CLIENT_ID.value: self.state.app_peer_data.oauth_client_id,
+        }
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):
                 logger.info("Database Requested has not run yet, skipping.")
                 continue
-            if issuer:
-                self.data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.OAUTH_ISSUER.value: issuer}
-                )
-            else:
-                self.data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.OAUTH_ISSUER.value]
-                )
+            for key, value in oauth_data.items():
+                if value:
+                    self.data_interface.update_relation_data(relation.id, {key: value})
+                else:
+                    self.data_interface.delete_relation_data(relation.id, [key])
 
     def update_oauth_ca_to_mongos(self) -> None:
         """Publish or withdraw the peer CA bundle on established mongos relations."""
