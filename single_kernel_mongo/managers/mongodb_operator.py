@@ -679,7 +679,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
     @override
-    def update_config_and_restart(self) -> None:
+    def update_config_and_restart(self) -> None:  # noqa: C901
         """Listen to changes in application configuration.
 
         To prevent a user from migrating a cluster, and causing the component to become
@@ -709,6 +709,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise InvalidLdapQueryTemplateError(
                 "Invalid LDAP Query template, please update your config."
             )
+
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
 
         if state := self.vault_manager.get_degraded_state():
             logger.warning(
@@ -823,9 +826,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.info(f"Password updated for {user.username}.")
 
     def _handle_ldap_config_changes(self):
-        """Helpful method to handle the ldap changes and a restart if necessary."""
+        """Apply LDAP configuration once incompatible OIDC setup has been removed."""
         if self.state.authentication_conflict:
-            return
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         # Store in the databag so we never miss it.
         if self.config.ldap_user_to_dn_mapping:
             self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping

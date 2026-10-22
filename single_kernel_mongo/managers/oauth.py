@@ -53,22 +53,6 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             relation_name=self.name,
         )
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
-        """Report unsupported OAuth relations using the shared status framework."""
-        if scope == "unit" and self.state.authentication_conflict:
-            return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
-        if not recompute:
-            return [
-                status
-                for status in self.state.statuses.get(scope=scope, component=self.name).root
-                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
-            ]
-        if scope == "app":
-            return []
-        if self.state.is_role(MongoDBRoles.SHARD) and self.model.relations.get(self.name, []):
-            return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
-        return []
-
     def assert_pass_hook_checks(self) -> None:
         """Reject unsupported roles and defer OAuth hooks until MongoDB is ready.
 
@@ -92,51 +76,72 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             raise DeferrableFailedHookChecksError("OAuth hooks are not supported during a refresh.")
 
     def configure(self) -> None:
-        """Store the provider issuer and request an asynchronous rolling restart.
+        """Store and propagate the OAuth issuer on the leader.
+
+        The leader stores the issuer in application peer databag.
+
+        Config servers propagate the issuer to Mongos through the cluster relation.
+        Replica sets request an asynchronous rolling restart if the configuration
+        has changed. Followers reconcile through peer relation events.
 
         Raises:
-            DeferrableFailedHookChecksError: If the checks fail but can be retried later
-            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet
+            NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
+            RollingOpsNoRelationError: A rolling restart is requested before its
+                relation is available.
         """
-        self.assert_pass_hook_checks()
-        if not (
-            self.state.is_role(MongoDBRoles.REPLICATION)
-            or self.state.is_role(MongoDBRoles.CONFIG_SERVER)
-        ):
+        if not self.charm.unit.is_leader():
             return
+        self.assert_pass_hook_checks()
+
         provider = self.oauth_requirer.get_provider_info()
         if provider is None or not provider.issuer_url:
             raise DeferrableFailedHookChecksError("Waiting for OAuth issuer information.")
-        if self.charm.unit.is_leader():
-            self.state.app_peer_data.oauth_issuer = provider.issuer_url
-            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-                self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
+
+        self.state.app_peer_data.oauth_issuer = provider.issuer_url
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
+            return
         self.restart_when_ready()
 
     def remove(self) -> None:
-        """Remove the OAuth issuer and request an asynchronous rolling restart.
+        """Remove and propagate the OAuth issuer on the leader.
+
+        The leader clears the issuer from application peer databag.
+        Config servers withdraw it from Mongos through the cluster relation.
+        Replica sets request an asynchronous rolling restart if the configuration
+        has changed. Followers reconcile through peer relation events.
 
         Raises:
-            DeferrableFailedHookChecksError: If the checks fail but can be retried later
-            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
+            RollingOpsNoRelationError: A rolling restart is requested before its
+                relation is available.
         """
+        if not self.charm.unit.is_leader():
+            return
         self.assert_pass_hook_checks()
-        if self.charm.unit.is_leader():
-            self.state.app_peer_data.oauth_issuer = None
-            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-                self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
+
+        self.state.app_peer_data.oauth_issuer = None
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
         self.restart_when_ready()
 
     def restart_when_ready(self) -> None:
-        """Request a rolling restart if the replica-set configuration has changed.
+        """Request a rolling restart to reconcile the replica set's OAuth configuration.
+
+        Skip the request if neither the peer databag nor the current configuration
+        contains the oauth issuer.
+        Request a rolling restart if configuration has changed.
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: Hook checks reject the configuration.
         """
-        if self.state.authentication_conflict:
-            return
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
+        self.assert_pass_hook_checks()
         manager = self.dependent.config_manager
         current = safe_load("\n".join(manager.workload.read(manager.file)))
         if not self.state.app_peer_data.oauth_issuer and not (current or {}).get(
@@ -145,3 +150,20 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return
         if current != manager.build_config():
             self.dependent.async_restart_charm_services(force=False)
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Report the oauth status."""
+        if scope == "unit" and self.state.authentication_conflict:
+            return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
+        if not recompute:
+            # The current conflict is checked above. Ignore a stale cached result.
+            return [
+                status
+                for status in self.state.statuses.get(scope=scope, component=self.name).root
+                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
+            ]
+        if scope == "app":
+            return []
+        if self.state.is_role(MongoDBRoles.SHARD) and self.model.relations.get(self.name, []):
+            return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+        return []

@@ -127,7 +127,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if self.state.authentication_conflict:
-            return
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if not self.state.db_initialised:
             return
 
@@ -164,7 +164,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if self.state.authentication_conflict:
-            return
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
             self.remove_hash_from_mongos()
@@ -217,7 +217,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if self.state.authentication_conflict:
-            return
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
             self.remove_hash_from_mongos()
@@ -317,6 +317,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         if scope == "unit" and self.state.authentication_conflict:
             return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
         if not recompute:
+            # The current conflict is checked above. Ignore a stale cached result.
             return [
                 status
                 for status in self.state.statuses.get(scope=scope, component=self.name).root

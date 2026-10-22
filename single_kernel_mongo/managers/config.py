@@ -408,7 +408,13 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
 
     @property
     def authentication_parameters(self) -> dict[str, Any]:
-        """Preserve enabled authentication while incompatible setups coexist."""
+        """Build authentication settings, preserving existing settings during a conflict.
+
+        Without an LDAP/OIDC conflict, merge the settings from the integrations.
+        During a conflict, copy authentication settings from the current config
+        file so other configuration updates cannot enable, disable, or modify
+        either authentication setup. Unrelated settings are rebuilt normally.
+        """
         if not self.state.authentication_conflict:
             return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
         current = safe_load("\n".join(self.workload.read(self.file))) or {}

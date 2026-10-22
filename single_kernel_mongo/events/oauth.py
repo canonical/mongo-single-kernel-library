@@ -10,7 +10,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from charmlibs.interfaces.oauth import (
-    InvalidClientConfigEvent,
     OAuthInfoChangedEvent,
     OAuthInfoRemovedEvent,
 )
@@ -46,10 +45,6 @@ class OAuthEventHandler(Object):
             self.manager.oauth_requirer.on.oauth_info_removed, self._on_oauth_info_removed
         )
         self.framework.observe(
-            self.manager.oauth_requirer.on.invalid_client_config, self._on_invalid_client_config
-        )
-
-        self.framework.observe(
             self.charm.on[self.charm.peer_rel_name.value].relation_changed,
             self._on_peer_relation_changed,
         )
@@ -82,7 +77,3 @@ class OAuthEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
-
-    def _on_invalid_client_config(self, event: InvalidClientConfigEvent) -> None:
-        """Report rejected OAuth client configuration."""
-        logger.error("Invalid OAuth client configuration: %s", event.error)

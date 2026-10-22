@@ -12,27 +12,6 @@ from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 
-def mongo_state(containers, *, role=MongoDBRoles.REPLICATION, **kwargs):
-    """Build MongoDB peer state for a single Scenario event."""
-    return authentication_state(
-        containers,
-        peer_endpoint=PeerRelationNames.PEERS.value,
-        role=role,
-        config={"role": role.value, **kwargs.pop("config", {})},
-        **kwargs,
-    )
-
-
-def mongos_state(containers, **kwargs):
-    """Build router state without a direct OAuth relation."""
-    return authentication_state(
-        {replace(container, name="mongos") for container in containers},
-        peer_endpoint=PeerRelationNames.ROUTER_PEERS.value,
-        role=MongoDBRoles.MONGOS,
-        **kwargs,
-    )
-
-
 def authentication_state(
     containers,
     *,
@@ -63,6 +42,27 @@ def authentication_state(
             PeerRelation(endpoint=PeerRelationNames.ROLLINGOPS_PEERS.value),
             *relations,
         },
+    )
+
+
+def mongo_state(containers, *, role=MongoDBRoles.REPLICATION, **kwargs):
+    """Build MongoDB peer state for a single Scenario event."""
+    return authentication_state(
+        containers,
+        peer_endpoint=PeerRelationNames.PEERS.value,
+        role=role,
+        config={"role": role.value, **kwargs.pop("config", {})},
+        **kwargs,
+    )
+
+
+def mongos_state(containers, **kwargs):
+    """Build router state without a direct OAuth relation."""
+    return authentication_state(
+        {replace(container, name="mongos") for container in containers},
+        peer_endpoint=PeerRelationNames.ROUTER_PEERS.value,
+        role=MongoDBRoles.MONGOS,
+        **kwargs,
     )
 
 

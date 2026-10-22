@@ -653,7 +653,7 @@ class AuthStatuses(Enum):
 
     LDAP_OAUTH_CONFLICT = StatusObject(
         status="blocked",
-        message="LDAP and OIDC are mutually exclusive.",
+        message="Invalid auth setup: LDAP and OIDC are mutually exclusive.",
         action="Remove either the LDAP setup or the OIDC setup.",
     )
 

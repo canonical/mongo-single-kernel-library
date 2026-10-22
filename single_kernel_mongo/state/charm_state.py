@@ -258,10 +258,17 @@ class CharmState(Object, AbstractStatusesState):
             or self.config.ldap_query_template
         )
         oauth_configured = bool(
-            self.model.relations.get(ExternalRequirerRelations.OAUTH.value, [])
+            self.oauth_relation
             or (self.charm_role.name == CharmKind.MONGOS and self.cluster.oauth_issuer)
         )
         return ldap_configured and oauth_configured
+
+    @property
+    def oauth_relation(self) -> Relation | None:
+        """The OAuth relation if it exists."""
+        if ExternalRequirerRelations.OAUTH.value not in self.model.relations:
+            return None
+        return self.model.get_relation(ExternalRequirerRelations.OAUTH.value)
 
     @property
     def ldap_relation(self) -> Relation | None:

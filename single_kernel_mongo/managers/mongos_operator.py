@@ -226,12 +226,7 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
-        return (
-            self,
-            self.tls_manager,
-            self.ldap_manager,
-            self.upgrades_status_manager,
-        )
+        return (self, self.tls_manager, self.ldap_manager, self.upgrades_status_manager)
 
     @property
     @override
