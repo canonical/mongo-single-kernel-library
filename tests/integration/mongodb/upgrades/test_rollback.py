@@ -6,7 +6,6 @@ import logging
 import time
 
 import jubilant
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.constants import DEPLOYMENT_TIMEOUT, TIMEOUT, UNIT_IDS
 from tests.integration.helpers.jubilant_common import (
@@ -16,6 +15,7 @@ from tests.integration.helpers.jubilant_common import (
     get_unit_id,
 )
 from tests.integration.helpers.jubilant_upgrades import (
+    get_resources,
     get_workload_version,
     refresh_with_juju,
     upgrade_incompatible,
@@ -63,6 +63,8 @@ def test_rollback(
 
     leader_name, _ = find_leader(juju, app_name)
 
+    # pin the image the channel ships, since Juju keeps the uploaded one
+    original_resources = get_resources(juju, substrate, base_app_name, "8/edge")
     resources = mongod_resource if substrate == Substrate.k8s else None
 
     # Refresh always happens from highest to lowest unit number
@@ -77,19 +79,23 @@ def test_rollback(
     juju.refresh(app=app_name, path=faulty_mongodb_upgrade_charm, resources=resources)
     logger.info("Wait for refresh to fail")
 
-    for attempt in Retrying(
-        reraise=True,
-        stop=stop_after_delay(TIMEOUT),
-        wait=wait_fixed(10),
-    ):
-        with attempt:
-            assert upgrade_incompatible(
-                juju, substrate, app_name, refresh_order[0]
-            ), "Not indicating charm incompatible"
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                app_name,
+                idle_period=60,
+            )
+            and upgrade_incompatible(status, substrate, app_name, refresh_order[0])
+        ),
+        timeout=TIMEOUT,
+    )
 
     logger.info("Re-refresh the charm")
 
-    refresh_with_juju(juju, app_name, "8/edge", charm_name=base_app_name)
+    refresh_with_juju(
+        juju, app_name, "8/edge", charm_name=base_app_name, resources=original_resources
+    )
 
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
@@ -97,30 +103,9 @@ def test_rollback(
         lambda status: are_agents_idle(
             status,
             app_name,
-            idle_period=60,
+            idle_period=20,
         ),
-        timeout=TIMEOUT,
-    )
-    if upgrade_incompatible(juju, substrate, app_name, refresh_order[0]):
-        # will be marked "incompatible" if rollback is not to the same revision as initially
-        # deployed
-        logger.info("Rollback is blocked due to incompatibility")
-
-        logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        force_refresh_task = juju.run(
-            refresh_order[0],
-            "force-refresh-start",
-            params={"check-compatibility": False, "check-workload-container": False},
-        )
-        assert force_refresh_task.return_code == 0, "action failed"
-
-    juju.wait(
-        lambda status: are_agents_idle(
-            status,
-            app_name,
-            idle_period=30,
-        ),
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     if "resume-refresh" in juju.status().apps.get(app_name).app_status.message:

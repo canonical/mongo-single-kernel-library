@@ -4,7 +4,6 @@
 
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CLIENT_TLS_RELATION_NAME,
@@ -29,7 +28,6 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -65,7 +63,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_build_cluster_with_peer_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster, when integrated with peer TLS, allows non TLS client relations."""
     integrate_sharding_components(juju)
@@ -113,7 +110,6 @@ def test_build_cluster_with_peer_tls(juju: jubilant.Juju, substrate: Substrate) 
     )
 
 
-@pytest.mark.abort_on_fail
 def test_built_cluster_with_client_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster, when integrated with client TLS, enforces the TLS relations."""
     for app in CLUSTER_COMPONENTS:

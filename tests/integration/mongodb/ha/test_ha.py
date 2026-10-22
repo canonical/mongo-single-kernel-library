@@ -264,9 +264,8 @@ def test_storage_re_use_different_cluster(
     for unit_id in unit_ids:
         storage_ids[unit_id] = storage_id(juju, unit_id, "data")
         juju.remove_unit(unit_id)
-        # Give some time to remove the unit. We don't use asyncio.sleep here to
-        # leave time for each unit to be removed before removing the next one.
-        # time.sleep(60)
+        # Give some time to remove the unit. We leave time for each unit to be removed
+        # before removing the next one.
         remaining_units -= 1
         juju.wait(
             lambda status: are_apps_active_and_agents_idle(

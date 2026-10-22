@@ -276,18 +276,17 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
                 continue
-            self.data_interface.update_relation_data(
-                relation.id,
-                {
-                    AppShardingComponentKeys.HOST.value: json.dumps(
-                        sorted(self.state.internal_hosts)
-                    ),
-                    AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
-                        sorted(cidrs(self.state.cluster_network().bind_addresses))
-                    ),
-                    AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
-                },
-            )
+            data = {
+                AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
+                AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
+                    sorted(cidrs(self.state.cluster_network().bind_addresses))
+                ),
+                AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
+            }
+            # Reconciliation of shard-integrated flag
+            if self.state.config_server_state(relation).auth_updated:
+                data[AppShardingComponentKeys.SHARD_INTEGRATED.value] = json.dumps(True)
+            self.data_interface.update_relation_data(relation.id, data)
 
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""

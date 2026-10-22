@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
@@ -32,7 +31,6 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -67,7 +65,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_build_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster can be integrated with TLS."""
     assert juju.model
@@ -98,14 +95,12 @@ def test_build_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate) -> No
     check_cluster_tls_enabled(juju, substrate)
 
 
-@pytest.mark.abort_on_fail
 def test_rotate_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that each cluster component can rotate TLS certs."""
     for cluster_app in CLUSTER_COMPONENTS:
         rotate_and_verify_certs(juju, substrate, cluster_app)
 
 
-@pytest.mark.abort_on_fail
 def test_disable_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster can disable TLS."""
     remove_tls_integrations(juju, *CLUSTER_COMPONENTS)

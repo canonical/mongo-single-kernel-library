@@ -6,32 +6,30 @@ import json
 import logging
 import math
 import os
+import re
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
-from typing import NamedTuple
+from random import choices
+from string import ascii_lowercase, digits
+from typing import Any, NamedTuple
+from urllib.parse import quote_plus
 
 import httpx
 import jubilant
 import yaml
 from bson.json_util import dumps as bson_dumps
-from jubilant._juju import ConstraintValue
+from jubilant import ConstraintValue
 from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
 from tenacity import RetryError, Retrying, wait_fixed
 from tenacity.stop import stop_after_delay
 
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    CommandResult,
-    ProcessError,
-    SecretNotFoundError,
-    find_json,
-    mongosh,
-)
 from tests.integration.helpers.constants import (
     BASE,
     CHARMED_OPERATOR_USERNAME,
     DEFAULT_DATABASE_NAME,
+    DEPLOYMENT_TIMEOUT,
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     MONGODB_EXPORTER_PORT,
@@ -50,10 +48,36 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
+class ProcessError(Exception):
+    """Raised when a process fails."""
+
+
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
+
+
+def mongosh(substrate: Substrate) -> str:
+    match substrate:
+        case Substrate.lxd:
+            return "charmed-mongodb.mongosh"
+        case Substrate.k8s:
+            return "mongosh"
+
+
 def mongodb_base_path(substrate: Substrate) -> str:
     if substrate == Substrate.lxd:
         return MONGODB_SNAP_CONF_DIR
     return MONGODB_ROCK_CONF_DIR
+
+
+def mongodb_log_path(substrate: Substrate) -> str:
+    """The path of mongodb log file."""
+    if substrate == Substrate.lxd:
+        mongodb_common_dir = "/var/snap/charmed-mongodb/common"
+    else:
+        mongodb_common_dir = ""
+
+    return f"{mongodb_common_dir}/var/log/mongodb/mongodb.log"
 
 
 def mongodb_config_path(substrate: Substrate) -> str:
@@ -425,6 +449,7 @@ def _uri(
 ) -> str:
     port = MONGOS_PORT if mongos else MONGOD_PORT
     _hosts = ",".join(f"{host}:{port}" for host in hosts)
+    password = quote_plus(password)
     if mongos:
         return f"mongodb://{username}:{password}@{_hosts}/admin"
     if replica_set:
@@ -581,6 +606,22 @@ def add_juju_secret(
     return secret_uri
 
 
+@dataclass(frozen=True)
+class CommandResult:
+    return_code: int
+    stdout: str
+    stderr: str
+    data: Any
+
+    @property
+    def succeeded(self):
+        return self.return_code == 0
+
+    @property
+    def failed(self):
+        return self.return_code != 0
+
+
 def execute_on_mongod(
     juju: jubilant.Juju,
     substrate: Substrate,
@@ -629,6 +670,24 @@ def execute_on_mongod(
         stderr=stderr,
         data=data,
     )
+
+
+def find_json(combined_string: str) -> dict[str, Any]:
+    """Find json in a complex string."""
+    split = combined_string.splitlines()
+    all_lines = [escape_ansi(_line) for line in split for _line in line.split("\x07")]
+    for line in all_lines:
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError:
+            continue
+    return {}
+
+
+def escape_ansi(line: str) -> str:
+    """Escape ansi characters."""
+    ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", line)
 
 
 def is_relation_joined(
@@ -1012,3 +1071,18 @@ def get_status_detail(juju: jubilant.Juju, unit_name: str) -> dict[str, list[dic
         "unit": json.loads(action.results["json-output"]["unit"]),
         "app": json.loads(action.results["json-output"]["app"]),
     }
+
+
+def audit_log_line_sanity_check(entry: dict[str, str | None]) -> bool:
+    fields = ["atype", "ts", "local", "remote", "users", "roles", "param", "result"]
+    for field in fields:
+        if entry.get(field) is None:
+            logger.error("Field '%s' not found in audit log entry \"%s\"", field, entry)
+            return False
+    return True
+
+
+def generate_collection_id() -> str:
+    """Generates a random collection id."""
+    new_id = "".join(choices(ascii_lowercase + digits, k=4)).replace("_", "")
+    return f"collection_{new_id}"

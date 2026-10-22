@@ -7,8 +7,8 @@ from logging import getLogger
 
 import jubilant
 
-from tests.integration.helpers.common import CHARMED_OPERATOR_USERNAME
 from tests.integration.helpers.constants import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     TIMEOUT,

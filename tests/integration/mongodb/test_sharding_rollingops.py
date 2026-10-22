@@ -6,7 +6,6 @@ import logging
 from datetime import datetime
 
 import jubilant
-import pytest
 
 from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
@@ -33,7 +32,6 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
 def test_build_and_deploy(
     juju: jubilant.Juju,
     mongodb_charm: str,
@@ -64,7 +62,6 @@ def test_build_and_deploy(
     )
 
 
-@pytest.mark.abort_on_fail
 def test_integrate_shard_with_etcd(juju: jubilant.Juju) -> None:
     """Integrate shard components with etcd cluster.
 
@@ -86,7 +83,6 @@ def test_integrate_shard_with_etcd(juju: jubilant.Juju) -> None:
     )
 
 
-@pytest.mark.abort_on_fail
 def test_enable_tls_in_shard_using_rolling_ops(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Enable TLS for shard components and verify rolling ops etcd lock acquisition.
 
