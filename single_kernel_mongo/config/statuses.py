@@ -663,11 +663,7 @@ class OAuthStatuses(Enum):
 
     INVALID_DISCOVERY = StatusObject(
         status="blocked",
-        message="OAuth issuer discovery endpoint did not return valid OIDC metadata.",
-    )
-    DISCOVERY_MISMATCH = StatusObject(
-        status="blocked",
-        message="OIDC discovery metadata does not match the OAuth relation.",
+        message="OIDC discovery metadata is invalid or does not match the OAuth relation.",
     )
     ISSUER_TLS_ERROR = StatusObject(
         status="blocked",

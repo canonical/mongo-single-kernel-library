@@ -316,8 +316,9 @@ def test_conflict_keeps_existing_ldap_credentials_and_certificates(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_conflict_prevents_oauth_certificate_removal(mongodb_ctx, mongo_auth_state, mocker, role):
-    state = mongo_auth_state(
+def test_conflict_prevents_oauth_certificate_removal(mongodb_ctx, mongodb_container, mocker, role):
+    state = mongo_state(
+        mongodb_container,
         role=role,
         relations={
             Relation(endpoint="oauth", remote_app_name="hydra"),
@@ -337,6 +338,8 @@ def test_conflict_prevents_oauth_certificate_removal(mongodb_ctx, mongo_auth_sta
         delete.assert_not_called()
         publish.assert_not_called()
         restart.assert_not_called()
+
+
 def test_ldap_unavailable_defers_during_authentication_conflict(
     mongodb_ctx, conflicting_authentication, mocker
 ):

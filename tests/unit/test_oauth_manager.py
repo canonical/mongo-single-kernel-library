@@ -522,7 +522,9 @@ def test_oauth_relation_does_not_block_supported_roles(mongodb_ctx, mongodb_cont
 
 
 @pytest.mark.parametrize("leader", [True, False])
-def test_certificate_available_writes_replica_set_ca(mongodb_ctx, mongo_auth_state, mocker, leader):
+def test_certificate_available_writes_replica_set_ca(
+    mongodb_ctx, mongodb_container, mocker, leader
+):
     relation = Relation(
         endpoint="oauth-certificate-transfer",
         remote_app_name="idp-ca",
@@ -531,7 +533,7 @@ def test_certificate_available_writes_replica_set_ca(mongodb_ctx, mongo_auth_sta
             "certificates": json.dumps(["root-ca", "intermediate-ca"]),
         },
     )
-    state = mongo_auth_state(leader=leader, relations={relation})
+    state = mongo_state(mongodb_container, leader=leader, relations={relation})
     with mongodb_ctx(mongodb_ctx.on.relation_changed(relation), state) as scenario:
         operator = scenario.charm.operator
         write = mocker.patch.object(operator.workload, "write")
@@ -544,14 +546,14 @@ def test_certificate_available_writes_replica_set_ca(mongodb_ctx, mongo_auth_sta
 
 
 def test_certificate_available_does_not_write_config_server_ca(
-    mongodb_ctx, mongo_auth_state, mocker
+    mongodb_ctx, mongodb_container, mocker
 ):
     relation = Relation(
         endpoint="oauth-certificate-transfer",
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(role=MongoDBRoles.CONFIG_SERVER, relations={relation})
+    state = mongo_state(mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={relation})
     with mongodb_ctx(mongodb_ctx.on.relation_changed(relation), state) as scenario:
         write = mocker.patch.object(scenario.charm.operator.workload, "write")
 
@@ -561,9 +563,9 @@ def test_certificate_available_does_not_write_config_server_ca(
 
 
 @pytest.mark.parametrize("leader", [True, False])
-def test_certificate_removed_deletes_replica_set_ca(mongodb_ctx, mongo_auth_state, mocker, leader):
+def test_certificate_removed_deletes_replica_set_ca(mongodb_ctx, mongodb_container, mocker, leader):
     relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state = mongo_auth_state(leader=leader, relations={relation})
+    state = mongo_state(mongodb_container, leader=leader, relations={relation})
     with mongodb_ctx(mongodb_ctx.on.relation_broken(relation), state) as scenario:
         workload = scenario.charm.operator.workload
         mocker.patch.object(workload, "exists", return_value=True)
@@ -574,9 +576,9 @@ def test_certificate_removed_deletes_replica_set_ca(mongodb_ctx, mongo_auth_stat
         delete.assert_called_once_with(workload.paths.oauth_ca_file)
 
 
-def test_certificate_removed_skips_missing_replica_set_ca(mongodb_ctx, mongo_auth_state, mocker):
+def test_certificate_removed_skips_missing_replica_set_ca(mongodb_ctx, mongodb_container, mocker):
     relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state = mongo_auth_state(relations={relation})
+    state = mongo_state(mongodb_container, relations={relation})
     with mongodb_ctx(mongodb_ctx.on.relation_broken(relation), state) as scenario:
         workload = scenario.charm.operator.workload
         mocker.patch.object(workload, "exists", return_value=False)
@@ -589,10 +591,10 @@ def test_certificate_removed_skips_missing_replica_set_ca(mongodb_ctx, mongo_aut
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.SHARD])
 def test_certificate_removed_does_not_delete_ca_for_other_roles(
-    mongodb_ctx, mongo_auth_state, mocker, role
+    mongodb_ctx, mongodb_container, mocker, role
 ):
     relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state = mongo_auth_state(role=role, relations={relation})
+    state = mongo_state(mongodb_container, role=role, relations={relation})
     with mongodb_ctx(mongodb_ctx.on.relation_broken(relation), state) as scenario:
         delete = mocker.patch.object(scenario.charm.operator.workload, "delete")
 
@@ -603,7 +605,7 @@ def test_certificate_removed_does_not_delete_ca_for_other_roles(
 
 @pytest.mark.parametrize("bundle", ["first-ca", "updated-ca"])
 def test_certificate_available_publishes_config_server_ca_to_mongos(
-    mongodb_ctx, mongo_auth_state, mocker, config_server_relations, bundle
+    mongodb_ctx, mongodb_container, mocker, config_server_relations, bundle
 ):
     first, second, pending = config_server_relations
     certificate_relation = Relation(
@@ -611,7 +613,8 @@ def test_certificate_available_publishes_config_server_ca_to_mongos(
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps([bundle])},
     )
-    state = mongo_auth_state(
+    state = mongo_state(
+        mongodb_container,
         role=MongoDBRoles.CONFIG_SERVER,
         relations={first, second, pending, certificate_relation},
     )
@@ -627,15 +630,18 @@ def test_certificate_available_publishes_config_server_ca_to_mongos(
 
 
 def test_certificate_available_config_server_follower_does_not_publish_ca(
-    mongodb_ctx, mongo_auth_state, mocker
+    mongodb_ctx, mongodb_container, mocker
 ):
     certificate_relation = Relation(
         endpoint="oauth-certificate-transfer",
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(
-        role=MongoDBRoles.CONFIG_SERVER, leader=False, relations={certificate_relation}
+    state = mongo_state(
+        mongodb_container,
+        role=MongoDBRoles.CONFIG_SERVER,
+        leader=False,
+        relations={certificate_relation},
     )
     with mongodb_ctx(mongodb_ctx.on.relation_changed(certificate_relation), state) as scenario:
         publish = mocker.patch.object(
@@ -650,20 +656,20 @@ def test_certificate_available_config_server_follower_does_not_publish_ca(
 @pytest.mark.parametrize("leader", [True, False])
 @pytest.mark.parametrize("bundle", ["first-ca", "updated-ca"])
 def test_mongos_stores_oauth_ca_from_cluster_relation(
-    mongos_ctx, mongos_auth_state, mongos_oauth_restart, mongos_cluster, leader, bundle
+    mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader, bundle
 ):
     cluster = replace(
         mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-ca": bundle}
     )
-    state = mongos_auth_state(leader=leader, relations={cluster})
+    state = mongos_state(mongodb_container, leader=leader, relations={cluster})
     with mongos_oauth_restart(state, mongos_ctx.on.relation_changed(cluster)) as run:
         run.scenario.run()
 
         run.write.assert_called_once_with(run.config.workload.paths.oauth_ca_file, bundle)
 
 
-def test_replica_set_oidc_provider_uses_local_ca(mongodb_ctx, mongo_auth_state, mocker):
-    state = mongo_auth_state(peer_data={"oauth-issuer": "https://issuer.example"})
+def test_replica_set_oidc_provider_uses_local_ca(mongodb_ctx, mongodb_container, mocker):
+    state = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
@@ -675,8 +681,8 @@ def test_replica_set_oidc_provider_uses_local_ca(mongodb_ctx, mongo_auth_state, 
         assert providers[0]["serverCAFile"] == str(operator.workload.paths.oauth_ca_file)
 
 
-def test_replica_set_oidc_provider_omits_missing_ca(mongodb_ctx, mongo_auth_state, mocker):
-    state = mongo_auth_state(peer_data={"oauth-issuer": "https://issuer.example"})
+def test_replica_set_oidc_provider_omits_missing_ca(mongodb_ctx, mongodb_container, mocker):
+    state = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=False)
@@ -688,21 +694,26 @@ def test_replica_set_oidc_provider_omits_missing_ca(mongodb_ctx, mongo_auth_stat
         assert "serverCAFile" not in providers[0]
 
 
-def test_replica_set_ca_alone_does_not_enable_oidc(mongodb_ctx, mongo_auth_state, mocker):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state()) as scenario:
+def test_replica_set_ca_alone_does_not_enable_oidc(mongodb_ctx, mongodb_container, mocker):
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        mongo_state(
+            mongodb_container,
+        ),
+    ) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
 
         assert operator.config_manager.oauth_parameters == {}
 
 
-def test_mongos_oidc_provider_uses_local_ca(mongos_ctx, mongos_auth_state, mocker):
+def test_mongos_oidc_provider_uses_local_ca(mongos_ctx, mongodb_container, mocker):
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="config-server",
         remote_app_data={"oauth-issuer": "https://issuer.example"},
     )
-    state = mongos_auth_state(relations={cluster})
+    state = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
@@ -714,13 +725,13 @@ def test_mongos_oidc_provider_uses_local_ca(mongos_ctx, mongos_auth_state, mocke
         assert providers[0]["serverCAFile"] == str(operator.workload.paths.oauth_ca_file)
 
 
-def test_mongos_oidc_provider_omits_missing_ca(mongos_ctx, mongos_auth_state, mocker):
+def test_mongos_oidc_provider_omits_missing_ca(mongos_ctx, mongodb_container, mocker):
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="config-server",
         remote_app_data={"oauth-issuer": "https://issuer.example"},
     )
-    state = mongos_auth_state(relations={cluster})
+    state = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=False)
@@ -732,9 +743,9 @@ def test_mongos_oidc_provider_omits_missing_ca(mongos_ctx, mongos_auth_state, mo
         assert "serverCAFile" not in providers[0]
 
 
-def test_mongos_ca_alone_does_not_enable_oidc(mongos_ctx, mongos_auth_state, mocker):
+def test_mongos_ca_alone_does_not_enable_oidc(mongos_ctx, mongodb_container, mocker):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
-    state = mongos_auth_state(relations={cluster})
+    state = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
@@ -744,9 +755,11 @@ def test_mongos_ca_alone_does_not_enable_oidc(mongos_ctx, mongos_auth_state, moc
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 def test_issuer_check_uses_system_trust_without_ca(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls, role
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, role
 ):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state(role=role)) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
+    ) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=False)
 
@@ -761,9 +774,14 @@ def test_issuer_check_uses_system_trust_without_ca(
 
 
 def test_replica_set_issuer_check_uses_workload_ca(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls
 ):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state()) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        mongo_state(
+            mongodb_container,
+        ),
+    ) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "exists", return_value=True)
         read = mocker.patch.object(operator.workload, "read", return_value=["root-ca"])
@@ -780,14 +798,16 @@ def test_replica_set_issuer_check_uses_workload_ca(
 
 
 def test_config_server_issuer_check_uses_relation_ca(
-    mongodb_ctx, mongo_auth_state, mock_issuer_tls
+    mongodb_ctx, mongodb_container, mock_issuer_tls
 ):
     certificate_relation = Relation(
         endpoint="oauth-certificate-transfer",
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(role=MongoDBRoles.CONFIG_SERVER, relations={certificate_relation})
+    state = mongo_state(
+        mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={certificate_relation}
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         assert (
             scenario.charm.operator.oauth_manager.check_issuer_connection("https://issuer.example")
@@ -799,9 +819,11 @@ def test_config_server_issuer_check_uses_relation_ca(
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 def test_issuer_tls_failure_without_ca_blocks(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls, role
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, role
 ):
-    state = mongo_auth_state(role=role, relations={oauth_relation("https://issuer.example")})
+    state = mongo_state(
+        mongodb_container, role=role, relations={oauth_relation("https://issuer.example")}
+    )
     mock_issuer_tls.request.side_effect = URLError(ssl.SSLCertVerificationError("unknown CA"))
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
@@ -818,9 +840,14 @@ def test_issuer_tls_failure_without_ca_blocks(
         restart.assert_not_called()
 
 
-def test_issuer_network_failure_reports_waiting(mongodb_ctx, mongo_auth_state, mock_issuer_tls):
+def test_issuer_network_failure_reports_waiting(mongodb_ctx, mongodb_container, mock_issuer_tls):
     mock_issuer_tls.request.side_effect = TimeoutError("connection timed out")
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state()) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        mongo_state(
+            mongodb_container,
+        ),
+    ) as scenario:
         assert (
             scenario.charm.operator.oauth_manager.check_issuer_connection("https://issuer.example")
             == OAuthStatuses.ISSUER_UNREACHABLE.value
@@ -828,9 +855,9 @@ def test_issuer_network_failure_reports_waiting(mongodb_ctx, mongo_auth_state, m
 
 
 def test_successful_issuer_check_clears_tls_block(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls
 ):
-    state = mongo_auth_state(relations={oauth_relation("https://issuer.example")})
+    state = mongo_state(mongodb_container, relations={oauth_relation("https://issuer.example")})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.workload, "read", return_value=["{}"])
@@ -851,7 +878,7 @@ def test_successful_issuer_check_clears_tls_block(
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 @pytest.mark.parametrize("field", ["issuer", "token_endpoint", "jwks_uri"])
 def test_discovery_mismatch_blocks_configuration(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls, role, field
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, role, field
 ):
     issuer = "https://issuer.example"
     document = {
@@ -864,7 +891,7 @@ def test_discovery_mismatch_blocks_configuration(
     response.__enter__.return_value.read.return_value = json.dumps(document)
     mock_issuer_tls.request.side_effect = None
     mock_issuer_tls.request.return_value = response
-    state = mongo_auth_state(role=role, relations={oauth_relation(issuer)})
+    state = mongo_state(mongodb_container, role=role, relations={oauth_relation(issuer)})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         restart = mocker.patch.object(operator, "async_restart_charm_services")
@@ -872,40 +899,50 @@ def test_discovery_mismatch_blocks_configuration(
         operator.oauth_manager.configure()
 
         assert operator.oauth_manager.get_statuses("unit") == [
-            OAuthStatuses.DISCOVERY_MISMATCH.value
+            OAuthStatuses.INVALID_DISCOVERY.value
         ]
         restart.assert_not_called()
 
 
 @pytest.mark.parametrize("body", ["not json", "[]", "{}", '{"issuer": "https://issuer.example"}'])
 def test_invalid_discovery_metadata_is_blocked(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls, body
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, body
 ):
     response = mocker.MagicMock()
     response.__enter__.return_value.read.return_value = body
     mock_issuer_tls.request.side_effect = None
     mock_issuer_tls.request.return_value = response
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state()) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        mongo_state(
+            mongodb_container,
+        ),
+    ) as scenario:
         assert (
             scenario.charm.operator.oauth_manager.check_issuer_connection("https://issuer.example")
             == OAuthStatuses.INVALID_DISCOVERY.value
         )
 
 
-def test_discovery_http_error_is_blocked(mongodb_ctx, mongo_auth_state, mock_issuer_tls):
+def test_discovery_http_error_is_blocked(mongodb_ctx, mongodb_container, mock_issuer_tls):
     mock_issuer_tls.request.side_effect = HTTPError(
         "https://issuer.example/.well-known/openid-configuration", 404, "Not Found", None, None
     )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), mongo_auth_state()) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        mongo_state(
+            mongodb_container,
+        ),
+    ) as scenario:
         assert (
             scenario.charm.operator.oauth_manager.check_issuer_connection("https://issuer.example")
             == OAuthStatuses.INVALID_DISCOVERY.value
         )
 
 
-def test_discovery_uses_issuer_path(mongodb_ctx, mongo_auth_state, mock_issuer_tls):
+def test_discovery_uses_issuer_path(mongodb_ctx, mongodb_container, mock_issuer_tls):
     issuer = "https://issuer.example/tenant"
-    state = mongo_auth_state(relations={oauth_relation(issuer)})
+    state = mongo_state(mongodb_container, relations={oauth_relation(issuer)})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         assert scenario.charm.operator.oauth_manager.check_issuer_connection(issuer) is None
 
@@ -919,7 +956,7 @@ def test_discovery_uses_issuer_path(mongodb_ctx, mongo_auth_state, mock_issuer_t
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 @pytest.mark.parametrize("previous_issuer", ["", "https://previous.example"])
 def test_failed_validation_preserves_stored_and_shared_issuer(
-    mongodb_ctx, mongo_auth_state, mocker, role, previous_issuer
+    mongodb_ctx, mongodb_container, mocker, role, previous_issuer
 ):
     cluster = Relation(
         endpoint="cluster",
@@ -927,7 +964,8 @@ def test_failed_validation_preserves_stored_and_shared_issuer(
         remote_app_data={"database": "mongos"},
         local_app_data={"oauth-issuer": previous_issuer},
     )
-    state = mongo_auth_state(
+    state = mongo_state(
+        mongodb_container,
         role=role,
         peer_data={"oauth-issuer": previous_issuer},
         relations={cluster, oauth_relation("https://new.example")},
@@ -937,7 +975,7 @@ def test_failed_validation_preserves_stored_and_shared_issuer(
         mocker.patch.object(
             operator.oauth_manager,
             "check_issuer_connection",
-            return_value=OAuthStatuses.DISCOVERY_MISMATCH.value,
+            return_value=OAuthStatuses.INVALID_DISCOVERY.value,
         )
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
@@ -974,9 +1012,11 @@ def oauth_workload_files(mocker):
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_replica_set_ca_addition_requests_restart(
-    mongodb_ctx, mongo_auth_state, mocker, oauth_workload_files, leader
+    mongodb_ctx, mongodb_container, mocker, oauth_workload_files, leader
 ):
-    state = mongo_auth_state(leader=leader, peer_data={"oauth-issuer": "https://issuer.example"})
+    state = mongo_state(
+        mongodb_container, leader=leader, peer_data={"oauth-issuer": "https://issuer.example"}
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         files = oauth_workload_files(operator.workload)
@@ -991,9 +1031,11 @@ def test_replica_set_ca_addition_requests_restart(
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_replica_set_ca_rotation_does_not_request_restart(
-    mongodb_ctx, mongo_auth_state, mocker, oauth_workload_files, leader
+    mongodb_ctx, mongodb_container, mocker, oauth_workload_files, leader
 ):
-    state = mongo_auth_state(leader=leader, peer_data={"oauth-issuer": "https://issuer.example"})
+    state = mongo_state(
+        mongodb_container, leader=leader, peer_data={"oauth-issuer": "https://issuer.example"}
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         files = oauth_workload_files(operator.workload)
@@ -1009,9 +1051,11 @@ def test_replica_set_ca_rotation_does_not_request_restart(
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_replica_set_ca_removal_requests_restart(
-    mongodb_ctx, mongo_auth_state, mocker, oauth_workload_files, leader
+    mongodb_ctx, mongodb_container, mocker, oauth_workload_files, leader
 ):
-    state = mongo_auth_state(leader=leader, peer_data={"oauth-issuer": "https://issuer.example"})
+    state = mongo_state(
+        mongodb_container, leader=leader, peer_data={"oauth-issuer": "https://issuer.example"}
+    )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         operator = scenario.charm.operator
         files = oauth_workload_files(operator.workload)
@@ -1026,7 +1070,7 @@ def test_replica_set_ca_removal_requests_restart(
 
 
 @pytest.fixture
-def mongos_ca_restart(mongos_ctx, mongos_auth_state, mocker, oauth_workload_files, tmp_path):
+def mongos_ca_restart(mongos_ctx, mongodb_container, mocker, oauth_workload_files, tmp_path):
     @contextmanager
     def run(bundle, leader=True, external_ca=""):
         cluster = Relation(
@@ -1040,7 +1084,7 @@ def mongos_ca_restart(mongos_ctx, mongos_auth_state, mocker, oauth_workload_file
                 "config-server-db": "rs/10.0.0.1:27017",
             },
         )
-        state = mongos_auth_state(leader=leader, relations={cluster})
+        state = mongos_state(mongodb_container, leader=leader, relations={cluster})
         with mongos_ctx(mongos_ctx.on.relation_changed(cluster), state) as scenario:
             operator = scenario.charm.operator
             files = oauth_workload_files(operator.workload)
@@ -1155,14 +1199,16 @@ def test_mongos_cluster_tls_ca_change_still_requests_restart(mongos_ca_restart):
 
 
 def test_config_server_ca_removal_is_shared_with_mongos(
-    mongodb_ctx, mongo_auth_state, mocker, config_server_relations
+    mongodb_ctx, mongodb_container, mocker, config_server_relations
 ):
     first, second, pending = config_server_relations
     first = replace(first, local_app_data={"oauth-ca": "previous-ca"})
     second = replace(second, local_app_data={"oauth-ca": "previous-ca"})
     certificate_relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state = mongo_auth_state(
-        role=MongoDBRoles.CONFIG_SERVER, relations={first, second, pending, certificate_relation}
+    state = mongo_state(
+        mongodb_container,
+        role=MongoDBRoles.CONFIG_SERVER,
+        relations={first, second, pending, certificate_relation},
     )
     with mongodb_ctx(mongodb_ctx.on.relation_broken(certificate_relation), state) as scenario:
         restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
@@ -1176,7 +1222,7 @@ def test_config_server_ca_removal_is_shared_with_mongos(
 
 
 def test_replica_set_certificate_arrival_retries_pending_issuer(
-    mongodb_ctx, mongo_auth_state, mocker, oauth_workload_files, mock_issuer_tls
+    mongodb_ctx, mongodb_container, mocker, oauth_workload_files, mock_issuer_tls
 ):
     issuer = "https://issuer.example"
     certificates = Relation(
@@ -1184,7 +1230,7 @@ def test_replica_set_certificate_arrival_retries_pending_issuer(
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(relations={oauth_relation(issuer), certificates})
+    state = mongo_state(mongodb_container, relations={oauth_relation(issuer), certificates})
     with mongodb_ctx(mongodb_ctx.on.relation_changed(certificates), state) as scenario:
         operator = scenario.charm.operator
         files = oauth_workload_files(operator.workload)
@@ -1207,7 +1253,7 @@ def test_replica_set_certificate_arrival_retries_pending_issuer(
 
 
 def test_config_server_certificate_arrival_retries_and_shares_pending_issuer(
-    mongodb_ctx, mongo_auth_state, mocker, mock_issuer_tls, config_server_relations
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, config_server_relations
 ):
     issuer = "https://issuer.example"
     first, second, pending = config_server_relations
@@ -1216,7 +1262,8 @@ def test_config_server_certificate_arrival_retries_and_shares_pending_issuer(
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(
+    state = mongo_state(
+        mongodb_container,
         role=MongoDBRoles.CONFIG_SERVER,
         relations={oauth_relation(issuer), certificates, first, second, pending},
     )
@@ -1243,15 +1290,17 @@ def test_config_server_certificate_arrival_retries_and_shares_pending_issuer(
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 def test_certificate_arrival_keeps_invalid_issuer_unstored(
-    mongodb_ctx, mongo_auth_state, mocker, oauth_workload_files, mock_issuer_tls, role
+    mongodb_ctx, mongodb_container, mocker, oauth_workload_files, mock_issuer_tls, role
 ):
     certificates = Relation(
         endpoint="oauth-certificate-transfer",
         remote_app_name="idp-ca",
         remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
     )
-    state = mongo_auth_state(
-        role=role, relations={oauth_relation("https://issuer.example"), certificates}
+    state = mongo_state(
+        mongodb_container,
+        role=role,
+        relations={oauth_relation("https://issuer.example"), certificates},
     )
     mock_issuer_tls.request.side_effect = URLError(ssl.SSLCertVerificationError("unknown CA"))
     with mongodb_ctx(mongodb_ctx.on.relation_changed(certificates), state) as scenario:
@@ -1266,9 +1315,9 @@ def test_certificate_arrival_keeps_invalid_issuer_unstored(
     request.assert_not_called()
 
 
-def test_mongos_requests_oauth_ca_as_secret(mongos_ctx, mongos_auth_state):
+def test_mongos_requests_oauth_ca_as_secret(mongos_ctx, mongodb_container):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
-    state = mongos_auth_state(relations={cluster})
+    state = mongos_state(mongodb_container, relations={cluster})
 
     result = mongos_ctx.run(mongos_ctx.on.relation_created(cluster), state)
 
@@ -1277,13 +1326,13 @@ def test_mongos_requests_oauth_ca_as_secret(mongos_ctx, mongos_auth_state):
 
 
 @pytest.mark.parametrize("bundle", ["first-ca", "updated-ca"])
-def test_config_server_shares_oauth_ca_as_secret(mongodb_ctx, mongo_auth_state, bundle):
+def test_config_server_shares_oauth_ca_as_secret(mongodb_ctx, mongodb_container, bundle):
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="mongos",
         remote_app_data={"database": "mongos", "requested-secrets": json.dumps(["oauth-ca"])},
     )
-    state = mongo_auth_state(role=MongoDBRoles.CONFIG_SERVER, relations={cluster})
+    state = mongo_state(mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={cluster})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state) as scenario:
         scenario.charm.operator.cluster_manager.update_oauth_ca_to_mongos(bundle)
 
@@ -1300,7 +1349,7 @@ def test_config_server_shares_oauth_ca_as_secret(mongodb_ctx, mongo_auth_state, 
 
 
 @pytest.fixture
-def config_server_oauth_secret(mongo_auth_state):
+def config_server_oauth_secret(mongodb_container):
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="mongos",
@@ -1317,7 +1366,8 @@ def config_server_oauth_secret(mongo_auth_state):
     )
     cluster = replace(cluster, local_app_data={"secret-extra": secret.id})
     state = replace(
-        mongo_auth_state(role=MongoDBRoles.CONFIG_SERVER, relations={cluster}), secrets={secret}
+        mongo_state(mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={cluster}),
+        secrets={secret},
     )
     return SimpleNamespace(cluster=cluster, secret=secret, state=state)
 
@@ -1353,7 +1403,7 @@ def test_config_server_removes_oauth_ca_from_secret(mongodb_ctx, config_server_o
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_mongos_stores_oauth_ca_from_cluster_secret(
-    mongos_ctx, mongos_auth_state, mongos_oauth_restart, leader
+    mongos_ctx, mongodb_container, mongos_oauth_restart, leader
 ):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
     secret = Secret(
@@ -1365,7 +1415,9 @@ def test_mongos_stores_oauth_ca_from_cluster_secret(
         label=f"cluster.{cluster.id}.extra.secret",
     )
     cluster = replace(cluster, remote_app_data={"secret-extra": secret.id})
-    state = replace(mongos_auth_state(leader=leader, relations={cluster}), secrets={secret})
+    state = replace(
+        mongos_state(mongodb_container, leader=leader, relations={cluster}), secrets={secret}
+    )
     with mongos_oauth_restart(state, mongos_ctx.on.relation_changed(cluster)) as run:
         run.scenario.run()
 
@@ -1374,7 +1426,7 @@ def test_mongos_stores_oauth_ca_from_cluster_secret(
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_mongos_reconciles_updated_oauth_ca_secret(
-    mongos_ctx, mongos_auth_state, mongos_oauth_restart, leader
+    mongos_ctx, mongodb_container, mongos_oauth_restart, leader
 ):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
     secret = Secret(
@@ -1391,7 +1443,9 @@ def test_mongos_reconciles_updated_oauth_ca_secret(
         label=f"cluster.{cluster.id}.extra.secret",
     )
     cluster = replace(cluster, remote_app_data={"secret-extra": secret.id})
-    state = replace(mongos_auth_state(leader=leader, relations={cluster}), secrets={secret})
+    state = replace(
+        mongos_state(mongodb_container, leader=leader, relations={cluster}), secrets={secret}
+    )
     with mongos_oauth_restart(state, mongos_ctx.on.secret_changed(secret)) as run:
         run.scenario.run()
 
@@ -1400,7 +1454,7 @@ def test_mongos_reconciles_updated_oauth_ca_secret(
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_mongos_removes_oauth_ca_when_cluster_secret_field_is_removed(
-    mongos_ctx, mongos_auth_state, mongos_oauth_restart, mocker, leader
+    mongos_ctx, mongodb_container, mongos_oauth_restart, mocker, leader
 ):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
     secret = Secret(
@@ -1413,7 +1467,9 @@ def test_mongos_removes_oauth_ca_when_cluster_secret_field_is_removed(
         label=f"cluster.{cluster.id}.extra.secret",
     )
     cluster = replace(cluster, remote_app_data={"secret-extra": secret.id})
-    state = replace(mongos_auth_state(leader=leader, relations={cluster}), secrets={secret})
+    state = replace(
+        mongos_state(mongodb_container, leader=leader, relations={cluster}), secrets={secret}
+    )
     with mongos_oauth_restart(state, mongos_ctx.on.secret_changed(secret)) as run:
         mocker.patch.object(run.config.workload, "exists", return_value=True)
         delete = mocker.patch.object(run.config.workload, "delete")

@@ -97,26 +97,6 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             workload.delete(workload.paths.oauth_ca_file)
         self.restart_when_ready()
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
-        """Report unsupported OAuth relations using the shared status framework."""
-        if scope == "unit" and self.state.authentication_conflict:
-            return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
-        if not recompute:
-            return [
-                status
-                for status in self.state.statuses.get(scope=scope, component=self.name).root
-                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
-            ]
-        if scope == "app":
-            return []
-        if self.state.is_role(MongoDBRoles.SHARD) and self.model.relations.get(self.name, []):
-            return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
-        provider = self.oauth_requirer.get_provider_info()
-        issuer = provider.issuer_url if provider else self.state.app_peer_data.oauth_issuer
-        if issuer and (status := self.check_issuer_connection(issuer)):
-            return [status]
-        return []
-
     def check_issuer_connection(self, issuer: str) -> StatusObject | None:
         """Verify HTTPS discovery metadata against the OAuth relation."""
         try:
@@ -152,7 +132,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         ):
             return OAuthStatuses.INVALID_DISCOVERY.value
         if any(document[key] != value for key, value in expected.items()):
-            return OAuthStatuses.DISCOVERY_MISMATCH.value
+            return OAuthStatuses.INVALID_DISCOVERY.value
         return None
 
     def _issuer_ssl_context(self) -> ssl.SSLContext:
@@ -231,15 +211,8 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             OAuthStatuses.ISSUER_TLS_ERROR,
             OAuthStatuses.ISSUER_UNREACHABLE,
             OAuthStatuses.INVALID_DISCOVERY,
-            OAuthStatuses.DISCOVERY_MISMATCH,
         ):
             self.state.statuses.delete(status.value, scope="unit", component=self.name)
-
-        self.state.app_peer_data.oauth_issuer = provider.issuer_url
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            self.dependent.cluster_manager.update_oauth_issuer_to_mongos()  # type: ignore[attr-defined]
-            return
-        self.restart_when_ready()
 
     def remove(self) -> None:
         """Remove and propagate the OAuth issuer on the leader.
@@ -276,10 +249,6 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             DeferrableFailedHookChecksError: If the unit is not ready to restart.
             NonDeferrableFailedHookChecksError: If OAuth is integrated with a shard.
         """
-        self.assert_pass_hook_checks()
-            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
-            NonDeferrableFailedHookChecksError: Hook checks reject the configuration.
-        """
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
         self.assert_pass_hook_checks()
@@ -293,11 +262,10 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             self.dependent.async_restart_charm_services(force=False)
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
-        """Report the oauth status."""
+        """Report integration conflicts, unsupported roles, and issuer discovery failures."""
         if scope == "unit" and self.state.authentication_conflict:
             return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
         if not recompute:
-            # The current conflict is checked above. Ignore a stale cached result.
             return [
                 status
                 for status in self.state.statuses.get(scope=scope, component=self.name).root
@@ -307,4 +275,8 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return []
         if self.state.is_role(MongoDBRoles.SHARD) and self.model.relations.get(self.name, []):
             return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+        provider = self.oauth_requirer.get_provider_info()
+        issuer = provider.issuer_url if provider else self.state.app_peer_data.oauth_issuer
+        if issuer and (status := self.check_issuer_connection(issuer)):
+            return [status]
         return []
