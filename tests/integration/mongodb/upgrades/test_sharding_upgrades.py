@@ -90,7 +90,7 @@ def test_upgrade(
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            idle_period=120,
+            idle_period=60,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
     )
