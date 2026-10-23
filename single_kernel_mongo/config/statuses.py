@@ -661,6 +661,12 @@ class AuthStatuses(Enum):
 class OAuthStatuses(Enum):
     """OIDC integration statuses."""
 
+    OAUTH_REQUIRED = StatusObject(
+        status="blocked",
+        message="OAuth integration is missing.",
+        action="Integrate oauth or remove oauth-certificate-transfer.",
+    )
+
     INVALID_DISCOVERY = StatusObject(
         status="blocked",
         message="OIDC discovery metadata is invalid or does not match the OAuth relation.",

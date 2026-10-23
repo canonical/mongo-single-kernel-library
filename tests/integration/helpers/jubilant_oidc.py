@@ -303,14 +303,18 @@ def _authentik_admin_client(juju_k8s_model: jubilant.Juju) -> Iterator[httpx.Cli
         yield client
 
 
-def get_oauth_ca(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> str:
-    """Read the OAuth CA bundle from the MongoDB leader's workload filesystem."""
-    ca_path = (
+def oauth_ca_path(substrate: Substrate) -> str:
+    """Return the OAuth CA bundle path in the MongoDB workload."""
+    return (
         "/var/snap/charmed-mongodb/current/etc/oauth/certs/oauth-ca.crt"
         if substrate == Substrate.lxd
         else "/etc/oauth/certs/oauth-ca.crt"
     )
-    return read_remote_file(juju, substrate, f"{app_name}/leader", ca_path)
+
+
+def get_oauth_ca(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> str:
+    """Read the OAuth CA bundle from the MongoDB leader's workload filesystem."""
+    return read_remote_file(juju, substrate, f"{app_name}/leader", oauth_ca_path(substrate))
 
 
 def get_oidc_access_token(

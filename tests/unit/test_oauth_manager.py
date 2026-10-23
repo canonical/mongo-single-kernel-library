@@ -922,3 +922,43 @@ def test_mongos_omits_oidc_without_client_id(mongos_ctx, mongodb_container):
     state_in = mongos_state(mongodb_container, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
         assert scenario.charm.operator.config_manager.oauth_parameters == {}
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+@pytest.mark.parametrize("leader", [True, False])
+def test_oauth_certificate_relation_requires_oauth(mongodb_ctx, mongodb_container, role, leader):
+    certificates = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
+    state_in = mongo_state(mongodb_container, role=role, leader=leader, relations={certificates})
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        manager = scenario.charm.operator.oauth_manager
+        assert manager.get_statuses("unit") == [OAuthStatuses.OAUTH_REQUIRED.value]
+        assert manager.get_statuses("unit", recompute=True) == [OAuthStatuses.OAUTH_REQUIRED.value]
+        assert manager.get_statuses("app", recompute=True) == []
+        state_out = scenario.run()
+
+    assert state_out.get_relation(certificates.id) == certificates
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_restoring_oauth_clears_cached_oauth_required_status(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, role
+):
+    certificates = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
+    state_in = mongo_state(mongodb_container, role=role, relations={certificates})
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        manager = scenario.charm.operator.oauth_manager
+        manager.state.statuses.add(
+            OAuthStatuses.OAUTH_REQUIRED.value, scope="unit", component=manager.name
+        )
+        state_out = scenario.run()
+
+    state_in = replace(state_out, relations={*state_out.relations, oauth_relation()})
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        manager = scenario.charm.operator.oauth_manager
+        assert OAuthStatuses.OAUTH_REQUIRED.value not in manager.get_statuses("unit")
+        assert OAuthStatuses.OAUTH_REQUIRED.value not in manager.get_statuses(
+            "unit", recompute=True
+        )
+        state_out = scenario.run()
+
+    assert state_out.get_relation(certificates.id) == certificates

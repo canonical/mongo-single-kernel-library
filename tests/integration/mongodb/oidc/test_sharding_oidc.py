@@ -4,17 +4,24 @@
 
 """Integration tests for OIDC authentication on a sharded MongoDB cluster."""
 
+import json
 from uuid import uuid4
 
 import jubilant
 import pytest
 from pymongo.errors import OperationFailure
+from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import OAuthStatuses
 from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     DEPLOYMENT_TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import (
+    mongos_config_path,
+    read_remote_file,
+    run_command_on_server,
 )
 from tests.integration.helpers.jubilant_oidc import (
     OAUTH_CERT_OFFER,
@@ -26,6 +33,7 @@ from tests.integration.helpers.jubilant_oidc import (
     deploy_authentik,
     generate_mongodb_oidc_client,
     get_oidc_access_token,
+    oauth_ca_path,
     teardown_authentik_offers,
 )
 from tests.integration.helpers.jubilant_sharding import (
@@ -131,16 +139,21 @@ def test_oidc_user_can_write_and_read(
         assert report == document
 
 
-def test_remove_oauth_disables_oidc_and_prevents_writes(
+def test_remove_oauth_blocks_and_prevents_writes(
     juju: jubilant.Juju, substrate: Substrate, juju_k8s_model: jubilant.Juju
 ) -> None:
-    """Removing OAuth disables token authentication while the cluster remains active."""
+    """Removing OAuth leaves a CA-only setup blocked and disables token authentication."""
     app_name = CONFIG_SERVER_APP_NAME
     token = get_oidc_access_token(juju, juju_k8s_model, substrate, app_name)
     juju.remove_relation(f"{app_name}:oauth", f"{OAUTH_OFFER}:oauth")
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30)
+        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30)
+        and does_status_match(
+            model_status=status,
+            expected_unit_statuses={app_name: [OAuthStatuses.OAUTH_REQUIRED.value]},
+            expected_app_statuses={},
+        )
         and none_is_restarting(status, juju, app_name),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -185,6 +198,14 @@ def test_restore_oauth_then_remove_certificates_prevents_writes(
         delay=5,
         successes=3,
     )
+
+    for unit in juju.status().get_units(app_name):
+        run_command_on_server(juju, substrate, unit, f"test ! -e {oauth_ca_path(substrate)}")
+        configuration = safe_load(
+            read_remote_file(juju, substrate, unit, mongos_config_path(substrate))
+        )
+        providers = json.loads(configuration["setParameter"]["oidcIdentityProviders"])
+        assert "serverCAFile" not in providers[0], f"{unit} still references the removed CA"
 
     with generate_mongodb_oidc_client(juju, substrate, app_name, token, mongos=True) as client:
         with pytest.raises(OperationFailure):

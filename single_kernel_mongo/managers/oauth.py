@@ -290,11 +290,17 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         """Report integration conflicts, unsupported roles, and issuer discovery failures."""
         if scope == "unit" and self.state.authentication_conflict:
             return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
+        if scope == "unit" and self.state.oauth_cert_relation and not self.state.oauth_relation:
+            return [OAuthStatuses.OAUTH_REQUIRED.value]
         if not recompute:
             return [
                 status
                 for status in self.state.statuses.get(scope=scope, component=self.name).root
-                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
+                if status
+                not in (
+                    AuthStatuses.LDAP_OAUTH_CONFLICT.value,
+                    OAuthStatuses.OAUTH_REQUIRED.value,
+                )
             ]
         if scope == "app":
             return []
