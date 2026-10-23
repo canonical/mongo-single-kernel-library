@@ -14,11 +14,15 @@ from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import OAuthStatuses
 from tests.integration.helpers.constants import (
+    BASE,
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     DEPLOYMENT_TIMEOUT,
+    MONGOS_APP_NAME,
+    MONGOS_CLIENT_APPLICATION,
 )
 from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
     mongos_config_path,
     read_remote_file,
     run_command_on_server,
@@ -54,6 +58,9 @@ def test_build_and_deploy(
     substrate: Substrate,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
+    mongos_charm: str,
+    mongos_resource: dict[str, str],
+    mongos_client_application_path: str,
 ) -> None:
     """Deploy the config server and two shards, then create the OIDC role through Mongos."""
     deploy_cluster_components(
@@ -64,8 +71,22 @@ def test_build_and_deploy(
     )
     integrate_sharding_components(juju)
 
+    deploy_charm(
+        juju,
+        mongos_charm,
+        substrate,
+        app_name=MONGOS_APP_NAME,
+        mongod_resource=mongos_resource,
+        num_units=1,
+    )
+    juju.deploy(mongos_client_application_path, app=MONGOS_CLIENT_APPLICATION, base=BASE)
+    juju.integrate(MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME)
+    juju.integrate(f"{MONGOS_APP_NAME}:cluster", f"{CONFIG_SERVER_APP_NAME}:cluster")
+
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30),
+        lambda status: are_apps_active_and_agents_idle(
+            status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
@@ -86,15 +107,15 @@ def test_deploy_authentik(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju) ->
 
 def test_integrate_oauth_only(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju) -> None:
     """OIDC with a self-signed issuer is blocked until its CA is received."""
-    app_name = CONFIG_SERVER_APP_NAME
+    config_server = CONFIG_SERVER_APP_NAME
 
-    juju.integrate(f"{app_name}:oauth", f"{OAUTH_OFFER}:oauth")
+    juju.integrate(f"{config_server}:oauth", f"{OAUTH_OFFER}:oauth")
 
     juju.wait(
-        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30)
+        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30)
         and does_status_match(
             model_status=status,
-            expected_unit_statuses={app_name: [OAuthStatuses.ISSUER_TLS_ERROR.value]},
+            expected_unit_statuses={config_server: [OAuthStatuses.ISSUER_TLS_ERROR.value]},
             expected_app_statuses={},
         ),
         timeout=DEPLOYMENT_TIMEOUT,
@@ -102,16 +123,20 @@ def test_integrate_oauth_only(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju
         successes=3,
     )
 
-    configure_authentik_signing_key(juju, juju_k8s_model, app_name)
+    configure_authentik_signing_key(juju, juju_k8s_model, config_server)
 
 
 def test_integrate_oauth_certificates(juju: jubilant.Juju) -> None:
     """The config server distributes the issuer CA and enables OIDC on Mongos."""
-    app_name = CONFIG_SERVER_APP_NAME
-    juju.integrate(f"{app_name}:oauth-certificate-transfer", f"{OAUTH_CERT_OFFER}:send-ca-cert")
+    config_server = CONFIG_SERVER_APP_NAME
+    juju.integrate(
+        f"{config_server}:oauth-certificate-transfer", f"{OAUTH_CERT_OFFER}:send-ca-cert"
+    )
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30),
+        lambda status: are_apps_active_and_agents_idle(
+            status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
@@ -124,11 +149,15 @@ def test_oidc_user_can_write_and_read(
     juju_k8s_model: jubilant.Juju,
 ) -> None:
     """Authenticate with the analytics user's token and access app.reports."""
-    app_name = CONFIG_SERVER_APP_NAME
-    token = get_oidc_access_token(juju, juju_k8s_model, substrate, app_name)
+    config_server = CONFIG_SERVER_APP_NAME
+    token = get_oidc_access_token(
+        juju, juju_k8s_model, substrate, config_server, ca_app_name=MONGOS_APP_NAME
+    )
     document = {"_id": uuid4().hex, "number": 1}
 
-    with generate_mongodb_oidc_client(juju, substrate, app_name, token, mongos=True) as client:
+    with generate_mongodb_oidc_client(
+        juju, substrate, MONGOS_APP_NAME, token, mongos=True
+    ) as client:
         authenticated = client.admin.command("connectionStatus")
         assert authenticated["authInfo"]["authenticatedUsers"]
 
@@ -143,24 +172,28 @@ def test_remove_oauth_blocks_and_prevents_writes(
     juju: jubilant.Juju, substrate: Substrate, juju_k8s_model: jubilant.Juju
 ) -> None:
     """Removing OAuth leaves a CA-only setup blocked and disables token authentication."""
-    app_name = CONFIG_SERVER_APP_NAME
-    token = get_oidc_access_token(juju, juju_k8s_model, substrate, app_name)
-    juju.remove_relation(f"{app_name}:oauth", f"{OAUTH_OFFER}:oauth")
+    config_server = CONFIG_SERVER_APP_NAME
+    token = get_oidc_access_token(
+        juju, juju_k8s_model, substrate, config_server, ca_app_name=MONGOS_APP_NAME
+    )
+    juju.remove_relation(f"{config_server}:oauth", f"{OAUTH_OFFER}:oauth")
 
     juju.wait(
-        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30)
+        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30)
         and does_status_match(
             model_status=status,
-            expected_unit_statuses={app_name: [OAuthStatuses.OAUTH_REQUIRED.value]},
+            expected_unit_statuses={config_server: [OAuthStatuses.OAUTH_REQUIRED.value]},
             expected_app_statuses={},
         )
-        and none_is_restarting(status, juju, app_name),
+        and none_is_restarting(status, juju, config_server),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
     )
 
-    with generate_mongodb_oidc_client(juju, substrate, app_name, token, mongos=True) as client:
+    with generate_mongodb_oidc_client(
+        juju, substrate, MONGOS_APP_NAME, token, mongos=True
+    ) as client:
         with pytest.raises(OperationFailure):
             client.app.reports.insert_one({"_id": uuid4().hex, "number": 2})
 
@@ -169,28 +202,34 @@ def test_restore_oauth_then_remove_certificates_prevents_writes(
     juju: jubilant.Juju, substrate: Substrate, juju_k8s_model: jubilant.Juju
 ) -> None:
     """Restoring OAuth enables access; removing its self-signed CA blocks it again."""
-    app_name = CONFIG_SERVER_APP_NAME
-    juju.integrate(f"{app_name}:oauth", f"{OAUTH_OFFER}:oauth")
+    config_server = CONFIG_SERVER_APP_NAME
+    juju.integrate(f"{config_server}:oauth", f"{OAUTH_OFFER}:oauth")
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30),
+        lambda status: are_apps_active_and_agents_idle(
+            status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
     )
 
-    configure_authentik_signing_key(juju, juju_k8s_model, app_name)
-    token = get_oidc_access_token(juju, juju_k8s_model, substrate, app_name)
-    with generate_mongodb_oidc_client(juju, substrate, app_name, token, mongos=True) as client:
+    configure_authentik_signing_key(juju, juju_k8s_model, config_server)
+    token = get_oidc_access_token(
+        juju, juju_k8s_model, substrate, config_server, ca_app_name=MONGOS_APP_NAME
+    )
+    with generate_mongodb_oidc_client(
+        juju, substrate, MONGOS_APP_NAME, token, mongos=True
+    ) as client:
         assert client.app.reports.insert_one({"_id": uuid4().hex, "number": 3}).acknowledged
 
     juju.remove_relation(
-        f"{app_name}:oauth-certificate-transfer", f"{OAUTH_CERT_OFFER}:send-ca-cert"
+        f"{config_server}:oauth-certificate-transfer", f"{OAUTH_CERT_OFFER}:send-ca-cert"
     )
     juju.wait(
-        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30)
+        lambda status: are_agents_idle(status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30)
         and does_status_match(
             model_status=status,
-            expected_unit_statuses={app_name: [OAuthStatuses.ISSUER_TLS_ERROR.value]},
+            expected_unit_statuses={config_server: [OAuthStatuses.ISSUER_TLS_ERROR.value]},
             expected_app_statuses={},
         )
         and none_is_restarting(status, juju, CONFIG_SERVER_APP_NAME),
@@ -199,25 +238,33 @@ def test_restore_oauth_then_remove_certificates_prevents_writes(
         successes=3,
     )
 
-    for unit in juju.status().get_units(app_name):
-        run_command_on_server(juju, substrate, unit, f"test ! -e {oauth_ca_path(substrate)}")
+    for unit in juju.status().get_units(MONGOS_APP_NAME):
+        run_command_on_server(
+            juju, substrate, unit, f"test ! -e {oauth_ca_path(substrate)}", container="mongos"
+        )
         configuration = safe_load(
-            read_remote_file(juju, substrate, unit, mongos_config_path(substrate))
+            read_remote_file(
+                juju, substrate, unit, mongos_config_path(substrate), container="mongos"
+            )
         )
         providers = json.loads(configuration["setParameter"]["oidcIdentityProviders"])
         assert "serverCAFile" not in providers[0], f"{unit} still references the removed CA"
 
-    with generate_mongodb_oidc_client(juju, substrate, app_name, token, mongos=True) as client:
+    with generate_mongodb_oidc_client(
+        juju, substrate, MONGOS_APP_NAME, token, mongos=True
+    ) as client:
         with pytest.raises(OperationFailure):
             client.app.reports.insert_one({"_id": uuid4().hex, "number": 4})
 
 
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju) -> None:
     """Remove the remaining OAuth relation and clean up cross-model offers."""
-    app_name = CONFIG_SERVER_APP_NAME
-    juju.remove_relation(f"{app_name}:oauth", f"{OAUTH_OFFER}:oauth")
+    config_server = CONFIG_SERVER_APP_NAME
+    juju.remove_relation(f"{config_server}:oauth", f"{OAUTH_OFFER}:oauth")
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(status, *CLUSTER_COMPONENTS, idle_period=30),
+        lambda status: are_apps_active_and_agents_idle(
+            status, *CLUSTER_COMPONENTS, MONGOS_APP_NAME, idle_period=30
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,

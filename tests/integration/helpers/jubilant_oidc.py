@@ -312,9 +312,13 @@ def oauth_ca_path(substrate: Substrate) -> str:
     )
 
 
-def get_oauth_ca(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> str:
+def get_oauth_ca(
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, container: str = "mongod"
+) -> str:
     """Read the OAuth CA bundle from the MongoDB leader's workload filesystem."""
-    return read_remote_file(juju, substrate, f"{app_name}/leader", oauth_ca_path(substrate))
+    return read_remote_file(
+        juju, substrate, f"{app_name}/leader", oauth_ca_path(substrate), container=container
+    )
 
 
 def get_oidc_access_token(
@@ -323,6 +327,7 @@ def get_oidc_access_token(
     substrate: Substrate,
     app_name: str,
     username: str = "oidc-test-user",
+    ca_app_name: str | None = None,
 ) -> str:
     """Exchange the service account's existing app password for an OIDC access token."""
     password = get_authentik_app_password(juju_k8s_model, username)
@@ -331,7 +336,9 @@ def get_oidc_access_token(
     assert client_id, "OAuth relation is missing the client ID"
     assert token_endpoint, "OAuth relation is missing the token endpoint"
 
-    ca = get_oauth_ca(juju, substrate, app_name)
+    ca = get_oauth_ca(
+        juju, substrate, ca_app_name or app_name, container="mongos" if ca_app_name else "mongod"
+    )
     context = ssl.create_default_context(cadata=ca)
 
     with httpx.Client(verify=context, timeout=30, trust_env=False) as client:
