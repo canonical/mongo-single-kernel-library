@@ -23,6 +23,7 @@ class AppPeerDataKeys(str, Enum):
     MANAGED_USERS_KEY = "managed-users-key"
     DB_INITIALISED = "db_initialised"
     OAUTH_ISSUER = "oauth-issuer"
+    OAUTH_CLIENT_ID = "oauth-client-id"
     OAUTH_CA = "oauth-ca"
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
@@ -104,6 +105,15 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @oauth_issuer.setter
     def oauth_issuer(self, value: str | None) -> None:
         self.update({AppPeerDataKeys.OAUTH_ISSUER.value: value or ""})
+
+    @property
+    def oauth_client_id(self) -> str | None:
+        """The OAuth client ID shared with all replica-set units."""
+        return self.relation_data.get(AppPeerDataKeys.OAUTH_CLIENT_ID.value) or None
+
+    @oauth_client_id.setter
+    def oauth_client_id(self, value: str | None) -> None:
+        self.update({AppPeerDataKeys.OAUTH_CLIENT_ID.value: value or ""})
 
     @property
     def oauth_ca(self) -> str | None:
