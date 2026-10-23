@@ -20,6 +20,7 @@ from tests.integration.helpers.jubilant_common import (
 from tests.integration.helpers.jubilant_oidc import (
     OAUTH_CERT_OFFER,
     OAUTH_OFFER,
+    configure_authentik_signing_key,
     consume_authentik_offers,
     create_authentik_user_and_group,
     create_mongodb_oidc_role,
@@ -82,7 +83,7 @@ def test_deploy_authentik(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju) ->
     assert password
 
 
-def test_integrate_oauth_only(juju: jubilant.Juju) -> None:
+def test_integrate_oauth_only(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju) -> None:
     """OIDC with a self-signed issuer is blocked until its CA is received."""
     app_name = existing_app(juju)
     assert app_name
@@ -100,6 +101,8 @@ def test_integrate_oauth_only(juju: jubilant.Juju) -> None:
         delay=5,
         successes=3,
     )
+
+    configure_authentik_signing_key(juju, juju_k8s_model, app_name)
 
 
 def test_integrate_oauth_certificates(juju: jubilant.Juju) -> None:
@@ -180,6 +183,7 @@ def test_restore_oauth_then_remove_certificates_prevents_writes(
         successes=3,
     )
 
+    configure_authentik_signing_key(juju, juju_k8s_model, app_name)
     token = get_oidc_access_token(juju, juju_k8s_model, substrate, app_name)
     with generate_mongodb_oidc_client(juju, substrate, app_name, token) as client:
         assert client.app.reports.insert_one({"_id": uuid4().hex, "number": 3}).acknowledged

@@ -180,6 +180,44 @@ def create_mongodb_oidc_role(
     assert result.succeeded, "Failed to create the oauth/analytics role"
 
 
+def configure_authentik_signing_key(
+    juju: jubilant.Juju, juju_k8s_model: jubilant.Juju, app_name: str
+) -> None:
+    """Assign an RSA signing key so MongoDB can verify tokens using the provider's JWKS."""
+    client_id = get_application_relation_data(juju, app_name, "oauth", "client_id")
+    assert client_id, "OAuth relation is missing the client ID"
+    with _authentik_admin_client(juju_k8s_model) as client:
+        providers = client.get("providers/oauth2/", params={"client_id": client_id})
+        providers.raise_for_status()
+        matches = providers.json()["results"]
+        assert len(matches) == 1, "Expected one Authentik provider for the MongoDB client ID"
+        provider = matches[0]
+
+        keys = client.get("crypto/certificatekeypairs/", params={"name": "mongodb-oidc-signing"})
+        keys.raise_for_status()
+        signing_keys = keys.json()["results"]
+        if signing_keys:
+            signing_key = signing_keys[0]
+        else:
+            generated = client.post(
+                "crypto/certificatekeypairs/generate/",
+                json={
+                    "common_name": "mongodb-oidc-signing",
+                    "validity_days": 365,
+                    "alg": "rsa",
+                },
+            )
+            generated.raise_for_status()
+            signing_key = generated.json()
+
+        updated = client.patch(
+            f"providers/oauth2/{provider['pk']}/",
+            json={"signing_key": signing_key["pk"]},
+        )
+        updated.raise_for_status()
+        assert updated.json()["signing_key"] == signing_key["pk"]
+
+
 def create_authentik_user_and_group(
     juju_k8s_model: jubilant.Juju,
     username: str = "oidc-test-user",
