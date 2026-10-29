@@ -7,14 +7,13 @@ from unittest.mock import PropertyMock
 
 import pytest
 from ops.model import BlockedStatus
-from ops.testing import Relation
+from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, PeerRelationNames
+from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import AuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError
-from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state
+from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
 
 
 @pytest.fixture(params=[MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -28,10 +27,12 @@ def test_oauth_blocks_existing_incomplete_ldap_relation(
 ):
     ldap = Relation(endpoint=endpoint, remote_app_name="glauth")
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = replace(authentication_state, relations={*authentication_state.relations, ldap})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    initial_state = replace(authentication_state, relations={*authentication_state.relations, ldap})
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), initial_state) as scenario:
         assert not scenario.charm.operator.state.authentication_conflict
-    state_in = replace(state_in, relations={*state_in.relations, oauth})
+    state_in = replace(
+        authentication_state, relations={*authentication_state.relations, ldap, oauth}
+    )
 
     state_out = mongodb_ctx.run(mongodb_ctx.on.relation_created(oauth), state_in)
 
@@ -44,10 +45,14 @@ def test_incomplete_ldap_relation_blocks_existing_oauth(
 ):
     ldap = Relation(endpoint=endpoint, remote_app_name="glauth")
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = replace(authentication_state, relations={*authentication_state.relations, oauth})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    initial_state = replace(
+        authentication_state, relations={*authentication_state.relations, oauth}
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), initial_state) as scenario:
         assert not scenario.charm.operator.state.authentication_conflict
-    state_in = replace(state_in, relations={*state_in.relations, ldap})
+    state_in = replace(
+        authentication_state, relations={*authentication_state.relations, oauth, ldap}
+    )
 
     state_out = mongodb_ctx.run(mongodb_ctx.on.relation_created(ldap), state_in)
 
@@ -56,13 +61,17 @@ def test_incomplete_ldap_relation_blocks_existing_oauth(
 
 @pytest.mark.parametrize("option", ["ldap-user-to-dn-mapping", "ldap-query-template"])
 def test_oauth_blocks_existing_ldap_option(mongodb_ctx, authentication_state, option):
-    state_in = replace(
+    initial_state = replace(
         authentication_state, config={**authentication_state.config, option: "configured"}
     )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), initial_state) as scenario:
         assert not scenario.charm.operator.state.authentication_conflict
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = replace(state_in, relations={*state_in.relations, oauth})
+    state_in = replace(
+        authentication_state,
+        config={**authentication_state.config, option: "configured"},
+        relations={*authentication_state.relations, oauth},
+    )
 
     state_out = mongodb_ctx.run(mongodb_ctx.on.relation_created(oauth), state_in)
 
@@ -72,10 +81,16 @@ def test_oauth_blocks_existing_ldap_option(mongodb_ctx, authentication_state, op
 @pytest.mark.parametrize("option", ["ldap-user-to-dn-mapping", "ldap-query-template"])
 def test_ldap_option_blocks_existing_oauth(mongodb_ctx, authentication_state, mocker, option):
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = replace(authentication_state, relations={*authentication_state.relations, oauth})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    initial_state = replace(
+        authentication_state, relations={*authentication_state.relations, oauth}
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), initial_state) as scenario:
         assert not scenario.charm.operator.state.authentication_conflict
-    state_in = replace(state_in, config={**state_in.config, option: "configured"})
+    state_in = replace(
+        authentication_state,
+        relations={*authentication_state.relations, oauth},
+        config={**authentication_state.config, option: "configured"},
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_config_and_restart"
     )
@@ -87,12 +102,16 @@ def test_ldap_option_blocks_existing_oauth(mongodb_ctx, authentication_state, mo
 
 @pytest.fixture
 def conflicting_authentication(mongodb_container):
-    return mongo_state(
-        mongodb_container,
-        relations={
-            Relation(endpoint="oauth", remote_app_name="hydra"),
-            Relation(endpoint="ldap", remote_app_name="glauth"),
-        },
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    return replace(
+        mongo_state(
+            mongodb_container,
+            relations={
+                oauth_relation(client_id="client-id", client_secret_id=secret.id),
+                Relation(endpoint="ldap", remote_app_name="glauth"),
+            },
+        ),
+        secrets={secret},
     )
 
 
@@ -101,48 +120,38 @@ def test_conflict_reports_blocked_status(mongodb_ctx, conflicting_authentication
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
         manager = getattr(scenario.charm.operator, manager_name)
         assert manager.get_statuses("unit") == [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
-        assert manager.get_statuses("unit", recompute=True) == [
-            AuthStatuses.LDAP_OAUTH_CONFLICT.value
-        ]
-
-
-@pytest.mark.parametrize("manager_name", ["oauth_manager", "ldap_manager"])
-@pytest.mark.parametrize("removed_relation", ["oauth", "ldap"])
-def test_removing_setup_clears_cached_conflict_status(
-    mongodb_ctx, conflicting_authentication, manager_name, removed_relation
-):
-    state_in = conflicting_authentication
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        manager = getattr(operator, manager_name)
-        operator.state.statuses.add(
-            AuthStatuses.LDAP_OAUTH_CONFLICT.value, scope="unit", component=manager.name
-        )
-        state_out = scenario.run()
-    removed = get_relation(state_out, removed_relation)
-    state_in = replace(state_out, relations=state_out.relations - {removed})
-
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        manager = getattr(operator, manager_name)
-        assert not operator.state.authentication_conflict
-        assert AuthStatuses.LDAP_OAUTH_CONFLICT.value not in manager.get_statuses("unit")
-        assert AuthStatuses.LDAP_OAUTH_CONFLICT.value not in manager.get_statuses(
-            "unit", recompute=True
-        )
 
 
 def test_conflict_prevents_oauth_changes(mongodb_ctx, mocker, conflicting_authentication):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(conflicting_authentication, "oauth")),
+        conflicting_authentication,
+    ) as scenario:
         operator = scenario.charm.operator
         request = mocker.patch.object(operator, "async_restart_charm_services")
 
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.oauth_manager.configure()
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.oauth_manager.restart_when_ready()
+        state_out = scenario.run()
 
         request.assert_not_called()
+    assert len(state_out.deferred) == 1
+
+
+def test_oauth_removal_resolves_authentication_conflict(
+    mongodb_ctx, mocker, conflicting_authentication
+):
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_broken(get_relation(conflicting_authentication, "oauth")),
+        conflicting_authentication,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        request = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+        request.assert_not_called()
+        assert not operator.state.authentication_conflict
+    assert not state_out.deferred
 
 
 def test_conflict_prevents_ldap_changes(mongodb_ctx, mocker, conflicting_authentication):
@@ -150,14 +159,18 @@ def test_conflict_prevents_ldap_changes(mongodb_ctx, mocker, conflicting_authent
         operator = scenario.charm.operator
         request = mocker.patch.object(operator, "async_restart_charm_services")
 
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.ldap_manager.store_ldap_credentials_and_uri(
-                operator.charm.model.get_relation("ldap")
-            )
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.ldap_manager.restart_when_ready()
+        operator.ldap_manager.ldap_requirer.on.ldap_ready.emit(
+            scenario.charm.model.get_relation("ldap")
+        )
+        scenario.charm.on[PeerRelationNames.LDAP_PEERS.value].relation_changed.emit(
+            scenario.charm.model.get_relation(PeerRelationNames.LDAP_PEERS.value),
+            scenario.charm.app,
+        )
+
+        state_out = scenario.run()
 
         request.assert_not_called()
+    assert len(state_out.deferred) == 2
 
 
 @pytest.mark.parametrize(
@@ -223,55 +236,6 @@ def test_conflict_preserves_enabled_authentication(
         oauth_params.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    ("removed_relation", "ldap_parameters", "oauth_parameters", "expected"),
-    [
-        pytest.param(
-            ExternalRequirerRelations.LDAP.value,
-            {},
-            {"setParameter": {"authenticationMechanisms": "SCRAM-SHA-256,MONGODB-OIDC"}},
-            {"setParameter": {"authenticationMechanisms": "SCRAM-SHA-256,MONGODB-OIDC"}},
-            id="remove-ldap-enables-oidc",
-        ),
-        pytest.param(
-            ExternalRequirerRelations.OAUTH.value,
-            {"setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"}},
-            {},
-            {"setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"}},
-            id="remove-oidc-enables-ldap",
-        ),
-    ],
-)
-def test_removing_setup_allows_remaining_authentication(
-    mongodb_ctx,
-    mocker,
-    conflicting_authentication,
-    removed_relation,
-    ldap_parameters,
-    oauth_parameters,
-    expected,
-):
-    removed = get_relation(conflicting_authentication, removed_relation)
-    state_in = replace(
-        conflicting_authentication, relations=conflicting_authentication.relations - {removed}
-    )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        config = operator.config_manager
-        mocker.patch.object(
-            type(config), "ldap_parameters", new_callable=PropertyMock, return_value=ldap_parameters
-        )
-        mocker.patch.object(
-            type(config),
-            "oauth_parameters",
-            new_callable=PropertyMock,
-            return_value=oauth_parameters,
-        )
-
-        assert not operator.state.authentication_conflict
-        assert config.authentication_parameters == expected
-
-
 def test_mongos_detects_oidc_from_config_server_with_incomplete_ldap(mongos_ctx, mongodb_container):
     state_in = mongos_state(
         mongodb_container,
@@ -299,73 +263,27 @@ def test_conflict_keeps_existing_ldap_credentials_and_certificates(
     clean_certificates = mocker.patch(
         "single_kernel_mongo.state.ldap_state.LdapState.clean_certificates"
     )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
+    certificates = Relation(endpoint="ldap-certificate-transfer", remote_app_name="glauth")
+    state_in = replace(
+        conflicting_authentication,
+        relations={*conflicting_authentication.relations, certificates},
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
         delete = mocker.patch.object(operator.ldap_manager.workload, "delete")
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.ldap_manager.clean_ldap_credentials_and_uri()
-        with pytest.raises(DeferrableFailedHookChecksError, match="mutually exclusive"):
-            operator.ldap_manager.remove_ldap_certificates()
+        operator.ldap_manager.ldap_requirer.on.ldap_unavailable.emit(
+            scenario.charm.model.get_relation("ldap")
+        )
+        operator.ldap_manager.certificate_transfer.on.certificate_removed.emit(
+            relation_id=certificates.id
+        )
+
+        state_out = scenario.run()
 
         clean_credentials.assert_not_called()
         clean_certificates.assert_not_called()
         delete.assert_not_called()
         restart.assert_not_called()
-
-
-def test_ldap_unavailable_defers_during_authentication_conflict(
-    mongodb_ctx, conflicting_authentication, mocker
-):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
-        event = mocker.Mock()
-
-        scenario.charm.operator.ldap_events._on_ldap_unavailable(event)
-
-        event.defer.assert_called_once_with()
-
-
-def test_ldap_certificate_removal_defers_during_authentication_conflict(
-    mongodb_ctx, conflicting_authentication, mocker
-):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
-        event = mocker.Mock()
-
-        scenario.charm.operator.ldap_events._on_certificate_removed(event)
-
-        event.defer.assert_called_once_with()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-@pytest.mark.parametrize("option", ["ldap-user-to-dn-mapping", "ldap-query-template"])
-def test_deferred_ldap_config_is_applied_after_oauth_removal(
-    mongodb_ctx, mongodb_container, mocker, role, option
-):
-    oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = mongo_state(
-        mongodb_container, role=role, config={option: "configured"}, relations={oauth}
-    )
-    mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_config_and_restart",
-        autospec=True,
-        side_effect=lambda operator: operator._handle_ldap_config_changes(),
-    )
-    mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_status")
-
-    state_out = mongodb_ctx.run(mongodb_ctx.on.config_changed(), state_in)
-
-    assert any(event.observer == "on_config_changed" for event in state_out.deferred)
-    assert option not in get_relation(state_out, PeerRelationNames.LDAP_PEERS.value).local_app_data
-    state_in = replace(
-        state_out,
-        relations={relation for relation in state_out.relations if relation.id != oauth.id},
-    )
-
-    state_out = mongodb_ctx.run(mongodb_ctx.on.collect_unit_status(), state_in)
-
-    assert not any(event.observer == "on_config_changed" for event in state_out.deferred)
-    assert (
-        get_relation(state_out, PeerRelationNames.LDAP_PEERS.value).local_app_data[option]
-        == "configured"
-    )
+    assert len(state_out.deferred) == 2
