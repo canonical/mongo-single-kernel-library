@@ -1,10 +1,8 @@
-import json
 import pathlib
 import socket
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from pathlib import Path
 from platform import platform
-from types import SimpleNamespace
 
 import ops.testing
 import pytest
@@ -12,7 +10,7 @@ import tomllib
 import yaml
 from charmlibs.snap import NotInstalledError
 from ops.hookcmds import Network
-from ops.testing import Context, Harness, Relation
+from ops.testing import Context, Harness
 
 from tests.integration.helpers.types import Substrate
 from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
@@ -378,79 +376,3 @@ def patched_getfqdn(mocker, substrate: Substrate):
             yield getfqdn
     else:
         yield
-
-
-@pytest.fixture
-def mock_issuer_tls(mocker):
-    """Keep issuer checks offline and expose the TLS context to connection tests."""
-    context = mocker.patch("single_kernel_mongo.managers.oauth.ssl.create_default_context")
-
-    def discovery_response(url, **kwargs):
-        issuer = url.removesuffix("/.well-known/openid-configuration")
-        response = mocker.MagicMock()
-        response.__enter__.return_value.read.return_value = json.dumps(
-            {"issuer": issuer, "token_endpoint": f"{issuer}/token", "jwks_uri": f"{issuer}/jwks"}
-        )
-        return response
-
-    request = mocker.patch(
-        "single_kernel_mongo.managers.oauth.urlopen", side_effect=discovery_response
-    )
-    return SimpleNamespace(context=context, request=request)
-
-
-@pytest.fixture
-def config_server_relations():
-    return (
-        Relation(
-            endpoint="cluster", remote_app_name="mongos-one", remote_app_data={"database": "mongos"}
-        ),
-        Relation(
-            endpoint="cluster", remote_app_name="mongos-two", remote_app_data={"database": "mongos"}
-        ),
-        Relation(endpoint="cluster", remote_app_name="pending"),
-    )
-
-
-@pytest.fixture
-def mongos_oauth_restart(mongos_ctx, mocker):
-    @contextmanager
-    def run(state_in, event, current="{}"):
-        with mongos_ctx(event, state_in) as scenario:
-            operator = scenario.charm.operator
-            cluster = operator.cluster_manager
-            config = operator.config_manager
-            mocker.patch.object(cluster, "assert_pass_hook_checks")
-            mocker.patch.object(cluster, "share_credentials_to_clients")
-            mocker.patch.object(cluster, "_set_ldap_user_to_dn")
-            mocker.patch.object(cluster, "_set_cluster_id")
-            mocker.patch.object(operator, "update_keyfile", return_value=False)
-            mocker.patch.object(operator, "update_config_server_db", return_value=False)
-            mocker.patch("pathlib.Path.unlink")
-            request = mocker.patch.object(operator.rollingops_manager, "request_async_lock")
-            mocker.patch.object(config.workload, "read", return_value=[current])
-            mocker.patch.object(config.workload, "active", return_value=True)
-            write = mocker.patch.object(config.workload, "write")
-            restart = mocker.patch.object(config.workload, "restart")
-            yield SimpleNamespace(
-                scenario=scenario,
-                cluster=cluster,
-                config=config,
-                request=request,
-                write=write,
-                restart=restart,
-            )
-
-    return run
-
-
-@pytest.fixture
-def mongos_cluster():
-    return Relation(
-        endpoint="cluster",
-        remote_app_name="config-server",
-        remote_app_data={
-            "key-file": "keyfile",
-            "config-server-db": "rs/10.0.0.1:27017",
-        },
-    )

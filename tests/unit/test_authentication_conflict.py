@@ -119,8 +119,7 @@ def conflicting_authentication(mongodb_container):
 
 @pytest.mark.parametrize("manager_name", ["oauth_manager", "ldap_manager"])
 def test_conflict_reports_blocked_status(mongodb_ctx, conflicting_authentication, manager_name):
-    state_in = conflicting_authentication
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
         manager = getattr(scenario.charm.operator, manager_name)
         assert manager.get_statuses("unit") == [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
 
@@ -158,8 +157,7 @@ def test_oauth_removal_resolves_authentication_conflict(
 
 
 def test_conflict_prevents_ldap_changes(mongodb_ctx, mocker, conflicting_authentication):
-    state_in = conflicting_authentication
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
         operator = scenario.charm.operator
         request = mocker.patch.object(operator, "async_restart_charm_services")
 
@@ -212,8 +210,7 @@ def test_conflict_prevents_ldap_changes(mongodb_ctx, mocker, conflicting_authent
 def test_conflict_preserves_enabled_authentication(
     mongodb_ctx, mocker, conflicting_authentication, current
 ):
-    state_in = conflicting_authentication
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
         config = scenario.charm.operator.config_manager
         mocker.patch.object(config.workload, "read", return_value=[safe_dump(current)])
         mocker.patch.object(config.workload, "active", return_value=True)
