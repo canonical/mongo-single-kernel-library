@@ -28,7 +28,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import LdapStatuses
+from single_kernel_mongo.config.statuses import AuthStatuses, LdapStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -76,6 +76,8 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
     def assert_pass_hook_checks(self) -> None:
         """Runs some hook checks before allowing the hook to run."""
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -124,6 +126,8 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if not self.state.db_initialised:
             return
 
@@ -159,6 +163,8 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
             self.remove_hash_from_mongos()
@@ -210,6 +216,8 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
+        if self.state.authentication_conflict:
+            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
             self.remove_hash_from_mongos()
@@ -306,6 +314,8 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Generates the status of a unit based on its status reported by mongod."""
+        if scope == "unit" and self.state.authentication_conflict:
+            return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 
