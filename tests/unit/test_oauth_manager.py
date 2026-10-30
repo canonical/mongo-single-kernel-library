@@ -2,17 +2,20 @@
 # See LICENSE file for licensing details.
 
 import json
+import ssl
 from dataclasses import replace
 from unittest.mock import PropertyMock
+from urllib.error import HTTPError, URLError
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, WaitingStatus
 from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import RollingOpsCallbackId
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -24,7 +27,9 @@ pytest_plugins = ("tests.unit.auth_scenario_helpers",)
 
 
 @pytest.mark.parametrize("initialised", [True, False])
-def test_oauth_hook_checks_reject_shard(mongodb_ctx, mongodb_container, initialised):
+def test_oauth_hook_checks_reject_shard(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, initialised
+):
     state_in = mongo_state(mongodb_container, role=MongoDBRoles.SHARD, initialised=initialised)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(
@@ -34,7 +39,9 @@ def test_oauth_hook_checks_reject_shard(mongodb_ctx, mongodb_container, initiali
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_container, role):
+def test_oauth_hook_checks_require_initialised_database(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, role
+):
     state_in = mongo_state(mongodb_container, role=role, initialised=False)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
@@ -42,7 +49,9 @@ def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_con
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container, mocker, role):
+def test_oauth_hook_checks_reject_degraded_vault(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
+):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -53,7 +62,9 @@ def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container,
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_container, mocker, role):
+def test_oauth_hook_checks_reject_refresh_in_progress(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
+):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -66,10 +77,9 @@ def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_conta
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_pass(mongodb_ctx, mongodb_container, role):
-    with mongodb_ctx(
-        mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
-    ) as scenario:
+def test_oauth_hook_checks_pass(mock_issuer_tls, mongodb_ctx, mongodb_container, role):
+    state_in = mongo_state(mongodb_container, role=role)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
 
 
@@ -98,7 +108,7 @@ def test_oauth_info_changed_rejects_shards(mongodb_ctx, mongodb_container, caplo
 
 
 def test_oauth_info_changed_shares_issuer_and_requests_restart_replica_set(
-    mongodb_ctx, mongodb_container, mocker
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
     secret = Secret(tracked_content={"secret": "client-secret"})
     state_in = replace(
@@ -144,7 +154,7 @@ def test_oauth_info_changed_shares_issuer_and_requests_restart_replica_set(
 
 
 def test_oauth_info_changed_does_not_restart_unchanged_configuration_replica_set(
-    mongodb_ctx, mongodb_container, mocker
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
     secret = Secret(tracked_content={"secret": "client-secret"})
     state_in = replace(
@@ -170,7 +180,7 @@ def test_oauth_info_changed_does_not_restart_unchanged_configuration_replica_set
 
 
 def test_oauth_info_removed_clears_issuer_and_requests_restart_replica_set(
-    mongodb_ctx, mongodb_container, mocker
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
     oauth = oauth_relation()
     state_in = mongo_state(
@@ -193,7 +203,7 @@ def test_oauth_info_removed_clears_issuer_and_requests_restart_replica_set(
 
 
 def test_oauth_provider_update_changes_issuer_replica_set(
-    mongodb_ctx, mongodb_container, mocker, registered_oauth
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, registered_oauth
 ):
     oauth, secret = registered_oauth
     state_in = replace(
@@ -220,7 +230,7 @@ def test_oauth_provider_update_changes_issuer_replica_set(
 
 
 def test_oauth_hook_defers_until_database_initialised_replica_set(
-    mongodb_ctx, mongodb_container, mocker, registered_oauth
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, registered_oauth
 ):
     oauth, secret = registered_oauth
     state_in = replace(
@@ -307,7 +317,9 @@ def test_mongos_setups_issuer_from_cluster_relation(mongos_ctx, mongodb_containe
 
 
 @pytest.mark.parametrize("leader", [True, False])
-def test_mongos_omits_oidc_without_cluster_issuer(mongos_ctx, mongodb_container, leader):
+def test_mongos_omits_oidc_without_cluster_issuer(
+    mock_issuer_tls, mongos_ctx, mongodb_container, leader
+):
     cluster = Relation(endpoint="cluster", remote_app_name="config-server")
     state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
@@ -317,7 +329,13 @@ def test_mongos_omits_oidc_without_cluster_issuer(mongos_ctx, mongodb_container,
 @pytest.mark.parametrize("leader", [True, False])
 @pytest.mark.parametrize("issuer", ["https://first-issuer", "https://updated-issuer", ""])
 def test_mongos_issuer_change_requests_async_restart(
-    mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader, issuer
+    mock_issuer_tls,
+    mongos_ctx,
+    mongodb_container,
+    mongos_oauth_restart,
+    mongos_cluster,
+    leader,
+    issuer,
 ):
     cluster = replace(
         mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": issuer}
@@ -342,6 +360,7 @@ def test_mongos_issuer_change_requests_async_restart(
     ],
 )
 def test_mongos_rolling_restart_writes_issuer(
+    mock_issuer_tls,
     mongos_ctx,
     mongodb_container,
     mongos_oauth_restart,
@@ -375,7 +394,7 @@ def test_mongos_rolling_restart_writes_issuer(
 
 @pytest.mark.parametrize("leader", [True, False])
 def test_mongos_rolling_restart_removes_oidc(
-    mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader
+    mock_issuer_tls, mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader
 ):
     initial_cluster = replace(
         mongos_cluster,
@@ -415,7 +434,9 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_relation_does_not_block_supported_roles(mongodb_ctx, mongodb_container, role):
+def test_oauth_relation_does_not_block_supported_roles(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, role
+):
     state_in = mongo_state(
         mongodb_container,
         role=role,
@@ -424,3 +445,207 @@ def test_oauth_relation_does_not_block_supported_roles(mongodb_ctx, mongodb_cont
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == []
         assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_issuer_check_uses_system_trust_without_ca(
+    mongodb_ctx, mongodb_container, mock_issuer_tls, mocker, role
+):
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    oauth = oauth_relation(client_id="client-id", client_secret_id=secret.id)
+    state_in = replace(
+        mongo_state(mongodb_container, role=role, relations={oauth}), secrets={secret}
+    )
+    with mongodb_ctx(mongodb_ctx.on.relation_changed(oauth), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+        mock_issuer_tls.context.assert_called_once_with()
+        mock_issuer_tls.request.assert_called_once_with(
+            "https://issuer.example/.well-known/openid-configuration",
+            context=mock_issuer_tls.context.return_value,
+            timeout=5,
+        )
+
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://issuer.example"
+    )
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_issuer_tls_failure_without_ca_blocks(
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls, role
+):
+    state_in = mongo_state(
+        mongodb_container, role=role, relations={oauth_relation("https://issuer.example")}
+    )
+    mock_issuer_tls.request.side_effect = URLError(ssl.SSLCertVerificationError("unknown CA"))
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator, "get_statuses", return_value=[StatusObject(status="active", message="")]
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+        assert state_out.unit_status == BlockedStatus(OAuthStatuses.ISSUER_TLS_ERROR.value.message)
+        restart.assert_not_called()
+
+
+def test_issuer_network_failure_reports_waiting(
+    mongodb_ctx, mongodb_container, mock_issuer_tls, mocker
+):
+    mock_issuer_tls.request.side_effect = TimeoutError("connection timed out")
+    state_in = mongo_state(
+        mongodb_container,
+        relations={oauth_relation("https://issuer.example")},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator, "get_statuses", return_value=[StatusObject(status="active", message="")]
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+        assert state_out.unit_status == WaitingStatus(
+            OAuthStatuses.ISSUER_UNREACHABLE.value.message
+        )
+        restart.assert_not_called()
+
+
+def test_invalid_discovery_metadata_is_blocked(
+    mongodb_ctx, mongodb_container, mocker, mock_issuer_tls
+):
+    response = mocker.MagicMock()
+    response.__enter__.return_value.read.return_value = '{"issuer": "https://issuer.example"}'
+    mock_issuer_tls.request.side_effect = None
+    mock_issuer_tls.request.return_value = response
+    state_in = mongo_state(
+        mongodb_container,
+        relations={oauth_relation("https://issuer.example")},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator, "get_statuses", return_value=[StatusObject(status="active", message="")]
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+        assert state_out.unit_status == BlockedStatus(OAuthStatuses.INVALID_DISCOVERY.value.message)
+        restart.assert_not_called()
+
+
+def test_discovery_http_error_is_blocked(mongodb_ctx, mongodb_container, mock_issuer_tls, mocker):
+    mock_issuer_tls.request.side_effect = HTTPError(
+        "https://issuer.example/.well-known/openid-configuration", 404, "Not Found", None, None
+    )
+    state_in = mongo_state(
+        mongodb_container,
+        relations={oauth_relation("https://issuer.example")},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator, "get_statuses", return_value=[StatusObject(status="active", message="")]
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+        assert state_out.unit_status == BlockedStatus(OAuthStatuses.INVALID_DISCOVERY.value.message)
+        restart.assert_not_called()
+
+
+@pytest.mark.parametrize("previous_issuer", ["", "https://previous.example"])
+def test_failed_validation_preserves_stored_issuer_replica_set(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, previous_issuer
+):
+    state_in = mongo_state(
+        mongodb_container,
+        role=MongoDBRoles.REPLICATION,
+        peer_data={"oauth-issuer": previous_issuer},
+        relations={oauth_relation("https://new.example")},
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator.oauth_manager,
+            "check_issuer_connection",
+            return_value=OAuthStatuses.INVALID_DISCOVERY.value,
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data.get(
+            "oauth-issuer", ""
+        )
+        == previous_issuer
+    )
+    assert isinstance(state_out.unit_status, BlockedStatus)
+    restart.assert_not_called()
+
+
+@pytest.mark.parametrize("previous_issuer", ["", "https://previous.example"])
+def test_failed_validation_preserves_stored_and_shared_issuer_config_server(
+    mock_issuer_tls,
+    mongodb_ctx,
+    mongodb_container,
+    mocker,
+    config_server_relations,
+    previous_issuer,
+):
+    cluster = replace(config_server_relations[0], local_app_data={"oauth-issuer": previous_issuer})
+    state_in = mongo_state(
+        mongodb_container,
+        role=MongoDBRoles.CONFIG_SERVER,
+        peer_data={"oauth-issuer": previous_issuer},
+        relations={cluster, oauth_relation("https://new.example")},
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator.oauth_manager,
+            "check_issuer_connection",
+            return_value=OAuthStatuses.INVALID_DISCOVERY.value,
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.configure()
+        state_out = scenario.run()
+
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data.get(
+            "oauth-issuer", ""
+        )
+        == previous_issuer
+    )
+    assert (
+        state_out.get_relation(cluster.id).local_app_data.get("oauth-issuer", "") == previous_issuer
+    )
+    assert isinstance(state_out.unit_status, BlockedStatus)
+    restart.assert_not_called()

@@ -215,7 +215,12 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.async_update_mongos_and_restart()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError, ClusterTLSError) as e:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            ClusterTLSError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")

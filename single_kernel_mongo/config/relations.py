@@ -42,6 +42,7 @@ class ExternalRequirerRelations(str, Enum):
     S3_CREDENTIALS = "s3-credentials"
     GCS_CREDENTIALS = "gcs-credentials"
     OAUTH = "oauth"
+    OAUTH_CERT = "oauth-certificate-transfer"
     LDAP = "ldap"
     LDAP_CERT = "ldap-certificate-transfer"
     VAULT = "vault-kv"
