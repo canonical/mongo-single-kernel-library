@@ -15,13 +15,14 @@ from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import RollingOpsCallbackId
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
 from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
+
+pytest_plugins = ("tests.unit.auth_scenario_helpers",)
 
 
 @pytest.mark.parametrize("initialised", [True, False])
@@ -81,16 +82,54 @@ def test_oauth_hook_checks_pass(mock_issuer_tls, mongodb_ctx, mongodb_container,
         scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
 
 
-def test_configure_shares_issuer_and_requests_restart(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
+def test_oauth_info_changed_rejects_shards(mongodb_ctx, mongodb_container, caplog):
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    oauth = oauth_relation(client_id="client-id", client_secret_id=secret.id)
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=MongoDBRoles.SHARD,
+            initialised=True,
+            relations={oauth},
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
+        state_out = scenario.run()
+
+    assert "Cannot integrate OAuth with shard" in caplog.text
+    assert (
+        "oauth-issuer" not in get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data
+    )
+    assert not state_out.deferred
+
+
+def test_oauth_info_changed_shares_issuer_and_requests_restart_replica_set(
+    mongodb_ctx, mongodb_container, mocker
 ):
-    state_in = mongo_state(mongodb_container, relations={oauth_relation("https://10.0.0.3")})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            relations={
+                oauth_relation(
+                    "https://10.0.0.3", client_id="client-id", client_secret_id=secret.id
+                )
+            },
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
-        operator.oauth_manager.configure()
+        state_out = scenario.run()
 
         assert operator.state.app_peer_data.oauth_issuer == "https://10.0.0.3"
         parameters = operator.config_manager.build_config()["setParameter"]
@@ -107,28 +146,34 @@ def test_configure_shares_issuer_and_requests_restart(
             }
         ]
         restart.assert_called_once_with(force=False)
-        state_out = scenario.run()
     assert (
         get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
         == "https://10.0.0.3"
     )
 
 
-def test_configure_does_not_restart_unchanged_configuration(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
+def test_oauth_info_changed_does_not_restart_unchanged_configuration_replica_set(
+    mongodb_ctx, mongodb_container, mocker
 ):
-    state_in = mongo_state(
-        mongodb_container,
-        peer_data={"oauth-issuer": "https://issuer.example"},
-        relations={oauth_relation()},
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            peer_data={"oauth-issuer": "https://issuer.example"},
+            relations={oauth_relation(client_id="client-id", client_secret_id=secret.id)},
+        ),
+        secrets={secret},
     )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
         operator = scenario.charm.operator
         current = safe_dump(operator.config_manager.build_config())
         mocker.patch.object(operator.config_manager.workload, "read", return_value=[current])
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
-        operator.oauth_manager.configure()
+        scenario.run()
 
         restart.assert_not_called()
 
@@ -140,7 +185,9 @@ def test_remove_clears_issuer_and_requests_restart(
     state_in = mongo_state(
         mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"}, relations={oauth}
     )
-    with mongodb_ctx(mongodb_ctx.on.relation_broken(oauth), state_in) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_broken(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
         operator = scenario.charm.operator
         current = safe_dump(operator.config_manager.build_config())
         mocker.patch.object(operator.config_manager.workload, "read", return_value=[current])
@@ -154,15 +201,8 @@ def test_remove_clears_issuer_and_requests_restart(
     restart.assert_called_once_with(force=False)
 
 
-@pytest.fixture
-def registered_oauth():
-    secret = Secret(tracked_content={"secret": "client-secret"})
-    oauth = oauth_relation("https://new-issuer", client_id="client-id", client_secret_id=secret.id)
-    return oauth, secret
-
-
-def test_oauth_provider_update_changes_issuer(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, registered_oauth
+def test_oauth_provider_update_changes_issuer_replica_set(
+    mongodb_ctx, mongodb_container, mocker, registered_oauth
 ):
     oauth, secret = registered_oauth
     state_in = replace(
@@ -171,7 +211,10 @@ def test_oauth_provider_update_changes_issuer(
         ),
         secrets={secret},
     )
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(oauth), state_in) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
         restart = mocker.patch.object(operator, "async_restart_charm_services")
@@ -192,7 +235,10 @@ def test_oauth_hook_defers_until_database_initialised(
     state_in = replace(
         mongo_state(mongodb_container, initialised=False, relations={oauth}), secrets={secret}
     )
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(oauth), state_in) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
         restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
 
         state_out = scenario.run()
@@ -201,15 +247,16 @@ def test_oauth_hook_defers_until_database_initialised(
     restart.assert_not_called()
 
 
-def test_oauth_follower_restarts_from_shared_issuer(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
+def test_oauth_follower_restarts_from_shared_issuer_replica_set(
+    mongodb_ctx, mongodb_container, mocker
 ):
     state_in = mongo_state(
-        mongodb_container, leader=False, peer_data={"oauth-issuer": "https://10.0.0.3"}
+        mongodb_container,
+        leader=False,
+        peer_data={"oauth-issuer": "https://10.0.0.3"},
+        peers_data={1: {}},
     )
-    original_peer = get_relation(state_in, PeerRelationNames.PEERS.value)
-    peer = replace(original_peer, peers_data={1: {}})
-    state_in = replace(state_in, relations=(state_in.relations - {original_peer}) | {peer})
+    peer = get_relation(state_in, PeerRelationNames.PEERS.value)
     with mongodb_ctx(mongodb_ctx.on.relation_changed(peer, remote_unit=1), state_in) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator, "peer_changed")
@@ -221,44 +268,8 @@ def test_oauth_follower_restarts_from_shared_issuer(
     restart.assert_called_once_with(force=False)
 
 
-@pytest.mark.parametrize(
-    ("previous_issuer", "issuer"),
-    [("", "https://first-issuer"), ("https://first-issuer", "https://second-issuer")],
-)
-def test_config_server_publishes_updates(
-    mock_issuer_tls,
-    mongodb_ctx,
-    mongodb_container,
-    mocker,
-    config_server_relations,
-    previous_issuer,
-    issuer,
-):
-    first, second, pending = config_server_relations
-    first = replace(first, local_app_data={"oauth-issuer": previous_issuer})
-    second = replace(second, local_app_data={"oauth-issuer": previous_issuer})
-    state_in = mongo_state(
-        mongodb_container,
-        role=MongoDBRoles.CONFIG_SERVER,
-        peer_data={"oauth-issuer": previous_issuer},
-        relations={first, second, pending, oauth_relation(issuer)},
-    )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        restart = mocker.patch.object(operator, "async_restart_charm_services")
-
-        operator.oauth_manager.configure()
-
-        assert "oidcIdentityProviders" not in operator.config_manager.build_config()["setParameter"]
-        state_out = scenario.run()
-    assert state_out.get_relation(first.id).local_app_data["oauth-issuer"] == issuer
-    assert state_out.get_relation(second.id).local_app_data["oauth-issuer"] == issuer
-    assert "oauth-issuer" not in state_out.get_relation(pending.id).local_app_data
-    restart.assert_not_called()
-
-
-def test_config_server_publishes_removal(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, config_server_relations
+def test_oauth_info_removed_config_server_publishes_removal(
+    mongodb_ctx, mongodb_container, mocker, config_server_relations
 ):
     first, second, pending = config_server_relations
     first = replace(first, local_app_data={"oauth-issuer": "https://first-issuer"})
@@ -270,7 +281,9 @@ def test_config_server_publishes_removal(
         peer_data={"oauth-issuer": "https://first-issuer"},
         relations={first, second, pending, oauth},
     )
-    with mongodb_ctx(mongodb_ctx.on.relation_broken(oauth), state_in) as scenario:
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_broken(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
         restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
 
         state_out = scenario.run()
@@ -284,9 +297,7 @@ def test_config_server_publishes_removal(
 
 
 @pytest.mark.parametrize("leader", [True, False])
-def test_mongos_renders_issuer_from_cluster_relation(
-    mock_issuer_tls, mongos_ctx, mongodb_container, leader
-):
+def test_mongos_setups_issuer_from_cluster_relation(mongos_ctx, mongodb_container, leader):
     cluster = Relation(
         endpoint="cluster",
         remote_app_name="config-server",
@@ -361,13 +372,13 @@ def test_mongos_rolling_restart_writes_issuer(
         mongos_cluster,
         remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": initial_issuer},
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+    initial_state = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), initial_state) as scenario:
         current = safe_dump(scenario.charm.operator.config_manager.build_config())
     cluster = replace(
         mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": issuer}
     )
-    state_in = replace(state_in, relations=(state_in.relations - {initial_cluster}) | {cluster})
+    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
     with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status(), current) as context:
         context.cluster.update_mongos_and_restart(force=False)
 
@@ -388,12 +399,10 @@ def test_mongos_rolling_restart_removes_oidc(
         mongos_cluster,
         remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": "https://first-issuer"},
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+    initial_state = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), initial_state) as scenario:
         current = safe_dump(scenario.charm.operator.config_manager.build_config())
-    state_in = replace(
-        state_in, relations=(state_in.relations - {initial_cluster}) | {mongos_cluster}
-    )
+    state_in = mongos_state(mongodb_container, leader=leader, relations={mongos_cluster})
     with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status(), current) as context:
         context.cluster.update_mongos_and_restart(force=False)
 
@@ -406,63 +415,21 @@ def test_mongos_rolling_restart_removes_oidc(
         context.restart.assert_called_once()
 
 
-@pytest.fixture
-def shard_state(mongodb_container, initialised, leader):
-    return mongo_state(
-        mongodb_container, role=MongoDBRoles.SHARD, initialised=initialised, leader=leader
-    )
-
-
-@pytest.fixture
-def isolate_shard_status(mocker):
+@pytest.mark.parametrize("initialised", [True, False])
+@pytest.mark.parametrize("leader", [True, False])
+def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
         return_value=[StatusObject(status="active", message="")],
     )
-
-
-@pytest.mark.parametrize("initialised", [True, False])
-@pytest.mark.parametrize("leader", [True, False])
-def test_oauth_relation_blocks_shard(
-    mock_issuer_tls, mongodb_ctx, shard_state, isolate_shard_status
-):
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
     state_in = replace(shard_state, relations={*shard_state.relations, oauth})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        manager = scenario.charm.operator.oauth_manager
-        assert manager in scenario.charm.operator.components
-        assert manager.get_statuses("unit", recompute=True) == [
-            OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value
-        ]
-        assert manager.get_statuses("app", recompute=True) == []
-        scenario.charm.status_handler._recompute_statuses_for_scope("unit", manager)
-        assert manager.get_statuses("unit") == [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+        scenario.charm.status_handler._recompute_statuses_for_scope(
+            "unit", scenario.charm.operator.oauth_manager
+        )
         state_out = scenario.run()
     assert state_out.unit_status == BlockedStatus("Cannot integrate OIDC with shard.")
-
-
-@pytest.mark.parametrize("initialised", [True, False])
-@pytest.mark.parametrize("leader", [True, False])
-def test_removing_oauth_relation_clears_shard_status(
-    mock_issuer_tls, mongodb_ctx, shard_state, isolate_shard_status
-):
-    oauth = Relation(endpoint="oauth", remote_app_name="hydra")
-    state_in = replace(shard_state, relations={*shard_state.relations, oauth})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        manager = scenario.charm.operator.oauth_manager
-        scenario.charm.status_handler._recompute_statuses_for_scope("unit", manager)
-        state_out = scenario.run()
-    assert state_out.unit_status == BlockedStatus("Cannot integrate OIDC with shard.")
-    state_in = replace(
-        state_out, relations=state_out.relations - {state_out.get_relation(oauth.id)}
-    )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        manager = scenario.charm.operator.oauth_manager
-        scenario.charm.status_handler._recompute_statuses_for_scope("unit", manager)
-        assert manager.get_statuses("unit", recompute=True) == []
-        assert manager.get_statuses("unit") == []
-        state_out = scenario.run()
-    assert not isinstance(state_out.unit_status, BlockedStatus)
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])

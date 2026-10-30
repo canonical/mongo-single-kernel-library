@@ -317,12 +317,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         if scope == "unit" and self.state.authentication_conflict:
             return [AuthStatuses.LDAP_OAUTH_CONFLICT.value]
         if not recompute:
-            # The current conflict is checked above. Ignore a stale cached result.
-            return [
-                status
-                for status in self.state.statuses.get(scope=scope, component=self.name).root
-                if status != AuthStatuses.LDAP_OAUTH_CONFLICT.value
-            ]
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         if not self.state.db_initialised:
             return []
