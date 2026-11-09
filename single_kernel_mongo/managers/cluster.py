@@ -107,12 +107,15 @@ class ClusterProvider(Object):
         """Handles the database requested event.
 
         The first time secrets are written to relations should be on this event.
+        The role requested by a client of a VM mongos is created after the router user.
         """
         self.assert_pass_hook_checks(initial_event=initial_event)
 
         config_server_db = self.state.generate_config_server_db(relation)
         try:
             self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            if self.state.is_entity_relation(relation):
+                self.dependent.mongo_manager.add_entity(relation)
         except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
             # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
             # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
@@ -163,7 +166,8 @@ class ClusterProvider(Object):
         If the relation has not departed yet, we raise a DeferrableError to
         handle the relation broken event in the future.
         If it has departed, we run some checks and if we are a VM charm, we
-        proceed to reconcile the users and DB and cleanup mongoDB.
+        proceed to reconcile the users and DB, drop the role created for the
+        mongos' client and cleanup mongoDB.
         """
         if self.dependent.refresh_in_progress:
             logger.warning(
@@ -184,6 +188,7 @@ class ClusterProvider(Object):
                 self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(
                     relation, relation_departing=True
                 )
+                self.dependent.mongo_manager.remove_entity(relation.id)
             except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
                 # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
                 # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
@@ -574,15 +579,21 @@ class ClusterRequirer(Object):
             raise DeferrableError("Credentials not received yet, can't reconcile users for mongos.")
 
         # We are a Kubernetes Mongos Charm so we are in charge of our client
-        # applications and their users and we proceed to update the users and their DBs.
+        # applications and their users and we proceed to update the users and their DBs,
+        # and the roles requested by clients.
         try:
-            for relation in self.state.client_relations:
+            for relation in self.state.user_relations:
                 self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            for relation in self.state.entity_relations:
+                self.dependent.mongo_manager.add_entity(relation)
         except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
     def remove_users_for_k8s_routers(self, relation: Relation) -> None:
         """Handles the removal of all client mongos-k8s users and the mongos-k8s admin user.
+
+        The roles requested by clients are dropped too, but their published entity name is
+        kept: re-integrating re-creates each role under the same name.
 
         Raises:
             PyMongoError
@@ -604,7 +615,7 @@ class ClusterRequirer(Object):
 
         # We are a Kubernetes Mongos Charm so we are in charge of our client
         # applications and their users and we proceed to remove the users we manage and their DBs.
-        for relation in self.state.client_relations:
+        for relation in self.state.user_relations:
             self.dependent.mongo_manager.remove_user(relation)
             data_interface = DatabaseProviderData(self.model, relation.name)
             fields = data_interface.fetch_my_relation_data([relation.id])[relation.id]
@@ -619,6 +630,9 @@ class ClusterRequirer(Object):
                 user_secrets.remove_all_revisions()
                 user_secrets.get_content(refresh=True)
             relation.data[self.charm.app].clear()
+
+        for relation in self.state.entity_relations:
+            self.dependent.mongo_manager.remove_entity(relation.id)
 
         # Also remove the local user.
         with MongoConnection(self.state.mongo_config) as mongo:

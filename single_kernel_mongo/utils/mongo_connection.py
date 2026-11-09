@@ -8,7 +8,7 @@ from typing import Any
 
 from bson import json_util
 from pymongo import MongoClient
-from pymongo.errors import OperationFailure, PyMongoError
+from pymongo.errors import OperationFailure, PyMongoError, WriteConcernError
 from tenacity import (
     RetryError,
     Retrying,
@@ -31,7 +31,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import AuthRestrictions, DBPrivilege
+from single_kernel_mongo.utils.mongodb_users import AuthRestrictions, DBPrivilege, RolePrivilege
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,12 @@ class MongoConnection:
         """Drop user."""
         self.client.admin.command("dropUser", username)
 
-    def create_role(self, role_name: str, privileges: dict, roles: list | None = None) -> None:
+    def create_role(
+        self,
+        role_name: str,
+        privileges: list[RolePrivilege],
+        roles: list[DBPrivilege] | None = None,
+    ) -> None:
         """Creates a new role.
 
         Args:
@@ -216,12 +221,49 @@ class MongoConnection:
         if roles is None:
             roles = []
         try:
-            self.client.admin.command("createRole", role_name, privileges=[privileges], roles=roles)
+            self.client.admin.command("createRole", role_name, privileges=privileges, roles=roles)
         except OperationFailure as e:
             if e.code == MongoErrorCodes.ROLE_ALREADY_EXISTS:
                 logger.info("Role already exists")
                 return
             logger.error("Cannot add role. error=%r", e)
+            raise
+
+    def get_role(self, role_name: str) -> dict | None:
+        """Returns a role of the admin database with its privileges, None when it does not exist.
+
+        Args:
+            role_name: name of the role to look up.
+        """
+        try:
+            result = self.client.admin.command(
+                "rolesInfo", {"role": role_name, "db": "admin"}, showPrivileges=True
+            )
+        except OperationFailure as e:
+            logger.error("Cannot check role %s. error=%r", role_name, e)
+            raise
+        return next(iter(result["roles"]), None)
+
+    def drop_role(self, role_name: str) -> None:
+        """Drops a role, ignoring a role that does not exist.
+
+        A write concern error means the role was dropped on the primary: it is logged,
+        not raised.
+
+        Args:
+            role_name: name of the role to drop.
+        """
+        try:
+            self.client.admin.command("dropRole", role_name)
+        except WriteConcernError as e:
+            # A subclass of OperationFailure: only the replication was not acknowledged.
+            logger.warning("Role %s was dropped with a write concern error: %r", role_name, e)
+            return
+        except OperationFailure as e:
+            if e.code == MongoErrorCodes.ROLE_NOT_FOUND:
+                logger.info("Role %s does not exist, nothing to drop", role_name)
+                return
+            logger.error("Cannot drop role. error=%r", e)
             raise
 
     def set_replicaset_election_priority(

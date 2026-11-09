@@ -3,17 +3,15 @@
 """Code for interactions with MongoDB."""
 
 from dataclasses import dataclass, field
-from itertools import chain
 from pathlib import Path
 from urllib.parse import quote_plus, urlencode
 
 from single_kernel_mongo.config.literals import MongoPorts
 from single_kernel_mongo.exceptions import AmbiguousConfigError
 from single_kernel_mongo.utils.mongodb_users import (
-    REGULAR_ROLES,
     AuthRestrictions,
     DBPrivilege,
-    UserRole,
+    roles_for_database,
 )
 
 ADMIN_AUTH_SOURCE = {"authSource": "admin"}
@@ -131,14 +129,7 @@ class MongoConfiguration:
     @property
     def supported_roles(self) -> list[DBPrivilege]:
         """The supported roles for this configuration."""
-        default_role = UserRole(
-            [
-                DBPrivilege(role="readWrite", db=self.database),
-                DBPrivilege(role="enableSharding", db=self.database),
-            ]
-        )
-        all_roles = REGULAR_ROLES | {"default": default_role}
-        return list(chain.from_iterable(all_roles[role] for role in self.roles))
+        return roles_for_database(self.database, self.roles)
 
 
 EMPTY_CONFIGURATION = MongoConfiguration(

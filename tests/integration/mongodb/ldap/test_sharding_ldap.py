@@ -8,8 +8,14 @@ import jubilant
 from yaml import safe_load
 
 from single_kernel_mongo.config.statuses import LdapStatuses
-from tests.integration.helpers.constants import CLUSTER_COMPONENTS, CONFIG_SERVER_APP_NAME
+from tests.integration.helpers.constants import (
+    CLUSTER_COMPONENTS,
+    CONFIG_SERVER_APP_NAME,
+    DATA_INTEGRATOR_APP_NAME,
+    MONGOS_APP_NAME,
+)
 from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
     execute_on_mongod,
     mongodb_config_path,
     read_remote_file,
@@ -19,9 +25,9 @@ from tests.integration.helpers.jubilant_ldap import (
     LDAP_OFFER,
     apply_ldif,
     consume_glauth_offers,
-    create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
+    request_ldap_group_role,
     teardown_offers,
 )
 from tests.integration.helpers.jubilant_sharding import (
@@ -39,6 +45,7 @@ from tests.integration.helpers.types import Substrate
 TIMEOUT = 15 * 60
 ENDPOINT_LDAP = "ldap"
 ENDPOINT_LDAP_CERT = "send-ca-cert"
+ENDPOINT_CLUSTER = "cluster"
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +56,15 @@ def test_build_and_deploy(
     juju_k8s_model: jubilant.Juju,
     mongodb_charm: str,
     mongod_resource: dict[str, str],
+    mongos_charm: str,
+    mongos_resource: dict[str, str],
 ) -> None:
-    """Build and deploy a sharded cluster.
+    """Build and deploy a sharded cluster and a mongos router.
 
     Deploy GLAUTH components and expose offers, consumes them and create groups on MongoDB.
+    The group role is requested through mongos by data-integrator as a GROUP entity: on VM
+    the subordinate mongos forwards it to the config-server over `cluster`, on K8s mongos-k8s
+    creates it.
     """
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
@@ -62,8 +74,18 @@ def test_build_and_deploy(
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
         extra_config_config_server={
-            "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
+            "ldap-query-template": "dc=glauth,dc=com?ou?sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
+    )
+    # On VM mongos is a subordinate: its unit comes with the data-integrator relation.
+    deploy_charm(
+        juju,
+        mongos_charm,
+        substrate,
+        app_name=MONGOS_APP_NAME,
+        mongod_resource=mongos_resource,
+        num_units=1,
+        subordinate=(substrate == Substrate.lxd),
     )
 
     integrate_sharding_components(juju)
@@ -79,6 +101,11 @@ def test_build_and_deploy(
         successes=3,
     )
 
+    # Connect the router to the cluster.
+    juju.integrate(
+        f"{MONGOS_APP_NAME}:{ENDPOINT_CLUSTER}", f"{CONFIG_SERVER_APP_NAME}:{ENDPOINT_CLUSTER}"
+    )
+
     # deploy the glauth-k8s charm
     deploy_glauth(juju_k8s_model)
 
@@ -88,9 +115,8 @@ def test_build_and_deploy(
     # Apply the LDIF file on glauth-utils to create users and groups
     apply_ldif(juju_k8s_model, "ldap_entries.ldif")
 
-    create_mongodb_user_roles(
-        juju, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
-    )
+    # Request the group role through mongos, as a GROUP entity.
+    request_ldap_group_role(juju, substrate, MONGOS_APP_NAME, mongos=True)
 
 
 def test_integrate_ldap_only(juju: jubilant.Juju):
@@ -159,7 +185,7 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
         app_name,
         {
             "ldap-user-to-dn-mapping": '[{"match": "([^@]+)@([^@]+)", "substitution": "cn={0},ou={1},ou=users,dc=glauth,dc=com"}]',
-            "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))",
+            "ldap-query-template": "dc=glauth,dc=com?ou?sub?(&(objectClass=posixGroup)(uniqueMember={USER}))",
         },
     )
 
@@ -189,7 +215,7 @@ def test_ldap_user_to_dn_mapping(juju: jubilant.Juju, substrate: Substrate):
         ), "Invalid userToDNMapping."
         assert (
             configuration["security"]["ldap"]["authz"].get("queryTemplate", "")
-            == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
+            == "dc=glauth,dc=com?ou?sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
         ), "Invalid ldap Query Template."
 
     uri = generate_mongodb_ldap_client(
@@ -236,13 +262,19 @@ def test_remove_ldap_goes_to_blocked(juju: jubilant.Juju):
 
 def test_teardown(juju: jubilant.Juju, juju_k8s_model: jubilant.Juju):
     app_name = CONFIG_SERVER_APP_NAME
+    # Remove data-integrator and its router before the LDAP offers.
+    juju.remove_application(DATA_INTEGRATOR_APP_NAME, MONGOS_APP_NAME)
     juju.remove_relation(f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer")
 
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(
-            status,
-            app_name,
-            idle_period=30,
+        lambda status: (
+            are_apps_active_and_agents_idle(
+                status,
+                app_name,
+                idle_period=30,
+            )
+            and DATA_INTEGRATOR_APP_NAME not in status.apps
+            and MONGOS_APP_NAME not in status.apps
         ),
         timeout=TIMEOUT,
     )
