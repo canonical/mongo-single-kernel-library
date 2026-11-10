@@ -75,7 +75,12 @@ class ClusterProvider(Object):
         self.data_interface = self.state.cluster_provider_data_interface
 
     def assert_pass_hook_checks(self, initial_event: bool = False) -> None:
-        """Runs the pre hook checks, raises if it fails."""
+        """Runs the pre hook checks, raises if it fails.
+
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later.
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
@@ -142,6 +147,9 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
+        if issuer := self.state.app_peer_data.oauth_issuer:
+            relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = issuer
+
         if cluster_id := self.state.get_cluster_id():
             relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
 
@@ -206,6 +214,28 @@ class ClusterProvider(Object):
                     ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
                 },
             )
+
+    def update_oauth_issuer_to_mongos(self) -> None:
+        """Publish or remove the OAuth issuer on established mongos relations.
+
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later.
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
+        self.assert_pass_hook_checks()
+        issuer = self.state.app_peer_data.oauth_issuer
+        for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
+            if issuer:
+                self.data_interface.update_relation_data(
+                    relation.id, {ClusterStateKeys.OAUTH_ISSUER.value: issuer}
+                )
+            else:
+                self.data_interface.delete_relation_data(
+                    relation.id, [ClusterStateKeys.OAUTH_ISSUER.value]
+                )
 
     def update_ldap_hash_to_mongos(self, hashed_data: str) -> None:
         """Sends the hash to mongos to confirm we are integrated with the same units."""

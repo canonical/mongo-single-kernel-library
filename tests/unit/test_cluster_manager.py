@@ -119,6 +119,8 @@ def test_share_secret_to_mongos(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
 
+    harness.charm.operator.state.app_peer_data.oauth_issuer = "https://issuer.example"
+
     mocked_reconcile = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
     )
@@ -130,6 +132,7 @@ def test_share_secret_to_mongos(
     mocked_reconcile.assert_called()
     data = manager.data_interface.as_dict(rel_id)
 
+    assert data.get("oauth-issuer") == "https://issuer.example"
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"

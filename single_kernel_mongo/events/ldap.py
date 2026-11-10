@@ -114,11 +114,11 @@ class LDAPEventHandler(Object):
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable.
 
-        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        Defer if hook checks prevent cleanup or a rolling lock is requested too early.
         """
         try:
             self.manager.clean_ldap_credentials_and_uri()
-        except RollingOpsNoRelationError as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_certificate_available(self, event: CertificateAvailableEvent):
@@ -161,11 +161,16 @@ class LDAPEventHandler(Object):
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable.
 
-        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        Defer if hook checks prevent cleanup, a rolling lock is requested too early,
+        or the workload is unavailable.
         """
         try:
             self.manager.remove_ldap_certificates()
-        except (RollingOpsNoRelationError, WorkloadServiceError) as e:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
