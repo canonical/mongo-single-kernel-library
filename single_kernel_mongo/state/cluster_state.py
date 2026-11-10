@@ -31,6 +31,7 @@ class ClusterStateKeys(str, Enum):
     USERNAME = "username"
     PASSWORD = "password"
     CLUSTER_ID = "cluster-id"
+    OAUTH_CA_SECRET = "oauth-ca-secret"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -106,6 +107,13 @@ class ClusterState(AbstractRelationState[Data]):
     def ldap_hash(self) -> str | None:
         """Returns the ldap hash shared by the config-server."""
         return self.relation_data.get(ClusterStateKeys.LDAP_HASH.value, None)
+
+    @property
+    def oauth_ca_bundle(self) -> str | None:
+        """The identity provider CA bundle shared by the config-server (a secret field)."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(ClusterStateKeys.OAUTH_CA_SECRET.value) or None
 
     @property
     def external_node_connectivity(self) -> bool:

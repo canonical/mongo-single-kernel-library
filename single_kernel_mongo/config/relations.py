@@ -13,6 +13,7 @@ class PeerRelationNames(str, Enum):
     ROUTER_PEERS = "router-peers"
     STATUS_PEERS = "status-peers"
     LDAP_PEERS = "ldap-peers"
+    OAUTH_PEERS = "oauth-peers"
     ROLLINGOPS_PEERS = "rollingops-peers"
 
 
@@ -43,6 +44,7 @@ class ExternalRequirerRelations(str, Enum):
     GCS_CREDENTIALS = "gcs-credentials"
     LDAP = "ldap"
     LDAP_CERT = "ldap-certificate-transfer"
+    OAUTH_CERT = "oauth-certificate-transfer"
     VAULT = "vault-kv"
 
 

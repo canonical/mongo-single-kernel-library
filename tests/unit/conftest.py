@@ -138,6 +138,7 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
+    harness.add_relation("oauth-peers", "oauth-peers")
     harness.add_relation("rollingops-peers", "rollingops-peers")
 
     # Add network
@@ -178,6 +179,7 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
 
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
+    harness.add_relation("oauth-peers", "oauth-peers")
     harness.add_relation("router-peers", "router-peers")
     harness.add_relation("rollingops-peers", "rollingops-peers")
 

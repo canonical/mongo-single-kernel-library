@@ -142,6 +142,10 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
+        # The identity provider CA bundle, for the routers' OAuth configuration.
+        if oauth_bundle := self.state.oauth.bundle:
+            relation_data[ClusterStateKeys.OAUTH_CA_SECRET.value] = oauth_bundle
+
         if cluster_id := self.state.get_cluster_id():
             relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
 
@@ -269,6 +273,28 @@ class ClusterProvider(Object):
                 },
             )
 
+    def update_oauth_ca_to_mongos(self) -> None:
+        """Publishes the identity provider CA bundle to every router, or removes it."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError) as err:
+            logger.info("Not updating the OAuth CA bundle now: %s", err)
+            return
+
+        bundle = self.state.oauth.bundle
+        for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
+            if bundle:
+                self.data_interface.update_relation_data(
+                    relation.id, {ClusterStateKeys.OAUTH_CA_SECRET.value: bundle}
+                )
+            else:
+                self.data_interface.delete_relation_data(
+                    relation.id, [ClusterStateKeys.OAUTH_CA_SECRET.value]
+                )
+
 
 @final
 class ClusterRequirer(Object):
@@ -368,6 +394,12 @@ class ClusterRequirer(Object):
                 logger.debug("Received a userToDNMapping, storing it in databag.")
                 self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
 
+    def _set_oauth_ca_bundle(self) -> None:
+        """Stores the identity provider CA bundle shared by the config-server on this unit."""
+        self.dependent.oauth_manager.store_certificates_from_bundle(
+            self.state.cluster.oauth_ca_bundle
+        )
+
     def update_mongos_and_restart(self, force: bool = False) -> None:
         """Start/restarts mongos with config server information.
 
@@ -390,6 +422,7 @@ class ClusterRequirer(Object):
         config_server_db_uri = self.state.cluster.config_server_uri
 
         self._set_ldap_user_to_dn()
+        self._set_oauth_ca_bundle()
         self._set_cluster_id()
 
         if not key_file_contents or not config_server_db_uri:
@@ -453,6 +486,7 @@ class ClusterRequirer(Object):
         config_server_db_uri = self.state.cluster.config_server_uri
 
         self._set_ldap_user_to_dn()
+        self._set_oauth_ca_bundle()
         self._set_cluster_id()
 
         if not key_file_contents or not config_server_db_uri:

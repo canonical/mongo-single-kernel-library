@@ -125,6 +125,7 @@ class TrustStoreFiles(str, Enum):
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
     VAULT = "vault.crt"
+    OAUTH = "oauth.crt"
 
 
 class RollingOpsBackend(StrEnum):

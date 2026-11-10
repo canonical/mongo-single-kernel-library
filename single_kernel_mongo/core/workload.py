@@ -145,6 +145,21 @@ class MongoPaths:
         return Path(f"{self.ldap_certificates_dir}/ldap.crt")
 
     @property
+    def oauth_path(self) -> Path:
+        """The OAuth directory."""
+        return Path(f"{self.etc_path}/oauth")
+
+    @property
+    def oauth_certificates_dir(self) -> Path:
+        """The OAuth certificates directory."""
+        return Path(f"{self.oauth_path}/certs")
+
+    @property
+    def oauth_certificates_file(self) -> Path:
+        """The identity provider CA bundle read by mongod/mongos (serverCAFile)."""
+        return Path(f"{self.oauth_certificates_dir}/oauth-ca.crt")
+
+    @property
     def vault_cert(self) -> Path:
         """Vault configuration file path."""
         return Path(f"{self.etc_path}/vault/vault_cert.pem")
