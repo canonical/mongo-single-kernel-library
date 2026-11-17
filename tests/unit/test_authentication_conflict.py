@@ -20,8 +20,9 @@ def authentication_state(mongodb_container, request):
 
 
 @pytest.mark.parametrize("endpoint", ["ldap", "ldap-certificate-transfer"])
+@pytest.mark.parametrize("oauth_endpoint", ["oauth", "oauth-certificate-transfer"])
 def test_mongodb_blocks_on_oauth_and_incomplete_ldap_relation(
-    mongodb_ctx, authentication_state, endpoint
+    mongodb_ctx, authentication_state, endpoint, oauth_endpoint
 ):
     ldap = Relation(endpoint=endpoint, remote_app_name="glauth")
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")

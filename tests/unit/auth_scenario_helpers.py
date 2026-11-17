@@ -194,3 +194,22 @@ def shard_state(mongodb_container: Iterable[Container], initialised: bool, leade
     return mongo_state(
         mongodb_container, role=MongoDBRoles.SHARD, initialised=initialised, leader=leader
     )
+
+
+@pytest.fixture
+def mock_issuer_tls(mocker):
+    """Mocks the issuer checks and expose the TLS context to connection tests."""
+    context = mocker.patch("single_kernel_mongo.managers.oauth.ssl.create_default_context")
+
+    def discovery_response(url, **kwargs):
+        issuer = url.removesuffix("/.well-known/openid-configuration")
+        response = mocker.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(
+            {"issuer": issuer, "token_endpoint": f"{issuer}/token", "jwks_uri": f"{issuer}/jwks"}
+        )
+        return response
+
+    request = mocker.patch(
+        "single_kernel_mongo.managers.oauth.urlopen", side_effect=discovery_response
+    )
+    return SimpleNamespace(context=context, request=request)

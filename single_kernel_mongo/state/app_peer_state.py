@@ -23,6 +23,7 @@ class AppPeerDataKeys(str, Enum):
     MANAGED_USERS_KEY = "managed-users-key"
     DB_INITIALISED = "db_initialised"
     OAUTH_ISSUER = "oauth-issuer"
+    OAUTH_CA = "oauth-ca"
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
     MONGOS_HOSTS = "mongos_hosts"
@@ -103,6 +104,17 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @oauth_issuer.setter
     def oauth_issuer(self, value: str | None) -> None:
         self.update({AppPeerDataKeys.OAUTH_ISSUER.value: value or ""})
+
+    @property
+    def oauth_ca(self) -> str | None:
+        """The OAuth CA bundle shared through the application peer secret."""
+        if not self.relation:
+            return None
+        return self.data_interface.get_secret(self.relation.id, AppPeerDataKeys.OAUTH_CA.value)
+
+    @oauth_ca.setter
+    def oauth_ca(self, value: str | None) -> None:
+        self.update({AppPeerDataKeys.OAUTH_CA.value: value})
 
     @property
     def db_initialised(self) -> bool:
