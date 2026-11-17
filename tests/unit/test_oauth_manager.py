@@ -407,9 +407,8 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     oauth = Relation(endpoint="oauth", remote_app_name="hydra")
     state_in = replace(shard_state, relations={*shard_state.relations, oauth})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        scenario.charm.status_handler._recompute_statuses_for_scope(
-            "unit", scenario.charm.operator.oauth_manager
-        )
+        with pytest.raises(NonDeferrableFailedHookChecksError):
+            scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
         state_out = scenario.run()
     assert state_out.unit_status == BlockedStatus("Cannot integrate OIDC with shard.")
 

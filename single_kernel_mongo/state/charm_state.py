@@ -265,8 +265,8 @@ class CharmState(Object, AbstractStatusesState):
 
     @property
     def oauth_relation(self) -> Relation | None:
-        """The OAuth relation if it exists."""
-        if ExternalRequirerRelations.OAUTH.value not in self.model.relations:
+        """The OAuth relation if it exists. The Oauth is not available on Mongos charms."""
+        if self.charm_role.name == CharmKind.MONGOS:
             return None
         return self.model.get_relation(ExternalRequirerRelations.OAUTH.value)
 

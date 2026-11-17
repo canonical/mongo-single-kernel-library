@@ -57,6 +57,7 @@ from single_kernel_mongo.config.relations import (
     RelationNames,
 )
 from single_kernel_mongo.config.statuses import (
+    AuthStatuses,
     BackupStatuses,
     CharmStatuses,
     LdapStatuses,
@@ -827,8 +828,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def _handle_ldap_config_changes(self):
         """Apply LDAP configuration once incompatible OIDC setup has been removed."""
-        if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         # Store in the databag so we never miss it.
         if self.config.ldap_user_to_dn_mapping:
             self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
@@ -1734,6 +1733,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
+
+        if self.state.authentication_conflict:
+            charm_statuses.append(AuthStatuses.LDAP_OAUTH_CONFLICT.value)
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
