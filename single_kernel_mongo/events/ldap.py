@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from charmlibs.interfaces.ldap import LdapReadyEvent, LdapUnavailableEvent
 from charmlibs.rollingops import RollingOpsNoRelationError
+from ops import UpdateStatusEvent
 from ops.framework import EventBase, EventSource, Object
 from pydantic import ValidationError
 
@@ -139,7 +140,7 @@ class LDAPEventHandler(Object):
                 LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )
 
-    def _on_update_status(self, event: CertificateAvailableEvent):
+    def _on_update_status(self, event: UpdateStatusEvent) -> None:
         """On update-status, check if everything is alright and restart if needed."""
         try:
             # Runs the checks and restart if needed.

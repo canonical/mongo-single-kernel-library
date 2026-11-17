@@ -36,7 +36,7 @@ from single_kernel_mongo.config.relations import (
     PeerRelationNames,
     RelationNames,
 )
-from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import AuthStatuses, CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -781,6 +781,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
+
+        if self.state.authentication_conflict:
+            charm_statuses.append(AuthStatuses.LDAP_OAUTH_CONFLICT.value)
 
         if scope == "unit" and self.is_waiting_for_rolling_operation():
             charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)
