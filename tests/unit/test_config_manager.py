@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any
+from unittest.mock import PropertyMock
 
 import pytest
 from ops.hookcmds import Network
@@ -321,6 +322,25 @@ def test_mongodb_ldap_config(mocker):
     assert ldap_config["bind"]["queryPassword"] == "password"
     assert ldap_config["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
     assert ldap_config["transportSecurity"] == "tls"
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.SHARD])
+@pytest.mark.parametrize("conflict", [True, False])
+def test_shard_omits_external_authentication(mongodb_config_manager, mocker, conflict):
+    manager, _ = mongodb_config_manager
+    manager.state.authentication_conflict = conflict
+    read = mocker.patch.object(manager.workload, "read")
+    ldap_parameters = mocker.patch.object(
+        type(manager), "ldap_parameters", new_callable=PropertyMock
+    )
+    oauth_parameters = mocker.patch.object(
+        type(manager), "oauth_parameters", new_callable=PropertyMock
+    )
+
+    assert manager.authentication_parameters == {}
+    read.assert_not_called()
+    ldap_parameters.assert_not_called()
+    oauth_parameters.assert_not_called()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])

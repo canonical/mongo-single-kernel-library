@@ -423,9 +423,13 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     def authentication_parameters(self) -> dict[str, Any]:
         """LDAP and Oauth are mutually exclusive. This method decides what configuration is used.
 
+        Shards do not configure external authentication.
         If there is no conflict, we merge the LDAP and OIDC parameters.
         If there is a conflict, we keep the authentication method configured on this unit.
         """
+        if self.state.app_peer_data.role == MongoDBRoles.SHARD:
+            return {}
+
         if not self.state.authentication_conflict:
             return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
 
