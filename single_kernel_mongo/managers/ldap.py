@@ -125,6 +125,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            DeferrableFailedHookChecksError: if there is a conflict with OIDC and LDAP.
         """
         if not self.state.db_initialised:
             return
@@ -314,6 +315,9 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Generates the status of a unit based on its status reported by mongod."""
+        if self.state.authentication_conflict:
+            return []
+
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 

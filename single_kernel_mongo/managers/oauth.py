@@ -78,7 +78,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if self.state.is_role(MongoDBRoles.SHARD):
             self.state.statuses.add(
                 OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value,
-                scope="unit",
+                scope="app",
                 component=self.name,
             )
             raise NonDeferrableFailedHookChecksError("Cannot integrate OAuth with shard.")
@@ -172,10 +172,11 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Report the oauth status."""
+        if self.state.authentication_conflict:
+            return []
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
         if scope == "app":
-            return []
-        if self.state.is_role(MongoDBRoles.SHARD) and self.state.oauth_relation:
-            return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+            if self.state.is_role(MongoDBRoles.SHARD) and self.state.oauth_relation:
+                return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
         return []

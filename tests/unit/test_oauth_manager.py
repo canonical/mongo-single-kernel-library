@@ -7,12 +7,13 @@ from unittest.mock import PropertyMock
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops.model import BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import RollingOpsCallbackId
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -398,7 +399,7 @@ def test_mongos_rolling_restart_removes_oidc(
 
 
 @pytest.mark.parametrize("initialised", [True, False])
-@pytest.mark.parametrize("leader", [True, False])
+@pytest.mark.parametrize("leader", [True])
 def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
@@ -409,8 +410,11 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(NonDeferrableFailedHookChecksError):
             scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+        statuses = scenario.charm.operator.oauth_manager.get_statuses("app", recompute=True)
+        assert statuses == [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
         state_out = scenario.run()
-    assert state_out.unit_status == BlockedStatus("Cannot integrate OIDC with shard.")
+    assert state_out.unit_status == ActiveStatus()
+    assert state_out.app_status == BlockedStatus("Cannot integrate OIDC with shard.")
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
