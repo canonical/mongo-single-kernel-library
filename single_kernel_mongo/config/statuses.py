@@ -618,6 +618,20 @@ class MongodStatuses(Enum):
         status="maintenance", message="Waiting for reconnection to mongo..."
     )
     WAITING_CREDENTIALS = StatusObject(status="waiting", message="Waiting for mongo credentials...")
+    INVALID_ENTITY_REQUEST = StatusObject(
+        status="blocked",
+        message="An entity request is invalid, check the logs.",
+        short_message="Invalid entity request.",
+        check="Entity request validation.",
+        action="Fix the request on the requirer side, then remove and re-add the relation.",
+    )
+    ENTITY_ROLE_NOT_CREATED = StatusObject(
+        status="blocked",
+        message="An entity role could not be created, check the logs.",
+        short_message="Entity role not created.",
+        check="Entity role creation.",
+        action="Check the logs: drop the conflicting MongoDB role, or fix the request and re-add the relation.",
+    )
 
     @staticmethod
     def replset_status(status: str):

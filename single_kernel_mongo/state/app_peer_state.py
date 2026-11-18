@@ -21,6 +21,7 @@ class AppPeerDataKeys(str, Enum):
 
     # MongoDB
     MANAGED_USERS_KEY = "managed-users-key"
+    MANAGED_ENTITIES_KEY = "managed-entities-key"
     DB_INITIALISED = "db_initialised"
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
@@ -132,6 +133,30 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def managed_users(self, value: set[str]) -> None:
         """Stores the managed users set."""
         self.update({AppPeerDataKeys.MANAGED_USERS_KEY.value: json.dumps(sorted(value))})
+
+    @property
+    def managed_entities(self) -> dict[int, str]:
+        """Returns the managed entities: relation id to the entity (role) name."""
+        if not self.relation:
+            return {}
+
+        return {
+            int(relation_id): name
+            for relation_id, name in json.loads(
+                self.relation_data.get(AppPeerDataKeys.MANAGED_ENTITIES_KEY.value, "{}")
+            ).items()
+        }
+
+    @managed_entities.setter
+    def managed_entities(self, value: dict[int, str]) -> None:
+        """Stores the managed entities."""
+        self.update(
+            {
+                AppPeerDataKeys.MANAGED_ENTITIES_KEY.value: json.dumps(
+                    {str(relation_id): name for relation_id, name in sorted(value.items())}
+                )
+            }
+        )
 
     @property
     def mongos_hosts(self) -> list[str]:

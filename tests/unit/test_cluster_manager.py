@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
@@ -19,19 +20,25 @@ from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ClusterTLSError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseProviderData,
+)
+from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
     SECRET_CERT_LABEL,
 )
+from single_kernel_mongo.utils.mongodb_users import roles_for_database
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
-from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
+from tests.unit.helpers import CLUSTER_NAME, CONNECTION, GROUP_DN, MODEL_NAME
 
 #################
 # Mongo DB Side #
@@ -204,6 +211,217 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     manager.cleanup_users(relation)
 
     mocked_reconcile.assert_called_with(relation, relation_departing=True)
+
+
+# The request of a client of a VM mongos, as the mongos forwards it on the cluster relation,
+# its name aside: `_mongos_relation` shares it in a secret of the mongos.
+FORWARDED_REQUEST = {
+    "database": "superdb",
+    ClusterStateKeys.ENTITY_TYPE.value: "GROUP",
+    ClusterStateKeys.EXTRA_GROUP_ROLES.value: "default",
+    ClusterStateKeys.ENTITY_PERMISSIONS.value: json.dumps(
+        [{"resource_name": "superdb.posts", "resource_type": "collection", "privileges": ["find"]}]
+    ),
+}
+
+
+ENTITY_REQUEST_KEYS = (
+    ClusterStateKeys.ENTITY_TYPE.value,
+    ClusterStateKeys.EXTRA_GROUP_ROLES.value,
+    ClusterStateKeys.ENTITY_PERMISSIONS.value,
+    ClusterStateKeys.REQUESTED_ENTITY_SECRET.value,
+)
+
+
+def _config_server_setup(harness: Harness[MongoTestCharm], mocker) -> Mock:
+    """Initialised config-server leader with the MongoDB user and role calls patched.
+
+    Returns:
+        The mock recording the user and role calls, in order.
+    """
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(f"{CONNECTION}.user_exists", return_value=False)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager._compute_auth_restrictions",
+        return_value=[],
+    )
+    calls = Mock()
+    calls.get_role.return_value = None
+    for method in ("create_user", "drop_user", "get_role", "create_role", "drop_role"):
+        mocker.patch(f"{CONNECTION}.{method}", getattr(calls, method))
+    return calls
+
+
+def _name_secret(harness: Harness[MongoTestCharm], name: str) -> str:
+    """Adds a mongos-owned `requested-entity-secret` granted to the config-server."""
+    secret_id = harness.add_model_secret("mongos", {"entity-name": name})
+    harness.grant_secret(secret_id, harness.charm.app.name)
+    return secret_id
+
+
+def _mongos_relation(
+    harness: Harness[MongoTestCharm], data: dict[str, str], name: str | None = None
+) -> int:
+    """Adds a cluster relation whose mongos publishes `data`, and the entity `name` if given."""
+    rel_id = harness.add_relation(RelationNames.CLUSTER.value, "mongos")
+    harness.add_relation_unit(rel_id, "mongos/0")
+    if name is not None:
+        data = data | {ClusterStateKeys.REQUESTED_ENTITY_SECRET.value: _name_secret(harness, name)}
+    harness.update_relation_data(rel_id, "mongos", data)
+    return rel_id
+
+
+def _entity_name(harness: Harness[MongoTestCharm], rel_id: int) -> str | None:
+    """The entity name the config-server published, read without a cached secret."""
+    data_interface = DatabaseProviderData(harness.model, RelationNames.CLUSTER.value)
+    return data_interface.fetch_my_relation_field(rel_id, "entity-name")
+
+
+def test_config_server_creates_role_for_forwarded_request(harness: Harness[MongoTestCharm], mocker):
+    calls = _config_server_setup(harness, mocker)
+
+    rel_id = _mongos_relation(harness, FORWARDED_REQUEST, GROUP_DN)
+
+    calls.create_role.assert_called_once_with(
+        GROUP_DN,
+        [{"resource": {"db": "superdb", "collection": "posts"}, "actions": ["find"]}],
+        [{"role": "readWrite", "db": "superdb"}, {"role": "enableSharding", "db": "superdb"}],
+    )
+    names = [name for name, _, _ in calls.mock_calls]
+    assert names.index("create_user") < names.index("create_role")
+    assert calls.create_user.call_args.args[0] == f"relation-{rel_id}"
+    assert _entity_name(harness, rel_id) == GROUP_DN
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {rel_id: GROUP_DN}
+
+
+def test_config_server_drops_role_when_cluster_relation_breaks(
+    harness: Harness[MongoTestCharm], mocker, substrate: Substrate
+):
+    calls = _config_server_setup(harness, mocker)
+    if substrate == Substrate.lxd:
+        rel_id = _mongos_relation(harness, FORWARDED_REQUEST, GROUP_DN)
+        assert harness.charm.operator.state.app_peer_data.managed_entities == {rel_id: GROUP_DN}
+    else:
+        # A mongos-k8s router creates its own roles: it forwards nothing.
+        rel_id = _mongos_relation(harness, {"database": "superdb"})
+        assert harness.charm.operator.state.entity_relations == set()
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.has_departed_run", return_value=True
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.is_scaling_down", return_value=False
+    )
+    mocker.patch(f"{CONNECTION}.user_exists", return_value=True)
+
+    harness.remove_relation(rel_id)
+
+    if substrate == Substrate.lxd:
+        calls.drop_role.assert_called_once_with(GROUP_DN)
+        # Together with the router user.
+        calls.drop_user.assert_called_once_with(f"relation-{rel_id}")
+    else:
+        calls.drop_role.assert_not_called()
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {}
+
+
+def test_config_server_drops_role_once_mongos_units_are_gone(
+    harness: Harness[MongoTestCharm], mocker, monkeypatch
+):
+    calls = _config_server_setup(harness, mocker)
+    # The mongos asks for the entity name as a secret, like the cluster requirer does.
+    monkeypatch.setenv("JUJU_VERSION", "3.6.0")
+    rel_id = _mongos_relation(
+        harness, FORWARDED_REQUEST | {"requested-secrets": json.dumps(["entity-name"])}, GROUP_DN
+    )
+    assert _entity_name(harness, rel_id) == GROUP_DN
+    assert "secret-entity" in harness.get_relation_data(rel_id, harness.charm.app.name)
+
+    # The subordinate mongos units vanish with its client relation, its request stays.
+    harness.remove_relation_unit(rel_id, "mongos/0")
+    calls.drop_role.assert_not_called()
+
+    # Honoured at the next update-status.
+    harness.charm.operator.reconcile_entities()
+
+    calls.drop_role.assert_called_once_with(GROUP_DN)
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {}
+    assert _entity_name(harness, rel_id) is None
+    assert "secret-entity" not in harness.get_relation_data(rel_id, harness.charm.app.name)
+
+    # A relation-changed deferred while the units were there does not re-create it.
+    relation = harness.model.get_relation(RelationNames.CLUSTER.value, rel_id)
+    with pytest.raises(DeferrableError):
+        harness.charm.operator.cluster_manager.share_secret_to_mongos(relation)
+    calls.create_role.assert_called_once()
+
+
+def test_config_server_renames_role(harness: Harness[MongoTestCharm], mocker, monkeypatch):
+    calls = _config_server_setup(harness, mocker)
+    monkeypatch.setenv("JUJU_VERSION", "3.6.0")
+    rel_id = _mongos_relation(
+        harness, FORWARDED_REQUEST | {"requested-secrets": json.dumps(["entity-name"])}, GROUP_DN
+    )
+
+    # A new client asks for another name before the withdrawal of the previous one was seen.
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        {ClusterStateKeys.REQUESTED_ENTITY_SECRET.value: _name_secret(harness, "ou=villains")},
+    )
+
+    calls.drop_role.assert_called_once_with(GROUP_DN)
+    assert calls.create_role.call_count == 2
+    assert calls.create_role.call_args.args[0] == "ou=villains"
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {rel_id: "ou=villains"}
+    assert _entity_name(harness, rel_id) == "ou=villains"
+
+
+def test_config_server_replaces_role_forwarded_with_another_definition(
+    harness: Harness[MongoTestCharm], mocker
+):
+    calls = _config_server_setup(harness, mocker)
+    rel_id = _mongos_relation(harness, FORWARDED_REQUEST, GROUP_DN)
+    _, privileges, roles = calls.create_role.call_args.args
+    # The existing role as `rolesInfo` reads it, then gone once dropped.
+    calls.get_role.side_effect = [{"privileges": privileges, "roles": roles}, None]
+
+    # A replacement client asks for the same name with other roles before the units rule ran.
+    # The library refuses a changed value, so the mongos clears its request first.
+    harness.update_relation_data(rel_id, "mongos", dict.fromkeys(ENTITY_REQUEST_KEYS, ""))
+    calls.drop_role.assert_not_called()
+    harness.update_relation_data(
+        rel_id,
+        "mongos",
+        FORWARDED_REQUEST
+        | {
+            ClusterStateKeys.EXTRA_GROUP_ROLES.value: "monitor",
+            ClusterStateKeys.REQUESTED_ENTITY_SECRET.value: _name_secret(harness, GROUP_DN),
+        },
+    )
+
+    calls.drop_role.assert_called_once_with(GROUP_DN)
+    assert calls.create_role.call_count == 2
+    assert calls.create_role.call_args.args == (
+        GROUP_DN,
+        privileges,
+        roles_for_database("superdb", {"monitor"}),
+    )
+    assert harness.charm.operator.state.app_peer_data.managed_entities == {rel_id: GROUP_DN}
+
+
+def test_library_refuses_a_changed_forwarded_extra_group_roles(
+    harness: Harness[MongoTestCharm], mocker
+):
+    _config_server_setup(harness, mocker)
+    rel_id = _mongos_relation(harness, FORWARDED_REQUEST, GROUP_DN)
+
+    # Why the mongos clears its request before it writes other roles.
+    with pytest.raises(ValueError, match="Cannot change extra-group-roles"):
+        harness.update_relation_data(
+            rel_id, "mongos", {ClusterStateKeys.EXTRA_GROUP_ROLES.value: "monitor"}
+        )
 
 
 ###############
@@ -521,6 +739,50 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
 
     assert manager.state.secrets.get_for_key(Scope.APP, "username") is None
     assert manager.state.secrets.get_for_key(Scope.APP, "password") is None
+
+
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_k8s_router_cleanup_drops_entity_roles_and_keeps_entity_name(
+    mongos_harness: Harness[MongosTestCharm], mocker
+):
+    manager = mongos_harness.charm.operator.cluster_manager
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
+    cluster_id = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    mongos_harness.add_relation_unit(cluster_id, "mongodb/0")
+    manager.share_credentials_to_clients(f"relation-{cluster_id}", "password")
+    mocker.patch(f"{CONNECTION}.get_role", return_value=None)
+    create_role = mocker.patch(f"{CONNECTION}.create_role")
+    drop_role = mocker.patch(f"{CONNECTION}.drop_role")
+    drop_user = mocker.patch(f"{CONNECTION}.drop_user")
+    rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
+    mongos_harness.add_relation_unit(rel_id, "client-app/0")
+    secret_id = mongos_harness.add_model_secret("client-app", {"entity-name": GROUP_DN})
+    mongos_harness.grant_secret(secret_id, mongos_harness.charm.app.name)
+    mongos_harness.update_relation_data(
+        rel_id,
+        "client-app",
+        {"database": "superdb", "entity-type": "GROUP", "requested-entity-secret": secret_id},
+    )
+    create_role.assert_called_once()
+    # The requester stops sharing its secret once the entity name is published.
+    mongos_harness.revoke_secret(secret_id, mongos_harness.charm.app.name)
+    cluster: Relation = mongos_harness.model.get_relation(RelationNames.CLUSTER.value, cluster_id)  # type: ignore[assignment]
+
+    manager.remove_users_for_k8s_routers(cluster)
+
+    drop_role.assert_called_once_with(GROUP_DN)
+    drop_user.assert_called_once_with(f"relation-{cluster_id}")  # the router user
+    assert mongos_harness.charm.operator.state.app_peer_data.managed_entities == {}
+    data_interface = DatabaseProviderData(mongos_harness.model, RelationNames.MONGOS_PROXY.value)
+    assert data_interface.fetch_my_relation_field(rel_id, "entity-name") == GROUP_DN
+
+    # Integrated again: the router start re-creates the role under the published name.
+    manager.update_users_for_k8s_routers()
+
+    assert create_role.call_count == 2
+    assert create_role.call_args.args[0] == GROUP_DN
+    assert mongos_harness.charm.operator.state.app_peer_data.managed_entities == {rel_id: GROUP_DN}
 
 
 @pytest.mark.parametrize(

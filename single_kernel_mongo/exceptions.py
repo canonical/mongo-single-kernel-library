@@ -311,3 +311,7 @@ class WaitingForACertError(ClusterTLSError):
 
 class ClusterVersionMismatchError(DeferrableFailedHookChecksError):
     """Raised when there's a mismatch in cluster version."""
+
+
+class InvalidEntityRequestError(Exception):
+    """Raised when a mongodb_client entity request is invalid."""

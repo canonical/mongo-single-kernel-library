@@ -66,6 +66,7 @@ from single_kernel_mongo.state.config_server_state import (
     AppShardingComponentState,
     UnitShardingComponentState,
 )
+from single_kernel_mongo.state.entity_state import EntityState
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
@@ -207,6 +208,69 @@ class CharmState(Object, AbstractStatusesState):
         exposed for mongodb charms.
         """
         return set(self.model.relations[self.client_relation_name])
+
+    def entity_state(self, relation: Relation) -> EntityState:
+        """The provider's view of an entity request on the given relation.
+
+        Requests relayed by a mongos over the cluster relation are forwarded ones.
+        """
+        return EntityState(
+            relation,
+            DatabaseProviderData(self.model, relation.name),
+            self.model.app,
+            self.model,
+            forwarded=relation.name == RelationNames.CLUSTER.value,
+        )
+
+    def is_entity_relation(self, relation: Relation) -> bool:
+        """Whether the relation carries an entity request.
+
+        A cluster relation carries one only while it has remote units: a VM mongos is a
+        subordinate, so its units vanish with its client relation, while the request it
+        forwarded stays in the databag.
+        """
+        if relation.name == RelationNames.CLUSTER.value and not relation.units:
+            return False
+        return self.entity_state(relation).requested
+
+    @property
+    def entity_relations(self) -> set[Relation]:
+        """The relations carrying entity requests.
+
+        On a config-server these are the cluster relations (the mongos relays the
+        request of its client), otherwise the client relations. A shard has none: the
+        database relation is infeasible on a sharding component and its clients go
+        through a mongos, so a shard must never create the role of an entity request.
+        """
+        if self.is_role(MongoDBRoles.SHARD):
+            return set()
+        relations = (
+            self.cluster_relations
+            if self.is_role(MongoDBRoles.CONFIG_SERVER)
+            else self.client_relations
+        )
+        return {relation for relation in relations if self.is_entity_relation(relation)}
+
+    @property
+    def orphaned_entity_ids(self) -> set[int]:
+        """The ids of the relations a role was created for and which no longer need it.
+
+        A client relation keeps its role while it exists, whatever it carries now. A cluster
+        relation keeps it only while it is an entity relation: while it has remote units,
+        which vanish with the client relation of the VM mongos, and carries a request. It
+        feeds the entity reconcile loops of the operators.
+        """
+        live_relation_ids = {
+            relation.id for relation in self.client_relations | self.entity_relations
+        }
+        return set(self.app_peer_data.managed_entities) - live_relation_ids
+
+    @property
+    def user_relations(self) -> set[Relation]:
+        """The client relations which request a user, not an entity."""
+        return {
+            relation for relation in self.client_relations if not self.is_entity_relation(relation)
+        }
 
     @property
     def mongos_cluster_relation(self) -> Relation | None:
@@ -379,6 +443,7 @@ class CharmState(Object, AbstractStatusesState):
             relation=self.mongos_cluster_relation,
             data_interface=self.cluster_requirer_data_interface,
             component=self.model.app,
+            model=self.model,
         )
 
     @property
