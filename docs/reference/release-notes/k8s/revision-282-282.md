@@ -19,7 +19,7 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 * `mongodb-image=ghcr.io/canonical/charmed-mongodb@sha256:4f3fda68dc0739baf3e8bb29d326ae94ff82db78562c9a5dc647e32ad84c047b`
 
-[Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
+[Charmhub](https://charmhub.io/mongodb-k8s) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
 ## Features
 
