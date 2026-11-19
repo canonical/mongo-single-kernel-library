@@ -1,20 +1,16 @@
-(revision-284)=
+(revision-285)=
 
-# Revision 284
+# Revision 285
 
-<sub>XX October 2026</sub>
+<sub>19 November 2026</sub>
 
-Charmed MongoDB K8s revision 284 has been release to the [`6/stable` channel](https://charmhub.io/mongodb-k8s?channel=6/stable) on Charmhub.
-It pairs with Charmed Mongos K8s revision 230 that has been release to the [`6/stable` channel](https://charmhub.io/mongos-k8s?channel=6/stable) on Charmhub.
+Charmed MongoDB K8s revision 285 has been release to the [`6/stable` channel](https://charmhub.io/mongodb-k8s?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos K8s revision 231 that has been release to the [`6/stable` channel](https://charmhub.io/mongos-k8s?channel=6/stable) on Charmhub.
 
 ## Highlights
 
 * Patch for a few CVEs on MongoDB.
 * Dependencies upgrades
-
-### Other features
-
-* GCS Backup support
 
 ## Bug Fixes
 

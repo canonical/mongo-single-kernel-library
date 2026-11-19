@@ -1,20 +1,16 @@
-(revision-415)=
+(revision-416)=
 
-# Revision 415
+# Revision 416
 
-<sub>NN October 2026</sub>
+<sub>19 November 2026</sub>
 
-Charmed MongoDB Revision 415 has been deployed to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
-It pairs with Charmed Mongos revision 221 that has been release to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
+Charmed MongoDB Revision 416 has been deployed to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos revision 222 that has been release to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
 
 ## Highlights
 
 * Patch for a few CVEs on MongoDB.
 * Dependencies upgrades
-
-### Other features
-
-* GCS Backup support
 
 ## Bug Fixes
 
