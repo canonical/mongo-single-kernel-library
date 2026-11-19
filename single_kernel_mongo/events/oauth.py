@@ -20,6 +20,7 @@ from ops.framework import Object
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
+    LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
@@ -55,7 +56,11 @@ class OAuthEventHandler(Object):
             return
         try:
             self.manager.restart_when_ready()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            LdapAndOauthConflictError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
@@ -64,7 +69,11 @@ class OAuthEventHandler(Object):
         """Handle available or updated provider information."""
         try:
             self.manager.configure()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            LdapAndOauthConflictError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
@@ -73,7 +82,11 @@ class OAuthEventHandler(Object):
         """Handle removal of provider information."""
         try:
             self.manager.remove()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            LdapAndOauthConflictError,
+        ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)

@@ -15,6 +15,9 @@ from single_kernel_mongo.core.structured_config import (
     MongoDBRoles,
     MongosCharmConfig,
 )
+from single_kernel_mongo.exceptions import (
+    LdapAndOauthConflictError,
+)
 from single_kernel_mongo.managers.config import (
     MongoDBConfigManager,
     MongosConfigManager,
@@ -384,61 +387,13 @@ def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
     read.assert_not_called()
 
 
-@pytest.fixture
-def conflicting_authentication_config_manager(mongodb_config_manager, mocker):
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
+def test_authentication_conflict_blocks_generation(mongodb_config_manager):
     manager, _ = mongodb_config_manager
     manager.state.substrate = Substrates.VM
     manager.state.authentication_conflict = True
-    manager.state.app_peer_data.oauth_issuer = "https://issuer.example"
-    manager.state.is_role.side_effect = lambda role: role == MongoDBRoles.REPLICATION
-    manager.state.ldap = mocker.MagicMock(LdapState)
-    manager.state.ldap.is_ready.return_value = True
-    manager.state.ldap.bind_user = "cn=user,dc=example"
-    manager.state.ldap.bind_password = "password"
-    manager.state.ldap.base_dn = "dc=example"
-    manager.state.ldap.formatted_ldap_urls = ["ldap.example:636"]
-    manager.state.ldap.ldap_user_to_dn_mapping = ""
-    manager.state.ldap.ldap_query_template = ""
-    return manager
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
-def test_authentication_conflict_keeps_ldap_in_rendered_config(
-    conflicting_authentication_config_manager, mocker
-):
-    manager = conflicting_authentication_config_manager
-    current = {"security": {"ldap": {"servers": "ldap.example:636"}}}
-    mocker.patch.object(manager.workload, "read", return_value=safe_dump(current).splitlines())
-
-    rendered = manager.build_config()
-
-    assert rendered["security"]["ldap"]["servers"] == "ldap.example:636"
-    assert rendered["security"]["ldap"]["bind"] == {
-        "queryUser": "cn=user,dc=example",
-        "queryPassword": "password",
-    }
-    assert rendered["setParameter"]["authenticationMechanisms"] == "PLAIN,SCRAM-SHA-256"
-    assert "oidcIdentityProviders" not in rendered["setParameter"]
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
-def test_authentication_conflict_keeps_oidc_in_rendered_config(
-    conflicting_authentication_config_manager, mocker
-):
-    manager = conflicting_authentication_config_manager
-    current = {
-        "setParameter": {
-            "oidcIdentityProviders": json.dumps([{"issuer": "https://issuer.example"}])
-        }
-    }
-    mocker.patch.object(manager.workload, "read", return_value=safe_dump(current).splitlines())
-
-    rendered = manager.build_config()
-
-    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
-    assert providers[0]["issuer"] == "https://issuer.example"
-    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
-    assert "ldap" not in rendered["security"]
+    with pytest.raises(LdapAndOauthConflictError):
+        manager.build_config()
 
 
 def test_mongodb_encryption_at_rest_config(mocker):

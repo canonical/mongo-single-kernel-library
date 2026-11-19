@@ -148,6 +148,8 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         """Runs before the upgrade."""
         if not self.state.db_initialised:
             return
+        if self.dependent.state.authentication_conflict:
+            raise charm_refresh.PrecheckFailed("LDAP and OIDC mutual exclusivity unmet.")
         if self.dependent.name == CharmKind.MONGOD:
             if state := self.dependent.vault_manager.get_degraded_state():
                 logger.error(

@@ -31,7 +31,7 @@ def test_oauth_hook_checks_reject_shard(mongodb_ctx, mongodb_container, initiali
         with pytest.raises(
             NonDeferrableFailedHookChecksError, match="Cannot integrate OAuth with shard"
         ):
-            scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -39,7 +39,7 @@ def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_con
     state_in = mongo_state(mongodb_container, role=role, initialised=False)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
-            scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -50,7 +50,7 @@ def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container,
         mocker.patch.object(operator.vault_manager, "get_degraded_state", return_value=True)
 
         with pytest.raises(DeferrableFailedHookChecksError, match="Encryption at rest"):
-            operator.oauth_manager.assert_pass_hook_checks()
+            operator.oauth_manager._assert_pass_hook_checks()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -63,7 +63,7 @@ def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_conta
         )
 
         with pytest.raises(DeferrableFailedHookChecksError, match="during a refresh"):
-            operator.oauth_manager.assert_pass_hook_checks()
+            operator.oauth_manager._assert_pass_hook_checks()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -71,7 +71,7 @@ def test_oauth_hook_checks_pass(mongodb_ctx, mongodb_container, role):
     with mongodb_ctx(
         mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
     ) as scenario:
-        scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+        scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
 
 
 def test_oauth_info_changed_rejects_shards(mongodb_ctx, mongodb_container, caplog):
@@ -409,7 +409,7 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     state_in = replace(shard_state, relations={*shard_state.relations, oauth})
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(NonDeferrableFailedHookChecksError):
-            scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
         statuses = scenario.charm.operator.oauth_manager.get_statuses("app", recompute=True)
         assert statuses == [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
         state_out = scenario.run()

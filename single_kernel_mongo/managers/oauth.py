@@ -32,6 +32,7 @@ from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
+    LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
@@ -67,13 +68,14 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             relation_name=self.name,
         )
 
-    def assert_pass_hook_checks(self) -> None:
+    def _assert_pass_hook_checks(self) -> None:
         """Reject unsupported roles and defer OAuth hooks until MongoDB is ready.
 
         Raises:
             NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
             DeferrableFailedHookChecksError: The database is not initialised, Vault
                 is degraded, a refresh is in progress, or LDAP setup conflicts with OIDC.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if self.state.is_role(MongoDBRoles.SHARD):
             self.state.statuses.add(
@@ -87,7 +89,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if self.dependent.refresh_in_progress:
             raise DeferrableFailedHookChecksError("OAuth hooks are not supported during a refresh.")
         if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
+            raise LdapAndOauthConflictError("LDAP and OIDC are mutually exclusive.")
         if self.dependent.vault_manager.get_degraded_state():
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly.")
 
@@ -105,13 +107,14 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
             RollingOpsNoRelationError: A rolling restart is requested before its
                 relation is available.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if not self.state.oauth_relation:
             return
         if not self.charm.unit.is_leader():
             return
 
-        self.assert_pass_hook_checks()
+        self._assert_pass_hook_checks()
 
         provider = self.oauth_requirer.get_provider_info()
         if provider is None or not provider.issuer_url:
@@ -132,15 +135,18 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         Replica sets request an asynchronous rolling restart if the configuration
         has changed. Followers reconcile through peer relation events.
 
+        We allow clean up even if there is a conflict with LDAP,
+        because the relation is being removed.
+
         Raises:
             DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
             NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
             RollingOpsNoRelationError: A rolling restart is requested before its
                 relation is available.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if not self.charm.unit.is_leader():
             return
-        self.assert_pass_hook_checks()
 
         self.state.app_peer_data.oauth_issuer = None
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
@@ -158,6 +164,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
             DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
             NonDeferrableFailedHookChecksError: Hook checks reject the configuration.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
@@ -165,7 +172,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if not self.state.app_peer_data.oauth_issuer and not file_has_oauth_configuration:
             return
 
-        self.assert_pass_hook_checks()
+        self._assert_pass_hook_checks()
 
         if self.dependent.config_manager.config_changed():
             self.dependent.async_restart_charm_services(force=False)

@@ -50,6 +50,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
     InvalidLdapStateError,
+    LdapAndOauthConflictError,
     MissingConfigServerError,
     UpgradeInProgressError,
     WaitingForSecretsError,
@@ -205,7 +206,7 @@ class MongosOperator(OperatorProtocol, Object):
             if self.state.mongos_cluster_relation:
                 logger.info("Restarting workloads")
                 self.start_charm_services()
-        except (WorkloadServiceError, WorkloadExecError):
+        except (WorkloadServiceError, WorkloadExecError, LdapAndOauthConflictError):
             return
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
@@ -290,6 +291,9 @@ class MongosOperator(OperatorProtocol, Object):
             # Bypass the regular start if refresh is in progress
             logger.info("Refresh in progress, skipping regular start")
             return
+
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         self._configure_workloads()
 
@@ -459,6 +463,9 @@ class MongosOperator(OperatorProtocol, Object):
             logger.error("Cannot start mongos without a config server db")
             raise MissingConfigServerError("Cannot start mongos without a config server db")
 
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
+
         if self.ldap_manager.should_not_restart():
             raise InvalidLdapStateError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
@@ -496,10 +503,10 @@ class MongosOperator(OperatorProtocol, Object):
             logger.warning("Invalid state before mongos restart: %s.", e)
             # No need to retry, it can only be resolved by manual intervention
             return OperationResult.RELEASE
-        except (WaitingForSecretsError,) as e:
+        except WaitingForSecretsError as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except WorkloadServiceError as e:
+        except (WorkloadServiceError, LdapAndOauthConflictError) as e:
             # Retry later
             logger.info("Error during mongos restart: %s.", e)
             return OperationResult.RETRY_RELEASE

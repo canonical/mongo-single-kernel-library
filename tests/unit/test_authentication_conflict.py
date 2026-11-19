@@ -2,15 +2,15 @@
 # See LICENSE file for licensing details.
 
 from dataclasses import replace
-from unittest.mock import PropertyMock
 
 import pytest
+from charmlibs.rollingops import OperationResult
 from ops.testing import Relation, Secret
-from yaml import safe_dump
 
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import AuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.exceptions import LdapAndOauthConflictError
 from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
 
 
@@ -114,75 +114,6 @@ def test_conflict_prevents_ldap_changes(mongodb_ctx, mocker, conflicting_authent
     assert len(state_out.deferred) == 2
 
 
-def test_authentication_selects_ldap_from_current_config(
-    mongodb_ctx, mocker, conflicting_authentication
-):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
-        config = scenario.charm.operator.config_manager
-        ldap_parameters = {"security": {"ldap": {"servers": "ldap.example"}}}
-        read = mocker.patch.object(
-            config.workload, "read", return_value=[safe_dump(ldap_parameters)]
-        )
-        mocker.patch.object(
-            type(config),
-            "ldap_parameters",
-            new_callable=PropertyMock,
-            return_value=ldap_parameters,
-        )
-        oauth_params = mocker.patch.object(
-            type(config), "oauth_parameters", new_callable=PropertyMock
-        )
-
-        assert config.authentication_parameters == ldap_parameters
-        oauth_params.assert_not_called()
-        read.assert_called_once_with(config.file)
-
-
-def test_authentication_selects_oidc_from_current_config(
-    mongodb_ctx, mocker, conflicting_authentication
-):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
-        config = scenario.charm.operator.config_manager
-        oauth_parameters = {"setParameter": {"oidcIdentityProviders": "providers"}}
-        read = mocker.patch.object(
-            config.workload, "read", return_value=[safe_dump(oauth_parameters)]
-        )
-        mocker.patch.object(
-            type(config),
-            "oauth_parameters",
-            new_callable=PropertyMock,
-            return_value=oauth_parameters,
-        )
-        ldap_params = mocker.patch.object(
-            type(config), "ldap_parameters", new_callable=PropertyMock
-        )
-
-        assert config.authentication_parameters == oauth_parameters
-        ldap_params.assert_not_called()
-        read.assert_called_once_with(config.file)
-
-
-def test_authentication_remains_disabled_during_conflict(
-    mongodb_ctx,
-    mocker,
-    conflicting_authentication,
-):
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
-        config = scenario.charm.operator.config_manager
-        read = mocker.patch.object(config.workload, "read", return_value=[safe_dump({})])
-        ldap_params = mocker.patch.object(
-            type(config), "ldap_parameters", new_callable=PropertyMock
-        )
-        oauth_params = mocker.patch.object(
-            type(config), "oauth_parameters", new_callable=PropertyMock
-        )
-
-        assert config.authentication_parameters == {}
-        ldap_params.assert_not_called()
-        oauth_params.assert_not_called()
-        read.assert_called_once_with(config.file)
-
-
 def test_mongos_detects_oidc_from_config_server_with_incomplete_ldap(mongos_ctx, mongodb_container):
     state_in = mongos_state(
         mongodb_container,
@@ -203,40 +134,21 @@ def test_mongos_detects_oidc_from_config_server_with_incomplete_ldap(mongos_ctx,
         )
 
 
-def test_conflict_keeps_existing_ldap_credentials_and_certificates(
-    mongodb_ctx, mocker, conflicting_authentication
-):
-    clean_credentials = mocker.patch("single_kernel_mongo.state.ldap_state.LdapState.clean_databag")
-    clean_certificates = mocker.patch(
-        "single_kernel_mongo.state.ldap_state.LdapState.clean_certificates"
-    )
-    certificates = Relation(endpoint="ldap-certificate-transfer", remote_app_name="glauth")
-    state_in = replace(
-        conflicting_authentication,
-        relations={*conflicting_authentication.relations, certificates},
-    )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+def test_conflict_blocks_ldap_cleanup_restart(mongodb_ctx, mocker, conflicting_authentication):
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
         operator = scenario.charm.operator
-        delete = mocker.patch.object(operator.ldap_manager.workload, "delete")
-        restart = mocker.patch.object(operator, "async_restart_charm_services")
+        configure = mocker.patch.object(operator.config_manager, "configure_and_restart")
+        restart = mocker.patch.object(operator.workload, "restart")
 
-        operator.ldap_manager.ldap_requirer.on.ldap_unavailable.emit(
-            scenario.charm.model.get_relation("ldap")
-        )
-        operator.ldap_manager.certificate_transfer.on.certificate_removed.emit(
-            relation_id=certificates.id
+        assert (
+            operator.restart_charm_services_callback(force=False) == OperationResult.RETRY_RELEASE
         )
 
-        state_out = scenario.run()
-
-        clean_credentials.assert_not_called()
-        clean_certificates.assert_not_called()
-        delete.assert_not_called()
+        configure.assert_not_called()
         restart.assert_not_called()
-    assert len(state_out.deferred) == 2
 
 
-def test_mongos_conflict_without_configured_auth_does_not_enable_oidc(
+def test_mongos_conflict_without_configured_auth_does_not_enable_oauth(
     mongos_ctx, mongodb_container, mocker
 ):
     state_in = mongos_state(
@@ -253,4 +165,29 @@ def test_mongos_conflict_without_configured_auth_does_not_enable_oidc(
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
         mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
-        assert operator.config_manager.authentication_parameters == {}
+        with pytest.raises(LdapAndOauthConflictError):
+            operator.config_manager.build_config()
+
+
+def test_mongos_holds_pending_restart_on_authentication_conflict(
+    mongos_ctx, mongodb_container, mocker
+):
+    state_in = mongos_state(
+        mongodb_container,
+        relations={
+            Relation(
+                endpoint="cluster",
+                remote_app_data={
+                    "oauth-issuer": "https://issuer",
+                    "config-server-db": "config-server/10.0.0.1:27017",
+                },
+            ),
+            Relation(endpoint="ldap"),
+        },
+    )
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        restart = mocker.patch.object(operator.cluster_manager, "update_mongos_and_restart")
+        assert operator.state.authentication_conflict
+        assert operator.restart_charm_services_callback(force=True) == OperationResult.RETRY_RELEASE
+        restart.assert_not_called()

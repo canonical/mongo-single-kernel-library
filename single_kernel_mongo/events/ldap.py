@@ -22,6 +22,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     InvalidLdapHashError,
     InvalidLdapWithShardError,
+    LdapAndOauthConflictError,
     LDAPSNotEnabledError,
     NonDeferrableFailedHookChecksError,
     UnableToBindError,
@@ -94,7 +95,7 @@ class LDAPEventHandler(Object):
                 component=self.manager.name,
             )
             defer_event_with_info_log(logger, event, action, f"{err}")
-        except (DeferrableError, DeferrableFailedHookChecksError) as err:
+        except (DeferrableError, DeferrableFailedHookChecksError, LdapAndOauthConflictError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except LDAPSNotEnabledError:
             self.manager.state.statuses.add(
@@ -126,7 +127,11 @@ class LDAPEventHandler(Object):
         """Handles the ops event that indicates that ldap-certificates relation is ready."""
         try:
             self.manager.store_ldap_certificates(event.certificate, event.ca, event.chain)
-        except DeferrableFailedHookChecksError as err:
+        except (
+            DeferrableFailedHookChecksError,
+            LdapAndOauthConflictError,
+            WorkloadServiceError,
+        ) as err:
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
@@ -152,6 +157,7 @@ class LDAPEventHandler(Object):
             UnableToBindError,
             NonDeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
+            LdapAndOauthConflictError,
         ):
             logger.warning(
                 "Update Status could not reconcile ldap integration. Please investigate."
@@ -167,11 +173,7 @@ class LDAPEventHandler(Object):
         """
         try:
             self.manager.remove_ldap_certificates()
-        except (
-            DeferrableFailedHookChecksError,
-            RollingOpsNoRelationError,
-            WorkloadServiceError,
-        ) as e:
+        except (RollingOpsNoRelationError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
@@ -182,7 +184,11 @@ class LDAPEventHandler(Object):
         action = "restart-ldap-if-ready"
         try:
             self.manager.restart_when_ready()
-        except (DeferrableFailedHookChecksError, DeferrableError, RollingOpsNoRelationError) as err:
+        except (
+            DeferrableFailedHookChecksError,
+            DeferrableError,
+            RollingOpsNoRelationError,
+        ) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except UnableToBindError as err:
             self.manager.state.statuses.add(
