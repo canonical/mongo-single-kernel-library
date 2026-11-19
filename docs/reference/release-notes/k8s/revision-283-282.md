@@ -71,7 +71,7 @@ See {ref}`system-requirements` for more information about software and hardware 
 
 This charm is based on the Canonical [charmed-mongodb-snap](https://github.com/canonical/charmed-mongodb-snap). It packages:
 
-* Percona Server for MongoDB `v8.0.28`
+* Percona Server for MongoDB `v8.0.28-12`
 * MongoDB Exporter `v0.51.0`
 * mongosh `v2.9.2`
 * Percona Backup for MongoDB `v2.15.0`
