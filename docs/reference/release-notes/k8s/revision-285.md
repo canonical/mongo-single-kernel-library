@@ -15,6 +15,7 @@ It pairs with Charmed Mongos K8s revision 231 that has been released to the [`6/
 ## Bug Fixes
 
 * Stability improvements
+* Backporting of multiple bug fixes from `8/stable`
 
 ## Requirements and compatibility
 
