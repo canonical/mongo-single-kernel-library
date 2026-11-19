@@ -15,7 +15,7 @@ It pairs with Charmed Mongos revision 222 that has been released to the [`6/stab
 ## Bug Fixes
 
 * Stability improvements
-* Backporting of multiple bug fixes from `8/stable`
+* Backports of multiple bug fixes from `8/stable`
 
 ## Requirements and compatibility
 
