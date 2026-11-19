@@ -2,7 +2,7 @@
 
 # Revision 413, 414
 
-<sub>16 October 2026</sub>
+<sub>19 November 2026</sub>
 
 This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, new versions of MongoDB, mongosh, PBM, mongodb_exporter. It features encryption at rest, juju spaces support, GCS backup support, rolling operations, and many bug fixes. It also feature some new updated and refined Terraform modules
 
