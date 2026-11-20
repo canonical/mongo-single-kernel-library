@@ -1,8 +1,8 @@
-(revision-283-282)=
+(revision-289-290)=
 
-# Revision 283, 282
+# Revision 289, 290
 
-<sub>19 November 2026</sub>
+<sub>20 November 2026</sub>
 
 This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, new versions of MongoDB, mongosh, PBM, mongodb_exporter. It features encryption at rest, GCS backup support, rolling operations, and many bug fixes. It also feature some new updated and refined Terraform modules
 
@@ -10,10 +10,10 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 | Charm   | Architecture | Charm revision | OCI Image revision* | MongoDB version | Min. recommended Juju version |
 |-------- | ------------ | -------------- |-------------------- | --------------- | ----------------------------- |
-| MongoDB |   `amd64`    | 283            |  50                 |    8.0.28-12    |        3.6.29+                |
-| MongoDB |   `arm64`    | 282            |  50                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `amd64`    | 228            |  20                 |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `arm64`    | 229            |  20                 |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `amd64`    | 289            |  50                 |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `arm64`    | 290            |  50                 |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `amd64`    | 235            |  20                 |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `arm64`    | 236            |  20                 |    8.0.28-12    |        3.6.29+                |
 
 \*OCI image resources:
 

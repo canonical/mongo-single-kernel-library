@@ -1,8 +1,8 @@
-(revision-413-414)=
+(revision-417-418)=
 
-# Revision 413, 414
+# Revision 417, 418
 
-<sub>19 November 2026</sub>
+<sub>20 November 2026</sub>
 
 This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, new versions of MongoDB, mongosh, PBM, mongodb_exporter. It features encryption at rest, juju spaces support, GCS backup support, rolling operations, and many bug fixes. It also feature some new updated and refined Terraform modules
 
@@ -10,10 +10,10 @@ This release of Charmed MongoDB and Mongos 8 for VM brings support for ARM64, ne
 
 | Charm   | Architecture | Charm revision | Snap version | MongoDB version | Min. recommended Juju version |
 |-------- | ------------ | -------------- |------------- | --------------- | ----------------------------- |
-| MongoDB |   `amd64`    | 413            |  358         |    8.0.28-12    |        3.6.29+                |
-| MongoDB |   `arm64`    | 414            |  359         |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `amd64`    | 219            |  358         |    8.0.28-12    |        3.6.29+                |
-| Mongos  |   `arm64`    | 220            |  359         |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `amd64`    | 417            |  358         |    8.0.28-12    |        3.6.29+                |
+| MongoDB |   `arm64`    | 418            |  359         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `amd64`    | 225            |  358         |    8.0.28-12    |        3.6.29+                |
+| Mongos  |   `arm64`    | 224            |  359         |    8.0.28-12    |        3.6.29+                |
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
