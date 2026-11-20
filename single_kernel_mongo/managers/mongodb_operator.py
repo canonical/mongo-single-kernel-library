@@ -57,6 +57,7 @@ from single_kernel_mongo.config.relations import (
     RelationNames,
 )
 from single_kernel_mongo.config.statuses import (
+    AuthStatuses,
     BackupStatuses,
     CharmStatuses,
     LdapStatuses,
@@ -76,6 +77,7 @@ from single_kernel_mongo.events.backups import BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
+from single_kernel_mongo.events.oauth import OAuthEventHandler
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
@@ -92,6 +94,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     InvalidPasswordError,
+    LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
     SetPasswordError,
@@ -116,6 +119,7 @@ from single_kernel_mongo.managers.config import (
 )
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.oauth import OAuthManager
 from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
@@ -309,6 +313,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
         self.ldap_events = LDAPEventHandler(self)
+        self.oauth_manager = OAuthManager(self, self.state)
+        self.oauth_events = OAuthEventHandler(self)
 
         # Listens after all other events to have the latest up to date data.
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
@@ -402,6 +408,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.warning(
                 f"Encryption at rest may be degraded. Error: {e}. This must be fixed first."
             )
+            return
+
+        if self.state.authentication_conflict:
+            logger.warning("LDAP and OIDC mutual exclusivity unmet. This must be fixed first.")
             return
 
         try:
@@ -508,6 +518,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.s3_backup_manager,
             self.gcs_backup_manager,
             self.ldap_manager,
+            self.oauth_manager,
         )
 
     # BEGIN: Handlers.
@@ -579,6 +590,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.vault_manager.get_degraded_state():
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
+
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         # Publish this unit's address before waiting for every planned unit.
         self.update_ips_in_databag()
@@ -674,7 +688,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
     @override
-    def update_config_and_restart(self) -> None:
+    def update_config_and_restart(self) -> None:  # noqa: C901
         """Listen to changes in application configuration.
 
         To prevent a user from migrating a cluster, and causing the component to become
@@ -704,6 +718,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise InvalidLdapQueryTemplateError(
                 "Invalid LDAP Query template, please update your config."
             )
+
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         if state := self.vault_manager.get_degraded_state():
             logger.warning(
@@ -818,7 +835,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.info(f"Password updated for {user.username}.")
 
     def _handle_ldap_config_changes(self):
-        """Helpful method to handle the ldap changes and a restart if necessary."""
+        """Apply LDAP configuration once incompatible OIDC setup has been removed."""
         # Store in the databag so we never miss it.
         if self.config.ldap_user_to_dn_mapping:
             self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
@@ -1219,6 +1236,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             return
 
+        if self.state.authentication_conflict:
+            logger.warning(
+                "LDAP and OIDC are mutually exclusive. Please update the configuration to resolve the conflict.",
+                state,
+            )
+            return
+
         if self.basic_statuses():
             logger.info("Early return invalid statuses.")
             return
@@ -1444,6 +1468,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             raise WorkloadServiceError("Workload not allowed to restart: DB not initialised.")
 
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
+
         if self.ldap_manager.should_not_restart():
             raise DeferrableError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
@@ -1486,7 +1513,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except (DeferrableError, DeferrableFailedHookChecksError) as e:
+        except (DeferrableError, DeferrableFailedHookChecksError, LdapAndOauthConflictError) as e:
             self.charm.state.statuses.add(
                 MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
@@ -1724,6 +1751,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
+
+        if self.state.authentication_conflict:
+            charm_statuses.append(AuthStatuses.LDAP_OAUTH_CONFLICT.value)
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")

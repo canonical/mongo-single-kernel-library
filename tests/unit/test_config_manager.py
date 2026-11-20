@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -33,8 +34,10 @@ def mongodb_config_manager(mocker, role):
     )
 
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
+    mock_app_state.oauth_issuer = None
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
     mock_state.app_peer_data.replica_set = "deadbeef"
@@ -183,6 +186,7 @@ def test_mongodb_config_manager_omits_allowlist_k8s(mongodb_config_manager):
 
 def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
     state = mocker.MagicMock(CharmState)
+    state.authentication_conflict = False
     state.peer_network.return_value.bind_addresses = []
     state.peer_database_addresses = []
     state.substrate = Substrates.VM
@@ -203,6 +207,7 @@ def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_shard_cluster_ips_include_config_server_hosts(mocker):
     state = mocker.MagicMock(CharmState)
+    state.authentication_conflict = False
     state.peer_network.return_value.bind_addresses = []
     state.peer_database_addresses = []
     state.substrate = Substrates.VM
@@ -225,6 +230,7 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
     mock_read = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.read")
 
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
@@ -279,8 +285,10 @@ def test_mongodb_ldap_config(mocker):
     )
 
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
+    mock_app_state.oauth_issuer = None
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.ldap = mocker.MagicMock(LdapState)
 
@@ -315,10 +323,53 @@ def test_mongodb_ldap_config(mocker):
     assert ldap_config["transportSecurity"] == "tls"
 
 
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
+def test_replica_set_oauth_without_conflict(mongodb_config_manager, mocker):
+    manager, _ = mongodb_config_manager
+    manager.state.substrate = Substrates.VM
+    manager.state.app_peer_data.oauth_issuer = "https://replica-set-issuer.example"
+    manager.state.ldap_relation = None
+    read = mocker.patch.object(manager.workload, "read")
+
+    rendered = manager.build_config()
+
+    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
+    assert providers[0]["issuer"] == "https://replica-set-issuer.example"
+    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+    assert rendered["security"]["authorization"] == "enabled"
+    assert "ldap" not in rendered["security"]
+    read.assert_not_called()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.MONGOS])
+def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
+    mongodb_manager, _ = mongodb_config_manager
+    state = mongodb_manager.state
+    state.substrate = Substrates.VM
+    state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
+    state.cluster.oauth_issuer = "https://config-server-issuer.example"
+    state.config_server_uri = "config-server/10.0.0.1:27017"
+    state.ldap_relation = None
+    workload = VMMongosWorkload(VM_MONGOS, None)
+    manager = MongosConfigManager(MongosCharmConfig(), workload, state)
+    read = mocker.patch.object(workload, "read")
+
+    rendered = manager.build_config()
+
+    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
+    assert providers[0]["issuer"] == "https://config-server-issuer.example"
+    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+    assert rendered["security"]["authorization"] == "enabled"
+    assert "ldap" not in rendered["security"]
+    read.assert_not_called()
+
+
 def test_mongodb_encryption_at_rest_config(mocker):
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
+    mock_app_state.oauth_issuer = None
     mock_state.vault_state = mocker.MagicMock(VaultState)
 
     mock_state.enable_encryption_at_rest = True
@@ -360,8 +411,10 @@ def test_mongos_config_manager(mocker):
         "single_kernel_mongo.core.vm_workload.VMWorkload.write",
     )
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
+    mock_state.cluster.oauth_issuer = None
     mock_state.substrate = Substrates.VM
     mock_state.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
@@ -473,8 +526,10 @@ def test_mongos_config_manager(mocker):
 
 def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state = mocker.MagicMock(CharmState)
+    mock_state.authentication_conflict = False
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
+    mock_app_state.oauth_issuer = None
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION

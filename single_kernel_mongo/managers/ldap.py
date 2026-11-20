@@ -34,6 +34,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     InvalidLdapHashError,
     InvalidLdapWithShardError,
+    LdapAndOauthConflictError,
     LDAPSNotEnabledError,
     UnableToBindError,
     WaitingForLdapDataError,
@@ -75,11 +76,19 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         )
 
     def assert_pass_hook_checks(self) -> None:
-        """Runs some hook checks before allowing the hook to run."""
+        """Runs some hook checks before allowing the hook to run.
+
+        Raises:
+            DeferrableFailedHookChecksError: Not ready.
+            InvalidLdapWithShardError: Raised when LDAP is integrated with a shard.
+            LdapAndOauthConflictError: LDAP and OIDC mutual exclusivity unmet.
+        """
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
         if self.dependent.name == CharmKind.MONGOD and (
             state := self.dependent.vault_manager.get_degraded_state()  # type: ignore[attr-defined]
         ):
@@ -100,7 +109,15 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         return (self.state.ldap_relation is not None) and not self.state.is_role(MongoDBRoles.SHARD)
 
     def store_ldap_credentials_and_uri(self, relation: Relation) -> None:
-        """Runs when LDAP is ready."""
+        """Runs when LDAP is ready.
+
+        Raises:
+            DeferrableFailedHookChecksError: Not ready.
+            InvalidLdapWithShardError: Raised when LDAP is integrated with a shard.
+            LdapAndOauthConflictError: LDAP and OIDC mutual exclusivity unmet.
+            WaitingForLdapDataError: If the charm hasn't received data from ldap yet.
+            LDAPSNotEnabledError: If the ldap server is not configured with ldaps support.
+        """
         self.assert_pass_hook_checks()
 
         ldap_data = self.ldap_requirer.consume_ldap_relation_data(relation=relation)
@@ -123,9 +140,14 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            LdapAndOauthConflictError: if there is a conflict with OIDC and LDAP.
+            InvalidLdapHashError: if the ldap hash is not the same between mongos and config-server.
+            UnableToBindError: if the ldap bind fails.
         """
         if not self.state.db_initialised:
             return
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         match self.ldap_state():
             case LdapState.EMPTY:
@@ -172,7 +194,14 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
             self.state.statuses.add(status, scope="unit", component=self.name)
 
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
-        """Runs when we receive the LDAP certificates."""
+        """Runs when we receive the LDAP certificates.
+
+        Raises:
+            DeferrableFailedHookChecksError: Not ready.
+            InvalidLdapWithShardError: Raised when LDAP is integrated with a shard.
+            LdapAndOauthConflictError: LDAP and OIDC mutual exclusivity unmet.
+            WorkloadServiceError: If the workload is not available to write the certificates.
+        """
         self.assert_pass_hook_checks()
         self.state.ldap.set_certificates(certificate, ca, chain)
 
@@ -209,6 +238,7 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            WorkloadServiceError: If the workload is not available to write the certificates.
         """
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
@@ -306,6 +336,9 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Generates the status of a unit based on its status reported by mongod."""
+        if self.state.authentication_conflict:
+            return []
+
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 
