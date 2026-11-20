@@ -10,7 +10,6 @@ from ops.testing import Relation, Secret
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import AuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import LdapAndOauthConflictError
 from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
 
 
@@ -146,27 +145,6 @@ def test_conflict_blocks_ldap_cleanup_restart(mongodb_ctx, mocker, conflicting_a
 
         configure.assert_not_called()
         restart.assert_not_called()
-
-
-def test_mongos_conflict_without_configured_auth_does_not_enable_oauth(
-    mongos_ctx, mongodb_container, mocker
-):
-    state_in = mongos_state(
-        mongodb_container,
-        relations={
-            Relation(
-                endpoint="cluster",
-                remote_app_name="config-server",
-                remote_app_data={"oauth-issuer": "https://possibly-new-issuer"},
-            ),
-            Relation(endpoint="ldap", remote_app_name="glauth"),
-        },
-    )
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
-        with pytest.raises(LdapAndOauthConflictError):
-            operator.config_manager.build_config()
 
 
 def test_mongos_holds_pending_restart_on_authentication_conflict(

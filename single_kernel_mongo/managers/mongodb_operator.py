@@ -410,6 +410,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             return
 
+        if self.state.authentication_conflict:
+            logger.warning("LDAP and OIDC mutual exclusivity unmet. This must be fixed first.")
+            return
+
         try:
             self._configure_workloads()
             self.start_charm_services()

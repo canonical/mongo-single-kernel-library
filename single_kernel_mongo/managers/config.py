@@ -33,7 +33,7 @@ from single_kernel_mongo.config.models import (
 )
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.exceptions import LdapAndOauthConflictError, WorkloadServiceError
+from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongodb_users import (
     CharmedBackupUser,
@@ -406,7 +406,8 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
-                self.authentication_parameters,
+                self.ldap_parameters,
+                self.oauth_parameters,
                 self.vault_parameters,
             ],
         )
@@ -418,20 +419,6 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         """
         current = safe_load("\n".join(self.workload.read(self.file))) or {}
         return bool(current.get("setParameter", {}).get("oidcIdentityProviders"))
-
-    @property
-    def authentication_parameters(self) -> dict[str, Any]:
-        """LDAP and Oauth are mutually exclusive. This method decides what configuration is used.
-
-        Shards do not configure external authentication.
-        If there is no conflict, we merge the LDAP and OIDC parameters.
-        Configuration generation is blocked until a conflict is resolved.
-        """
-        if self.state.app_peer_data.role == MongoDBRoles.SHARD:
-            return {}
-        if self.state.authentication_conflict:
-            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
-        return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
 
     @property
     @abstractmethod

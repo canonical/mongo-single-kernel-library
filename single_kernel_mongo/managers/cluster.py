@@ -223,6 +223,7 @@ class ClusterProvider(Object):
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
         """
         self.assert_pass_hook_checks()
+
         issuer = self.state.app_peer_data.oauth_issuer
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):

@@ -198,6 +198,10 @@ class MongosOperator(OperatorProtocol, Object):
         if not refresh.workload_allowed_to_start:
             return
 
+        if self.state.authentication_conflict:
+            logger.warning("LDAP and OIDC mutual exclusivity unmet. This must be fixed first.")
+            return
+
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
         try:
@@ -206,7 +210,7 @@ class MongosOperator(OperatorProtocol, Object):
             if self.state.mongos_cluster_relation:
                 logger.info("Restarting workloads")
                 self.start_charm_services()
-        except (WorkloadServiceError, WorkloadExecError, LdapAndOauthConflictError):
+        except (WorkloadServiceError, WorkloadExecError):
             return
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
