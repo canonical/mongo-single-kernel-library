@@ -1,11 +1,11 @@
-(revision-416)=
+(revision-421)=
 
-# Revision 416
+# Revision 421
 
-<sub>19 November 2026</sub>
+<sub>20 November 2026</sub>
 
-Charmed MongoDB Revision 416 has been released to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
-It pairs with Charmed Mongos revision 222 that has been released to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
+Charmed MongoDB Revision 421 has been released to the [`6/stable` channel](https://charmhub.io/mongodb?channel=6/stable) on Charmhub.
+It pairs with Charmed Mongos revision 223 that has been released to the [`6/stable` channel](https://charmhub.io/mongos?channel=6/stable) on Charmhub.
 
 ## Highlights
 
