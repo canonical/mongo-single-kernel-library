@@ -167,6 +167,21 @@ class LdapState(Enum):
     ACTIVE = auto()
 
 
+class OAuthState(Enum):
+    """OAuth integration state that can be mapped to a status."""
+
+    EMPTY = auto()
+    WRONG_ROLE = auto()
+    LDAP_CONFLICT = auto()
+    MISSING_OAUTH_RELATION = auto()
+    WAITING_FOR_PROVIDER_DATA = auto()
+    INVALID_DISCOVERY = auto()
+    ISSUER_TLS_ERROR = auto()
+    ISSUER_UNREACHABLE = auto()
+    ACTIVE = auto()
+    REMOVING = auto()
+
+
 class BackupState(Enum):
     """Backup state that can be mapped to a status."""
 

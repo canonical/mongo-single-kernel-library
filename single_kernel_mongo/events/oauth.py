@@ -2,7 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Event handlers for the OAuth relation."""
+"""Event handlers for the oauth and oaut-certificate-transfer relations."""
 
 from __future__ import annotations
 
@@ -45,12 +45,14 @@ class OAuthEventHandler(Object):
         self.dependent = dependent
         self.charm = dependent.charm
         self.manager = dependent.oauth_manager
+
         self.framework.observe(
             self.manager.oauth_requirer.on.oauth_info_changed, self._on_oauth_info_changed
         )
         self.framework.observe(
             self.manager.oauth_requirer.on.oauth_info_removed, self._on_oauth_info_removed
         )
+
         self.framework.observe(
             self.manager.certificate_transfer.on.certificate_set_updated,
             self._on_certificate_available,
@@ -59,12 +61,54 @@ class OAuthEventHandler(Object):
             self.manager.certificate_transfer.on.certificates_removed,
             self._on_certificate_removed,
         )
+
+        self.framework.observe(self.charm.on.update_status, self._on_update_status)
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
-        self.framework.observe(self.charm.on.update_status, self._on_peer_relation_changed)
         self.framework.observe(
             self.charm.on[self.charm.peer_rel_name.value].relation_changed,
             self._on_peer_relation_changed,
         )
+
+    def _on_peer_relation_changed(
+        self, event: RelationChangedEvent | SecretChangedEvent | UpdateStatusEvent
+    ) -> None:
+        """Retry OAuth reconciliation on peer, secret, and periodic updates."""
+        try:
+            self.manager.reconcile()
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
+        except NonDeferrableFailedHookChecksError as err:
+            logger.error("%s", err)
+
+    def _on_oauth_info_changed(self, event: OAuthInfoChangedEvent) -> None:
+        """Handle available or updated provider information."""
+        try:
+            self.manager.configure()
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
+        except NonDeferrableFailedHookChecksError as err:
+            logger.error("%s", err)
+
+    def _on_oauth_info_removed(self, event: OAuthInfoRemovedEvent) -> None:
+        """Handle removal of provider information."""
+        try:
+            self.manager.remove()
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as err:
+            defer_event_with_info_log(logger, event, str(type(event)), str(err))
+        except NonDeferrableFailedHookChecksError as err:
+            logger.error("%s", err)
 
     def _on_secret_changed(self, event: SecretChangedEvent) -> None:
         """Reconcile CA rotations in the application peer secret."""
@@ -101,46 +145,19 @@ class OAuthEventHandler(Object):
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
-    def _on_peer_relation_changed(
-        self, event: RelationChangedEvent | SecretChangedEvent | UpdateStatusEvent
-    ) -> None:
-        """Reconcile the shared issuer and CA on follower units."""
-        if self.charm.unit.is_leader():
+    def _on_update_status(self, event: UpdateStatusEvent) -> None:
+        """On update-status, check if everything is alright and restart if needed."""
+        try:
+            self.manager.reconcile()
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+            NonDeferrableFailedHookChecksError,
+        ) as err:
+            logger.warning(
+                "Update Status could not reconcile oauth integration. Please investigate. %s",
+                str(err),
+            )
+            # Statuses will be updated in the handler for advanced statuses.
             return
-        try:
-            self.manager.reconcile_certificates()
-            self.manager.restart_when_ready()
-        except (
-            DeferrableFailedHookChecksError,
-            RollingOpsNoRelationError,
-            WorkloadServiceError,
-        ) as err:
-            defer_event_with_info_log(logger, event, str(type(event)), str(err))
-        except NonDeferrableFailedHookChecksError as err:
-            logger.error("%s", err)
-
-    def _on_oauth_info_changed(self, event: OAuthInfoChangedEvent) -> None:
-        """Handle available or updated provider information."""
-        try:
-            self.manager.configure()
-        except (
-            DeferrableFailedHookChecksError,
-            RollingOpsNoRelationError,
-            WorkloadServiceError,
-        ) as err:
-            defer_event_with_info_log(logger, event, str(type(event)), str(err))
-        except NonDeferrableFailedHookChecksError as err:
-            logger.error("%s", err)
-
-    def _on_oauth_info_removed(self, event: OAuthInfoRemovedEvent) -> None:
-        """Handle removal of provider information."""
-        try:
-            self.manager.remove()
-        except (
-            DeferrableFailedHookChecksError,
-            RollingOpsNoRelationError,
-            WorkloadServiceError,
-        ) as err:
-            defer_event_with_info_log(logger, event, str(type(event)), str(err))
-        except NonDeferrableFailedHookChecksError as err:
-            logger.error("%s", err)

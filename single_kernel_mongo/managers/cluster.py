@@ -225,6 +225,8 @@ class ClusterProvider(Object):
             DeferrableFailedHookChecksError: If the checks fail but can be retried later.
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
         """
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
         self.assert_pass_hook_checks()
         issuer = self.state.app_peer_data.oauth_issuer
         for relation in self.state.cluster_relations:
@@ -242,6 +244,8 @@ class ClusterProvider(Object):
 
     def update_oauth_ca_to_mongos(self) -> None:
         """Publish or withdraw the peer CA bundle on established mongos relations."""
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
         self.assert_pass_hook_checks()
         bundle = self.state.app_peer_data.oauth_ca
         for relation in self.state.cluster_relations:

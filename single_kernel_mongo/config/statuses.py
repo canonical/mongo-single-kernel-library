@@ -680,6 +680,19 @@ class OAuthStatuses(Enum):
         message="Cannot integrate OIDC with shard.",
         action="Remove the oauth relation from shard.",
     )
+    MISSING_OAUTH_RELATION = StatusObject(
+        status="blocked",
+        message="Missing oauth relation.",
+        action="Add the oauth relation to the charm.",
+    )
+    WAITING_FOR_OAUTH_DATA = StatusObject(
+        status="waiting",
+        message="Waiting for OIDC data from the oauth relation.",
+    )
+    ACTIVE_IDLE = StatusObject(
+        status="active",
+        message="",
+    )
 
 
 class LdapStatuses(Enum):

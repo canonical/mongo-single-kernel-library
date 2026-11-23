@@ -4,7 +4,7 @@
 import json
 import ssl
 from dataclasses import replace
-from unittest.mock import PropertyMock
+from unittest.mock import Mock, PropertyMock
 from urllib.error import HTTPError, URLError
 
 import pytest
@@ -14,6 +14,7 @@ from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import RollingOpsCallbackId
+from single_kernel_mongo.config.models import OAuthState
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -21,9 +22,94 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
+from single_kernel_mongo.managers.oauth import OAuthManager
 from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
 
 pytest_plugins = ("tests.unit.auth_scenario_helpers",)
+
+
+@pytest.mark.parametrize(
+    "oauth,cert,issuer,ca,configured,shard,conflict,provider,status,expected",
+    [
+        (False, False, None, None, False, False, False, False, None, "EMPTY"),
+        (False, False, "issuer", None, False, False, False, False, None, "REMOVING"),
+        (False, False, None, None, True, False, False, False, None, "REMOVING"),
+        (False, True, None, None, False, False, False, False, None, "MISSING_OAUTH_RELATION"),
+        (True, False, None, None, False, True, False, True, None, "WRONG_ROLE"),
+        (True, False, None, None, False, False, True, True, None, "LDAP_CONFLICT"),
+        (True, False, None, None, False, False, False, False, None, "WAITING_FOR_PROVIDER_DATA"),
+        (True, True, None, None, False, False, False, True, None, "ACTIVE"),
+        (True, False, None, None, False, False, False, True, None, "ACTIVE"),
+        (True, True, None, "ca", False, False, False, True, None, "ACTIVE"),
+        (
+            True,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+            True,
+            "ISSUER_TLS_ERROR",
+            "ISSUER_TLS_ERROR",
+        ),
+        (
+            True,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+            True,
+            "ISSUER_UNREACHABLE",
+            "ISSUER_UNREACHABLE",
+        ),
+        (
+            True,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+            True,
+            "INVALID_DISCOVERY",
+            "INVALID_DISCOVERY",
+        ),
+    ],
+)
+def test_oauth_state(
+    oauth, cert, issuer, ca, configured, shard, conflict, provider, status, expected
+):
+    manager = Mock(spec=OAuthManager)
+    manager.state = Mock(db_initialised=True)
+    manager.charm = Mock()
+    manager.charm.unit.is_leader.return_value = True
+    manager._has_oauth_configuration.side_effect = lambda: OAuthManager._has_oauth_configuration(
+        manager
+    )
+    manager.dependent = Mock()
+    manager.oauth_requirer = Mock()
+    manager.state.oauth_relation = object() if oauth else None
+    manager.state.oauth_cert_relation = object() if cert else None
+    manager.state.app_peer_data.oauth_issuer = issuer
+    manager.state.app_peer_data.oauth_ca = ca
+    manager.state.authentication_conflict = conflict
+    manager.state.is_role.side_effect = lambda role: (
+        shard if role == MongoDBRoles.SHARD else role == MongoDBRoles.REPLICATION
+    )
+    manager.dependent.config_manager.file_has_oauth_configuration.return_value = configured
+    manager.oauth_requirer.get_provider_info.return_value = (
+        Mock(issuer_url="https://issuer.example") if provider else None
+    )
+    manager.get_issuer_connection_state.return_value = OAuthState[status] if status else None
+
+    assert OAuthManager.oauth_state(manager) == OAuthState[expected]
+    if expected in {"ACTIVE", "ISSUER_TLS_ERROR", "ISSUER_UNREACHABLE", "INVALID_DISCOVERY"}:
+        manager.get_issuer_connection_state.assert_called_once_with("https://issuer.example")
+    else:
+        manager.get_issuer_connection_state.assert_not_called()
 
 
 @pytest.mark.parametrize("initialised", [True, False])
@@ -433,7 +519,7 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_relation_does_not_block_supported_roles(
+def test_oauth_relation_waits_for_provider_data_on_supported_roles(
     mock_issuer_tls, mongodb_ctx, mongodb_container, role
 ):
     state_in = mongo_state(
@@ -442,7 +528,9 @@ def test_oauth_relation_does_not_block_supported_roles(
         relations={Relation(endpoint="oauth", remote_app_name="hydra")},
     )
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == []
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == [
+            OAuthStatuses.WAITING_FOR_OAUTH_DATA.value
+        ]
         assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []
 
 
@@ -591,8 +679,8 @@ def test_failed_validation_preserves_stored_issuer_replica_set(
         operator = scenario.charm.operator
         mocker.patch.object(
             operator.oauth_manager,
-            "check_issuer_connection",
-            return_value=OAuthStatuses.INVALID_DISCOVERY.value,
+            "get_issuer_connection_state",
+            return_value=OAuthState.INVALID_DISCOVERY,
         )
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
@@ -629,8 +717,8 @@ def test_failed_validation_preserves_stored_and_shared_issuer_config_server(
         operator = scenario.charm.operator
         mocker.patch.object(
             operator.oauth_manager,
-            "check_issuer_connection",
-            return_value=OAuthStatuses.INVALID_DISCOVERY.value,
+            "get_issuer_connection_state",
+            return_value=OAuthState.INVALID_DISCOVERY,
         )
         restart = mocker.patch.object(operator, "async_restart_charm_services")
 
@@ -648,3 +736,75 @@ def test_failed_validation_preserves_stored_and_shared_issuer_config_server(
     )
     assert isinstance(state_out.unit_status, BlockedStatus)
     restart.assert_not_called()
+
+
+@pytest.mark.parametrize("leader", [True, False])
+@pytest.mark.parametrize(
+    "integration_state",
+    [
+        OAuthState.ACTIVE,
+        OAuthState.REMOVING,
+        OAuthState.INVALID_DISCOVERY,
+        OAuthState.WAITING_FOR_PROVIDER_DATA,
+        OAuthState.EMPTY,
+    ],
+)
+def test_reconcile_applies_only_valid_configuration(leader, integration_state):
+    manager = Mock()
+    manager.assert_pass_hook_checks = Mock()
+    manager.name = "oauth"
+    manager.charm.unit.is_leader.return_value = leader
+    manager.oauth_state.return_value = integration_state
+    manager.map_state_to_statuses.side_effect = lambda state: OAuthManager.map_state_to_statuses(
+        manager, state
+    )
+    manager.oauth_requirer.get_provider_info.return_value = Mock(issuer_url="https://new.example")
+    manager.state.is_role.return_value = True
+    manager.state.app_peer_data.oauth_issuer = "https://previous.example"
+
+    OAuthManager.reconcile(manager)
+
+    if integration_state == OAuthState.ACTIVE:
+        manager.restart_when_ready.assert_called_once_with()
+        assert manager.state.app_peer_data.oauth_issuer == (
+            "https://new.example" if leader else "https://previous.example"
+        )
+        assert manager.dependent.cluster_manager.update_oauth_issuer_to_mongos.call_count == int(
+            leader
+        )
+    elif integration_state == OAuthState.REMOVING:
+        if leader:
+            manager.remove.assert_called_once_with()
+        else:
+            manager.restart_when_ready.assert_called_once_with()
+    else:
+        manager.restart_when_ready.assert_not_called()
+        manager.remove.assert_not_called()
+        assert manager.state.app_peer_data.oauth_issuer == "https://previous.example"
+    if integration_state == OAuthState.INVALID_DISCOVERY:
+        manager.state.statuses.add.assert_called_once_with(
+            OAuthStatuses.INVALID_DISCOVERY.value, scope="unit", component="oauth"
+        )
+
+
+def test_update_status_retries_issuer_on_leader(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
+):
+    state_in = mongo_state(
+        mongodb_container,
+        relations={oauth_relation("https://new.example")},
+        peer_data={"oauth-issuer": "https://previous.example"},
+    )
+    with mongodb_ctx(mongodb_ctx.on.update_status(), state_in) as scenario:
+        mocker.patch.object(scenario.charm.operator, "update_status")
+        mocker.patch.object(scenario.charm.status_handler, "_recompute_statuses")
+        manager = scenario.charm.operator.oauth_manager
+        connection = mocker.patch.object(manager, "get_issuer_connection_state", return_value=None)
+        restart = mocker.patch.object(manager, "restart_when_ready")
+        state_out = scenario.run()
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://new.example"
+    )
+    connection.assert_called_once_with("https://new.example")
+    restart.assert_called_once_with()
