@@ -181,8 +181,6 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
-        if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
             self.remove_hash_from_mongos()
@@ -242,8 +240,6 @@ class LDAPManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
             WorkloadServiceError: If the workload is not available to write the certificates.
         """
-        if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
             self.remove_hash_from_mongos()

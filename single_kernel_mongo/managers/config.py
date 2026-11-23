@@ -445,7 +445,9 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         ...
 
     @staticmethod
-    def _build_oauth_parameters(issuer: str | None, ca_file: Path | None = None) -> dict[str, Any]:
+    def _build_oauth_parameters(
+        issuer: str | None, ca_file_path: Path | None = None
+    ) -> dict[str, Any]:
         """Build OIDC settings for the single supported identity provider."""
         if not issuer:
             return {}
@@ -458,8 +460,8 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             "authorizationClaim": "groups",
             "supportsHumanFlows": False,
         }
-        if ca_file:
-            provider["serverCAFile"] = str(ca_file)
+        if ca_file_path:
+            provider["serverCAFile"] = str(ca_file_path)
         return {
             "security": {"authorization": "enabled"},
             "setParameter": {
@@ -747,7 +749,7 @@ class MongoDBConfigManager(MongoConfigManager):
         ca_file = self.workload.paths.oauth_ca_file
         return self._build_oauth_parameters(
             self.state.app_peer_data.oauth_issuer,
-            ca_file=ca_file if self.workload.exists(ca_file) else None,
+            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 
     @override
@@ -784,7 +786,7 @@ class MongosConfigManager(MongoConfigManager):
         ca_file = self.workload.paths.oauth_ca_file
         return self._build_oauth_parameters(
             self.state.cluster.oauth_issuer,
-            ca_file=ca_file if self.workload.exists(ca_file) else None,
+            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 
     @property

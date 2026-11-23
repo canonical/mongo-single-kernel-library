@@ -27,9 +27,6 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from charmlibs.interfaces.certificate_transfer import CertificateTransferRequires
-from logging import getLogger
-from typing import TYPE_CHECKING, final
-
 from charmlibs.interfaces.oauth import ClientConfig, OAuthRequirer
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
@@ -42,10 +39,9 @@ from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
-    WorkloadServiceError,
     LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 
@@ -390,18 +386,6 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             case OAuthState.ACTIVE:
                 return [OAuthStatuses.ACTIVE_IDLE.value]
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
-        """Report the oauth status."""
-        if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name).root
-        if not self.state.db_initialised:
-            return []
-
-        if scope == "app":
-            return []
-
-        return self.map_state_to_statuses(self.oauth_state())
-
     def _clear_issuer_statuses(self) -> None:
         """Clear previous issuer connection and discovery errors."""
         for status in (
@@ -417,6 +401,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             self.state.is_role(MongoDBRoles.REPLICATION)
             and self.dependent.config_manager.file_has_oauth_configuration()
         )
+
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Report the oauth status."""
         if self.state.authentication_conflict:
@@ -426,4 +411,4 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if scope == "app":
             if self.state.is_role(MongoDBRoles.SHARD) and self.state.oauth_relation:
                 return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
-        return []
+        return self.map_state_to_statuses(self.oauth_state())

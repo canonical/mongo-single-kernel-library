@@ -1,678 +1,429 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 import json
-from pathlib import Path
-from typing import Any
+from dataclasses import replace
 from unittest.mock import PropertyMock
 
 import pytest
-from ops.hookcmds import Network
-from ops.model import Relation
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from ops.model import ActiveStatus, BlockedStatus
+from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
-from single_kernel_mongo.config.literals import CharmKind, Substrates
-from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS, VM_PATH
-from single_kernel_mongo.core.structured_config import (
-    MongoDBCharmConfig,
-    MongoDBRoles,
-    MongosCharmConfig,
+from single_kernel_mongo.config.literals import RollingOpsCallbackId
+from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import OAuthStatuses
+from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.exceptions import (
+    DeferrableFailedHookChecksError,
+    NonDeferrableFailedHookChecksError,
 )
-from single_kernel_mongo.managers.config import (
-    MongoDBConfigManager,
-    MongosConfigManager,
-)
-from single_kernel_mongo.state.app_peer_state import AppPeerReplicaSet
-from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.ldap_state import LdapState
-from single_kernel_mongo.state.tls_state import TLSState
-from single_kernel_mongo.state.vault_state import VaultState
-from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
-from tests.integration.helpers.types import Substrate
+from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
+
+pytest_plugins = ("tests.unit.auth_scenario_helpers",)
 
 
-@pytest.fixture
-def mongodb_config_manager(mocker, role):
-    mock = mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
+@pytest.mark.parametrize("initialised", [True, False])
+def test_oauth_hook_checks_reject_shard(mongodb_ctx, mongodb_container, initialised):
+    state_in = mongo_state(mongodb_container, role=MongoDBRoles.SHARD, initialised=initialised)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        with pytest.raises(
+            NonDeferrableFailedHookChecksError, match="Cannot integrate OAuth with shard"
+        ):
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_container, role):
+    state_in = mongo_state(mongodb_container, role=role, initialised=False)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container, mocker, role):
+    state_in = mongo_state(mongodb_container, role=role)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.vault_manager, "get_degraded_state", return_value=True)
+
+        with pytest.raises(DeferrableFailedHookChecksError, match="Encryption at rest"):
+            operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_container, mocker, role):
+    state_in = mongo_state(mongodb_container, role=role)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            type(operator), "refresh_in_progress", new_callable=PropertyMock, return_value=True
+        )
+
+        with pytest.raises(DeferrableFailedHookChecksError, match="during a refresh"):
+            operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_pass(mongodb_ctx, mongodb_container, role):
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
+    ) as scenario:
+        scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+
+
+def test_oauth_info_changed_rejects_shards(mongodb_ctx, mongodb_container, caplog):
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    oauth = oauth_relation(client_id="client-id", client_secret_id=secret.id)
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=MongoDBRoles.SHARD,
+            initialised=True,
+            relations={oauth},
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
+        state_out = scenario.run()
+
+    assert "Cannot integrate OAuth with shard" in caplog.text
+    assert (
+        "oauth-issuer" not in get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data
+    )
+    assert not state_out.deferred
+
+
+def test_oauth_info_changed_shares_issuer_and_requests_restart_replica_set(
+    mongodb_ctx, mongodb_container, mocker
+):
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            relations={
+                oauth_relation(
+                    "https://10.0.0.3", client_id="client-id", client_secret_id=secret.id
+                )
+            },
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+        assert operator.state.app_peer_data.oauth_issuer == "https://10.0.0.3"
+        parameters = operator.config_manager.build_config()["setParameter"]
+        assert parameters["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+        assert json.loads(parameters["oidcIdentityProviders"]) == [
+            {
+                "issuer": "https://10.0.0.3",
+                "audience": "mongodb",
+                "authNamePrefix": "oauth",
+                "principalName": "sub",
+                "useAuthorizationClaim": True,
+                "authorizationClaim": "groups",
+                "supportsHumanFlows": False,
+            }
+        ]
+        restart.assert_called_once_with(force=False)
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://10.0.0.3"
     )
 
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app_peer_data = mock_app_state
-    mock_app_state.oauth_issuer = None
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.app_peer_data.role = role
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.client_enabled = False
-    mock_state.vault_relation = None
-    mock_state.peer_network = lambda: Network._from_dict(
-        {
-            "bind-addresses": [
-                {
-                    "mac-address": "aa:bb",
-                    "interface-name": "eth0",
-                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
-                }
-            ],
-            "egress-subnets": ["127.0.0.0/24"],
-            "ingress-addresses": ["10.0.0.1"],
-        }
+
+def test_oauth_info_changed_does_not_restart_unchanged_configuration_replica_set(
+    mongodb_ctx, mongodb_container, mocker
+):
+    secret = Secret(tracked_content={"secret": "client-secret"})
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            peer_data={"oauth-issuer": "https://issuer.example"},
+            relations={oauth_relation(client_id="client-id", client_secret_id=secret.id)},
+        ),
+        secrets={secret},
     )
-    mock_state.listens_on = lambda: ["10.0.0.1", "127.0.0.1"]
-    workload = VMMongoDBWorkload(VM_MONGOD, None)
-    config = MongoDBCharmConfig()
-    manager = MongoDBConfigManager(
-        config,
-        mock_state,
-        workload,
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=[current])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        scenario.run()
+
+        restart.assert_not_called()
+
+
+def test_oauth_info_removed_clears_issuer_and_requests_restart_replica_set(
+    mongodb_ctx, mongodb_container, mocker
+):
+    oauth = oauth_relation()
+    state_in = mongo_state(
+        mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"}, relations={oauth}
     )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_broken(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
+        operator = scenario.charm.operator
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=[current])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
 
-    return manager, mock
-
-
-@pytest.mark.parametrize(
-    "role,expected_parameter",
-    (
-        (MongoDBRoles.CONFIG_SERVER, {"sharding": {"clusterRole": "configsvr"}}),
-        (MongoDBRoles.SHARD, {"sharding": {"clusterRole": "shardsvr"}}),
-        (MongoDBRoles.REPLICATION, {}),
-    ),
-)
-def test_mongodb_config_manager_vm(mongodb_config_manager, expected_parameter: dict[str, Any]):
-    manager, mock = mongodb_config_manager
-    manager.state.substrate = Substrates.VM
-    port_parameter = manager.port_parameter
-    replset_option = manager.replset_option
-    role_parameter = manager.role_parameter
-    db_path_argument = manager.db_path_argument
-    binding_ips = manager.binding_ips
-    log_options = manager.log_options
-    audit_options = manager.audit_options
-    auth_parameter = manager.auth_parameter
-    client_tls_parameters = manager.client_tls_parameters
-    cluster_ips = manager.cluster_ips
-
-    all_params = manager.build_config()
-
-    assert port_parameter == {"net": {"port": 27017}}
-    assert replset_option == {"replication": {"replSetName": "deadbeef"}}
-    assert role_parameter == expected_parameter
-    assert db_path_argument == {
-        "storage": {
-            "dbPath": f"{VM_PATH['mongod']['DATA']}",
-            "journal": {"enabled": True},
-        }
-    }
-    assert binding_ips == {"net": {"bindIp": "10.0.0.1,127.0.0.1"}}
-    assert log_options == {
-        "setParameter": {"processUmask": "037"},
-        "systemLog": {
-            "logRotate": "reopen",
-            "logAppend": True,
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
-            "destination": "file",
-        },
-    }
-
-    assert audit_options == {
-        "auditLog": {
-            "destination": "file",
-            "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
-        }
-    }
-
-    assert auth_parameter == {
-        "security": {
-            "authorization": "enabled",
-            "clusterAuthMode": "keyFile",
-            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
-        }
-    }
-    assert client_tls_parameters == {}
-    assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
-    assert manager.cluster_ip_source_allowlist == ["10.0.0.1/24", "127.0.0.1"]
+        state_out = scenario.run()
 
     assert (
-        all_params
-        == {
-            "net": {"bindIp": "10.0.0.1,127.0.0.1", "port": 27017},
-            "security": {
-                "authorization": "enabled",
-                "clusterAuthMode": "keyFile",
-                "clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"],
-                "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
-            },
-            "setParameter": {"processUmask": "037"},
-            "systemLog": {
-                "logRotate": "reopen",
-                "logAppend": True,
-                "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
-                "destination": "file",
-            },
-            "auditLog": {
-                "destination": "file",
-                "format": "JSON",
-                "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
-            },
-            "replication": {"replSetName": "deadbeef"},
-            "storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}", "journal": {"enabled": True}},
-        }
-        | expected_parameter
+        "oauth-issuer" not in get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data
     )
+    restart.assert_called_once_with(force=False)
 
-    manager.set_environment()
 
-    mock.assert_called_once_with(
-        Path(f"{VM_PATH['mongod']['CONF']}/mongod.conf"), safe_dump(all_params)
+def test_oauth_provider_update_changes_issuer_replica_set(
+    mongodb_ctx, mongodb_container, mocker, registered_oauth
+):
+    oauth, secret = registered_oauth
+    state_in = replace(
+        mongo_state(
+            mongodb_container, peer_data={"oauth-issuer": "https://old-issuer"}, relations={oauth}
+        ),
+        secrets={secret},
     )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://new-issuer"
+    )
+    restart.assert_called_once_with(force=False)
 
 
+def test_oauth_hook_defers_until_database_initialised_replica_set(
+    mongodb_ctx, mongodb_container, mocker, registered_oauth
+):
+    oauth, secret = registered_oauth
+    state_in = replace(
+        mongo_state(mongodb_container, initialised=False, relations={oauth}), secrets={secret}
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_changed(get_relation(state_in, "oauth")),
+        state_in,
+    ) as scenario:
+        restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    assert len(state_out.deferred) == 1
+    restart.assert_not_called()
+
+
+def test_oauth_follower_restarts_from_shared_issuer_replica_set(
+    mongodb_ctx, mongodb_container, mocker
+):
+    state_in = mongo_state(
+        mongodb_container,
+        leader=False,
+        peer_data={"oauth-issuer": "https://10.0.0.3"},
+        peers_data={1: {}},
+    )
+    peer = get_relation(state_in, PeerRelationNames.PEERS.value)
+    with mongodb_ctx(mongodb_ctx.on.relation_changed(peer, remote_unit=1), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(operator, "peer_changed")
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        scenario.run()
+
+    restart.assert_called_once_with(force=False)
+
+
+def test_oauth_info_removed_config_server_publishes_removal(
+    mongodb_ctx, mongodb_container, mocker, config_server_relations
+):
+    first, second, pending = config_server_relations
+    first = replace(first, local_app_data={"oauth-issuer": "https://first-issuer"})
+    second = replace(second, local_app_data={"oauth-issuer": "https://first-issuer"})
+    oauth = oauth_relation("https://first-issuer")
+    state_in = mongo_state(
+        mongodb_container,
+        role=MongoDBRoles.CONFIG_SERVER,
+        peer_data={"oauth-issuer": "https://first-issuer"},
+        relations={first, second, pending, oauth},
+    )
+    with mongodb_ctx(
+        mongodb_ctx.on.relation_broken(get_relation(state_in, "oauth")), state_in
+    ) as scenario:
+        restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    assert "oauth-issuer" not in state_out.get_relation(first.id).local_app_data
+    assert "oauth-issuer" not in state_out.get_relation(second.id).local_app_data
+    assert (
+        "oauth-issuer" not in get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data
+    )
+    restart.assert_not_called()
+
+
+@pytest.mark.parametrize("leader", [True, False])
+def test_mongos_setups_issuer_from_cluster_relation(mongos_ctx, mongodb_container, leader):
+    cluster = Relation(
+        endpoint="cluster",
+        remote_app_name="config-server",
+        remote_app_data={"oauth-issuer": "https://issuer.example"},
+    )
+    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+        parameters = scenario.charm.operator.config_manager.oauth_parameters
+        assert (
+            parameters["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+        )
+        assert (
+            json.loads(parameters["setParameter"]["oidcIdentityProviders"])[0]["issuer"]
+            == "https://issuer.example"
+        )
+
+
+@pytest.mark.parametrize("leader", [True, False])
+def test_mongos_omits_oidc_without_cluster_issuer(mongos_ctx, mongodb_container, leader):
+    cluster = Relation(endpoint="cluster", remote_app_name="config-server")
+    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+        assert scenario.charm.operator.config_manager.oauth_parameters == {}
+
+
+@pytest.mark.parametrize("leader", [True, False])
+@pytest.mark.parametrize("issuer", ["https://first-issuer", "https://updated-issuer", ""])
+def test_mongos_issuer_change_requests_async_restart(
+    mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader, issuer
+):
+    cluster = replace(
+        mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": issuer}
+    )
+    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
+    with mongos_oauth_restart(state_in, mongos_ctx.on.relation_changed(cluster)) as context:
+        context.scenario.run()
+
+        context.request.assert_called_once_with(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
+        )
+        context.write.assert_not_called()
+        context.restart.assert_not_called()
+
+
+@pytest.mark.parametrize("leader", [True, False])
 @pytest.mark.parametrize(
-    "role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.SHARD, MongoDBRoles.REPLICATION]
+    ("initial_issuer", "issuer"),
+    [
+        pytest.param("", "https://first-issuer", id="initial-issuer"),
+        pytest.param("https://first-issuer", "https://updated-issuer", id="updated-issuer"),
+    ],
 )
-def test_mongodb_config_manager_omits_allowlist_k8s(mongodb_config_manager):
-    manager, mock_write = mongodb_config_manager
-    manager.state.substrate = Substrates.K8S
-
-    config = manager.build_config()
-    manager.set_environment()
-
-    assert manager.cluster_ips == {}
-    assert manager.cluster_ip_source_allowlist == []
-    assert "clusterIpSourceAllowlist" not in config["security"]
-    mock_write.assert_called_once_with(manager.file, safe_dump(config))
-
-
-def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
-    state = mocker.MagicMock(CharmState)
-    state.authentication_conflict = False
-    state.peer_network.return_value.bind_addresses = []
-    state.peer_database_addresses = []
-    state.substrate = Substrates.VM
-    state.config_server_network.return_value.bind_addresses = []
-    state.is_role.side_effect = lambda role: role == MongoDBRoles.CONFIG_SERVER
-    state.is_cluster_component = False
-
-    state.related_cluster_hosts = ["10.0.1.10", "10.0.1.11"]
-
-    manager = MongoDBConfigManager.__new__(MongoDBConfigManager)
-    manager.state = state
-
-    assert manager.cluster_ips == {
-        "security": {"clusterIpSourceAllowlist": ["10.0.1.10", "10.0.1.11", "127.0.0.1"]}
-    }
-
-
-@pytest.mark.skip_if_substrate(Substrate.k8s)
-def test_shard_cluster_ips_include_config_server_hosts(mocker):
-    state = mocker.MagicMock(CharmState)
-    state.authentication_conflict = False
-    state.peer_network.return_value.bind_addresses = []
-    state.peer_database_addresses = []
-    state.substrate = Substrates.VM
-    state.sharding_network.return_value.bind_addresses = []
-    state.related_cluster_hosts = ["10.0.2.10", "10.0.2.11"]
-    state.shard_state.mongos_cidrs = []
-    state.is_role.side_effect = lambda role: role == MongoDBRoles.SHARD
-    state.is_cluster_component = False
-
-    manager = MongoDBConfigManager.__new__(MongoDBConfigManager)
-    manager.state = state
-
-    assert manager.cluster_ips == {
-        "security": {"clusterIpSourceAllowlist": ["10.0.2.10", "10.0.2.11"]}
-    }
-
-
-def test_sync_cluster_ip_source_allowlist_to_file(mocker):
-    mock_write = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
-    mock_read = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.read")
-
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.client_enabled = False
-    mock_state.vault_relation = None
-    mock_state.peer_network = lambda: Network._from_dict(
-        {
-            "bind-addresses": [
-                {
-                    "mac-address": "aa:bb",
-                    "interface-name": "eth0",
-                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
-                }
-            ],
-            "egress-subnets": ["127.0.0.0/24"],
-            "ingress-addresses": ["10.0.0.1"],
-        }
+def test_mongos_rolling_restart_writes_issuer(
+    mongos_ctx,
+    mongodb_container,
+    mongos_oauth_restart,
+    mongos_cluster,
+    leader,
+    initial_issuer,
+    issuer,
+):
+    initial_cluster = replace(
+        mongos_cluster,
+        remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": initial_issuer},
     )
-    mock_state.is_role = lambda role: False
-    mock_state.is_cluster_component = False
-    manager = MongoDBConfigManager(
-        MongoDBCharmConfig(), mock_state, VMMongoDBWorkload(VM_MONGOD, None)
+    initial_state = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), initial_state) as scenario:
+        current = safe_dump(scenario.charm.operator.config_manager.build_config())
+    cluster = replace(
+        mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": issuer}
     )
+    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
+    with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status(), current) as context:
+        context.cluster.update_mongos_and_restart(force=False)
 
-    mock_read.return_value = safe_dump(
-        {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24"]}}
-    ).splitlines()
-    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
-    mock_write.assert_called()
-
-    mock_read.return_value = safe_dump(
-        {
-            "net": {"bindIp": "10.0.0.1,127.0.0.1"},
-            "security": {"clusterIpSourceAllowlist": ["10.0.1.0/24"]},
-        }
-    ).splitlines()
-    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.2/24"])
-
-    written_config = safe_load(mock_write.call_args.args[1])
-    assert written_config == {
-        "net": {"bindIp": "10.0.0.1,127.0.0.1"},
-        "security": {"clusterIpSourceAllowlist": ["10.0.0.2/24"]},
-    }
+        context.write.assert_called_once()
+        path, content = context.write.call_args.args
+        assert path == context.config.file
+        parameters = safe_load(content)["setParameter"]
+        assert json.loads(parameters["oidcIdentityProviders"])[0]["issuer"] == issuer
+        assert parameters["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+        context.restart.assert_called_once()
 
 
-def test_mongodb_ldap_config(mocker):
+@pytest.mark.parametrize("leader", [True, False])
+def test_mongos_rolling_restart_removes_oidc(
+    mongos_ctx, mongodb_container, mongos_oauth_restart, mongos_cluster, leader
+):
+    initial_cluster = replace(
+        mongos_cluster,
+        remote_app_data={**mongos_cluster.remote_app_data, "oauth-issuer": "https://first-issuer"},
+    )
+    initial_state = mongos_state(mongodb_container, leader=leader, relations={initial_cluster})
+    with mongos_ctx(mongos_ctx.on.collect_unit_status(), initial_state) as scenario:
+        current = safe_dump(scenario.charm.operator.config_manager.build_config())
+    state_in = mongos_state(mongodb_container, leader=leader, relations={mongos_cluster})
+    with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status(), current) as context:
+        context.cluster.update_mongos_and_restart(force=False)
+
+        context.write.assert_called_once()
+        path, content = context.write.call_args.args
+        assert path == context.config.file
+        parameters = safe_load(content)["setParameter"]
+        assert "oidcIdentityProviders" not in parameters
+        assert "MONGODB-OIDC" not in parameters.get("authenticationMechanisms", "")
+        context.restart.assert_called_once()
+
+
+@pytest.mark.parametrize("initialised", [True, False])
+@pytest.mark.parametrize("leader", [True])
+def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
     mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
+        return_value=[StatusObject(status="active", message="")],
     )
+    oauth = Relation(endpoint="oauth", remote_app_name="hydra")
+    state_in = replace(shard_state, relations={*shard_state.relations, oauth})
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        with pytest.raises(NonDeferrableFailedHookChecksError):
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+        statuses = scenario.charm.operator.oauth_manager.get_statuses("app", recompute=True)
+        assert statuses == [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+        state_out = scenario.run()
+    assert state_out.unit_status == ActiveStatus()
+    assert state_out.app_status == BlockedStatus("Cannot integrate OIDC with shard.")
 
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app_peer_data = mock_app_state
-    mock_app_state.oauth_issuer = None
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.ldap = mocker.MagicMock(LdapState)
 
-    mock_state.ldap.is_ready = lambda: True
-    mock_state.ldap.relation = mocker.MagicMock(Relation)
-    mock_state.ldap.bind_user = "cn=user,ou=group,dc=glauth,dc=com"
-    mock_state.ldap.bind_password = "password"
-    mock_state.ldap.base_dn = "dc=glauth,dc=com"
-    mock_state.ldap.formatted_ldap_urls = ["ldap.glauth.com:3894"]
-    mock_state.ldap.certificate = "beefdead"
-    mock_state.ldap.ca = "deadbeef"
-    mock_state.ldap.chain = ["feeddead"]
-
-    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.is_role = lambda x: False
-    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.client_enabled = False
-    workload = VMMongoDBWorkload(VM_MONGOD, None)
-    config = MongoDBCharmConfig()
-    manager = MongoDBConfigManager(
-        config,
-        mock_state,
-        workload,
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_relation_does_not_block_supported_roles(mongodb_ctx, mongodb_container, role):
+    state_in = mongo_state(
+        mongodb_container,
+        role=role,
+        relations={Relation(endpoint="oauth", remote_app_name="hydra")},
     )
-    ldap_config = manager.ldap_parameters["security"]["ldap"]
-
-    assert ldap_config["servers"] == "ldap.glauth.com:3894"
-    assert ldap_config["bind"]["queryPassword"] == "password"
-    assert ldap_config["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
-    assert ldap_config["transportSecurity"] == "tls"
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.SHARD])
-@pytest.mark.parametrize("conflict", [True, False])
-def test_shard_omits_external_authentication(mongodb_config_manager, mocker, conflict):
-    manager, _ = mongodb_config_manager
-    manager.state.authentication_conflict = conflict
-    read = mocker.patch.object(manager.workload, "read")
-    ldap_parameters = mocker.patch.object(
-        type(manager), "ldap_parameters", new_callable=PropertyMock
-    )
-    oauth_parameters = mocker.patch.object(
-        type(manager), "oauth_parameters", new_callable=PropertyMock
-    )
-
-    assert manager.authentication_parameters == {}
-    read.assert_not_called()
-    ldap_parameters.assert_not_called()
-    oauth_parameters.assert_not_called()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
-def test_replica_set_oauth_without_conflict(mongodb_config_manager, mocker):
-    manager, _ = mongodb_config_manager
-    manager.state.substrate = Substrates.VM
-    manager.state.app_peer_data.oauth_issuer = "https://replica-set-issuer.example"
-    manager.state.ldap_relation = None
-    read = mocker.patch.object(manager.workload, "read")
-
-    rendered = manager.build_config()
-
-    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
-    assert providers[0]["issuer"] == "https://replica-set-issuer.example"
-    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
-    assert rendered["security"]["authorization"] == "enabled"
-    assert "ldap" not in rendered["security"]
-    read.assert_not_called()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.MONGOS])
-def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
-    mongodb_manager, _ = mongodb_config_manager
-    state = mongodb_manager.state
-    state.substrate = Substrates.VM
-    state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
-    state.cluster.oauth_issuer = "https://config-server-issuer.example"
-    state.config_server_uri = "config-server/10.0.0.1:27017"
-    state.ldap_relation = None
-    workload = VMMongosWorkload(VM_MONGOS, None)
-    manager = MongosConfigManager(MongosCharmConfig(), workload, state)
-    read = mocker.patch.object(workload, "read")
-
-    rendered = manager.build_config()
-
-    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
-    assert providers[0]["issuer"] == "https://config-server-issuer.example"
-    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
-    assert rendered["security"]["authorization"] == "enabled"
-    assert "ldap" not in rendered["security"]
-    read.assert_not_called()
-
-
-@pytest.fixture
-def conflicting_authentication_config_manager(mongodb_config_manager, mocker):
-    manager, _ = mongodb_config_manager
-    manager.state.substrate = Substrates.VM
-    manager.state.authentication_conflict = True
-    manager.state.app_peer_data.oauth_issuer = "https://issuer.example"
-    manager.state.is_role.side_effect = lambda role: role == MongoDBRoles.REPLICATION
-    manager.state.ldap = mocker.MagicMock(LdapState)
-    manager.state.ldap.is_ready.return_value = True
-    manager.state.ldap.bind_user = "cn=user,dc=example"
-    manager.state.ldap.bind_password = "password"
-    manager.state.ldap.base_dn = "dc=example"
-    manager.state.ldap.formatted_ldap_urls = ["ldap.example:636"]
-    manager.state.ldap.ldap_user_to_dn_mapping = ""
-    manager.state.ldap.ldap_query_template = ""
-    return manager
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
-def test_authentication_conflict_keeps_ldap_in_rendered_config(
-    conflicting_authentication_config_manager, mocker
-):
-    manager = conflicting_authentication_config_manager
-    current = {"security": {"ldap": {"servers": "ldap.example:636"}}}
-    mocker.patch.object(manager.workload, "read", return_value=safe_dump(current).splitlines())
-
-    rendered = manager.build_config()
-
-    assert rendered["security"]["ldap"]["servers"] == "ldap.example:636"
-    assert rendered["security"]["ldap"]["bind"] == {
-        "queryUser": "cn=user,dc=example",
-        "queryPassword": "password",
-    }
-    assert rendered["setParameter"]["authenticationMechanisms"] == "PLAIN,SCRAM-SHA-256"
-    assert "oidcIdentityProviders" not in rendered["setParameter"]
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
-def test_authentication_conflict_keeps_oidc_in_rendered_config(
-    conflicting_authentication_config_manager, mocker
-):
-    manager = conflicting_authentication_config_manager
-    current = {
-        "setParameter": {
-            "oidcIdentityProviders": json.dumps([{"issuer": "https://issuer.example"}])
-        }
-    }
-    mocker.patch.object(manager.workload, "read", return_value=safe_dump(current).splitlines())
-
-    rendered = manager.build_config()
-
-    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
-    assert providers[0]["issuer"] == "https://issuer.example"
-    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
-    assert "ldap" not in rendered["security"]
-
-
-def test_mongodb_encryption_at_rest_config(mocker):
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app_peer_data = mock_app_state
-    mock_app_state.oauth_issuer = None
-    mock_state.vault_state = mocker.MagicMock(VaultState)
-
-    mock_state.enable_encryption_at_rest = True
-    mock_state.vault_state.is_ready = lambda: True
-    mock_state.vault_relation = mocker.MagicMock(Relation)
-    mock_state.vault_state.vault_url_tuple = "192.168.1.1", "8200"
-    mock_state.vault_state.vault_secret_path = "mongodb-mongodb/data/mongodb-0"
-
-    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.is_role = lambda x: False
-    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.client_enabled = False
-    workload = VMMongoDBWorkload(VM_MONGOD, None)
-    config = MongoDBCharmConfig()
-    manager = MongoDBConfigManager(
-        config,
-        mock_state,
-        workload,
-    )
-    vault_config = manager.vault_parameters["security"]
-    assert vault_config["enableEncryption"]
-    assert vault_config["vault"]["serverName"] == "192.168.1.1"
-    assert vault_config["vault"]["port"] == "8200"
-    assert (
-        vault_config["vault"]["tokenFile"]
-        == "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
-    )
-    assert (
-        vault_config["vault"]["serverCAFile"]
-        == "/var/snap/charmed-mongodb/current/etc/vault/vault_cert.pem"
-    )
-    assert vault_config["vault"]["secret"] == "mongodb-mongodb/data/mongodb-0"
-
-
-def test_mongos_config_manager(mocker):
-    mock = mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
-    )
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
-    mock_state.cluster.oauth_issuer = None
-    mock_state.substrate = Substrates.VM
-    mock_state.config_server_uri = "mongodb://config-server-url"
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app_peer_data.external_connectivity = False
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.client_enabled = False
-    mock_state.ldap.is_ready = lambda: False
-    mock_state.peer_network = lambda: Network._from_dict(
-        {
-            "bind-addresses": [
-                {
-                    "mac-address": "aa:bb",
-                    "interface-name": "eth0",
-                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
-                }
-            ],
-            "egress-subnets": ["127.0.0.0/24"],
-            "ingress-addresses": ["10.0.0.1"],
-        }
-    )
-    workload = VMMongosWorkload(VM_MONGOS, None)
-    config = MongosCharmConfig()
-    manager = MongosConfigManager(
-        config,
-        workload,
-        mock_state,
-    )
-
-    port_parameter = manager.port_parameter
-    binding_ips = manager.binding_ips
-    log_options = manager.log_options
-    audit_options = manager.audit_options
-    auth_parameter = manager.auth_parameter
-    client_tls_parameters = manager.client_tls_parameters
-    config_server_db_parameter = manager.config_server_db_parameter
-    cluster_ips = manager.cluster_ips
-
-    all_params = manager.build_config()
-
-    assert port_parameter == {"net": {"port": 27018}}
-    assert binding_ips == {
-        "net": {
-            "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
-            "unixDomainSocket": {
-                "enabled": True,
-                "filePermissions": "0666",
-            },
-        }
-    }
-    assert cluster_ips == {}
-    assert log_options == {
-        "setParameter": {"processUmask": "037"},
-        "systemLog": {
-            "logRotate": "reopen",
-            "logAppend": True,
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongos.log",
-            "destination": "file",
-        },
-    }
-
-    assert audit_options == {
-        "auditLog": {
-            "destination": "file",
-            "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/audit_mongos.log",
-        }
-    }
-    assert auth_parameter == {
-        "security": {
-            "clusterAuthMode": "keyFile",
-            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
-        }
-    }
-    assert client_tls_parameters == {}
-    assert config_server_db_parameter == {"sharding": {"configDB": "mongodb://config-server-url"}}
-
-    assert all_params == {
-        "net": {
-            "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
-            "unixDomainSocket": {
-                "enabled": True,
-                "filePermissions": "0666",
-            },
-            "port": 27018,
-        },
-        "security": {
-            "clusterAuthMode": "keyFile",
-            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
-        },
-        "setParameter": {"processUmask": "037"},
-        "systemLog": {
-            "logRotate": "reopen",
-            "logAppend": True,
-            "path": f"{VM_PATH['mongod']['LOGS']}/mongos.log",
-            "destination": "file",
-        },
-        "auditLog": {
-            "destination": "file",
-            "format": "JSON",
-            "path": f"{VM_PATH['mongod']['LOGS']}/audit_mongos.log",
-        },
-        "sharding": {"configDB": "mongodb://config-server-url"},
-    }
-    manager.set_environment()
-    mock.assert_called_once_with(
-        Path(f"{VM_PATH['mongod']['CONF']}/mongos.conf"), safe_dump(all_params)
-    )
-
-
-def test_mongodb_config_manager_tls_enabled(mocker):
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.authentication_conflict = False
-    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app_peer_data = mock_app_state
-    mock_app_state.oauth_issuer = None
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
-    mock_state.get_subject_name = lambda: "mongodb"
-    mock_state.tls.peer_enabled = True
-    mock_state.tls.client_enabled = True
-    workload = VMMongoDBWorkload(VM_MONGOD, None)
-    config = MongoDBCharmConfig()
-    manager = MongoDBConfigManager(
-        config,
-        mock_state,
-        workload,
-    )
-
-    assert manager.auth_parameter == {
-        "security": {
-            "authorization": "enabled",
-            "clusterAuthMode": "x509",
-        },
-        "net": {
-            "tls": {
-                "mode": "preferTLS",
-                "allowInvalidCertificates": True,
-                "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
-                "CAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
-                "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
-                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
-                "disabledProtocols": "TLS1_0,TLS1_1",
-                "clusterAuthX509": {
-                    "attributes": "O=mongodb",
-                },
-            }
-        },
-    }
-    assert manager.client_tls_parameters == {
-        "net": {
-            "tls": {
-                "CAFile": f"{VM_PATH['mongod']['CONF']}/external-ca.crt",
-                "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
-                "mode": "requireTLS",
-                "disabledProtocols": "TLS1_0,TLS1_1",
-                "allowConnectionsWithoutCertificates": True,
-            }
-        },
-    }
-
-
-def test_mongos_default_config_server(mocker):
-    mock_state = mocker.create_autospec(CharmState)
-    mock_state.app_peer_data = mocker.Mock(AppPeerReplicaSet)
-    mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.unit_peer_data.internal_address = "127.0.0.1"
-    mock_state.config_server_uri = (
-        f"{mock_state.app_peer_data.replica_set}/{mock_state.unit_peer_data.internal_address}:27017"
-    )
-    mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app_peer_data.external_connectivity = False
-    mock_state.tls.peer_enabled = False
-    mock_state.tls.externalenabled = False
-    workload = VMMongoDBWorkload(VM_MONGOD, None)
-    config = MongosCharmConfig()
-    manager = MongosConfigManager(
-        config,
-        workload,
-        mock_state,
-    )
-    assert manager.config_server_db_parameter == {
-        "sharding": {"configDB": "deadbeef/127.0.0.1:27017"}
-    }
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == []
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []

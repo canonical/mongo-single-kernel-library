@@ -26,16 +26,9 @@ from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
-    WorkloadServiceError,
-from ops.charm import RelationChangedEvent
-from ops.framework import Object
-
-from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.exceptions import (
-    DeferrableFailedHookChecksError,
     LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 

@@ -10,12 +10,6 @@ from urllib.error import HTTPError, URLError
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.model import BlockedStatus, WaitingStatus
-from dataclasses import replace
-from unittest.mock import PropertyMock
-
-import pytest
-from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
@@ -51,26 +45,13 @@ def test_oauth_hook_checks_require_initialised_database(
     state_in = mongo_state(mongodb_container, role=role, initialised=False)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
-            scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 def test_oauth_hook_checks_reject_degraded_vault(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
 ):
-            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_container, role):
-    state_in = mongo_state(mongodb_container, role=role, initialised=False)
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
-            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container, mocker, role):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -84,11 +65,6 @@ def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container,
 def test_oauth_hook_checks_reject_refresh_in_progress(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
 ):
-            operator.oauth_manager._assert_pass_hook_checks()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_container, mocker, role):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -102,14 +78,6 @@ def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_conta
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
 def test_oauth_hook_checks_pass(mock_issuer_tls, mongodb_ctx, mongodb_container, role):
-    state_in = mongo_state(mongodb_container, role=role)
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
-            operator.oauth_manager._assert_pass_hook_checks()
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_hook_checks_pass(mongodb_ctx, mongodb_container, role):
     with mongodb_ctx(
         mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
     ) as scenario:
