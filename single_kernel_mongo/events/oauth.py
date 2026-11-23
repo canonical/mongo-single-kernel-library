@@ -28,6 +28,14 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WorkloadServiceError,
+from ops.charm import RelationChangedEvent
+from ops.framework import Object
+
+from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.exceptions import (
+    DeferrableFailedHookChecksError,
+    LdapAndOauthConflictError,
+    NonDeferrableFailedHookChecksError,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
@@ -92,6 +100,7 @@ class OAuthEventHandler(Object):
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
             WorkloadServiceError,
+            LdapAndOauthConflictError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
@@ -105,6 +114,7 @@ class OAuthEventHandler(Object):
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
             WorkloadServiceError,
+            LdapAndOauthConflictError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:

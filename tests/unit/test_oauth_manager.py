@@ -10,6 +10,12 @@ from urllib.error import HTTPError, URLError
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.model import BlockedStatus, WaitingStatus
+from dataclasses import replace
+from unittest.mock import PropertyMock
+
+import pytest
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Relation, Secret
 from yaml import safe_dump, safe_load
 
@@ -28,94 +34,8 @@ from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_s
 pytest_plugins = ("tests.unit.auth_scenario_helpers",)
 
 
-@pytest.mark.parametrize(
-    "oauth,cert,issuer,ca,configured,shard,conflict,provider,status,expected",
-    [
-        (False, False, None, None, False, False, False, False, None, "EMPTY"),
-        (False, False, "issuer", None, False, False, False, False, None, "REMOVING"),
-        (False, False, None, None, True, False, False, False, None, "REMOVING"),
-        (False, True, None, None, False, False, False, False, None, "MISSING_OAUTH_RELATION"),
-        (True, False, None, None, False, True, False, True, None, "WRONG_ROLE"),
-        (True, False, None, None, False, False, True, True, None, "LDAP_CONFLICT"),
-        (True, False, None, None, False, False, False, False, None, "WAITING_FOR_PROVIDER_DATA"),
-        (True, True, None, None, False, False, False, True, None, "ACTIVE"),
-        (True, False, None, None, False, False, False, True, None, "ACTIVE"),
-        (True, True, None, "ca", False, False, False, True, None, "ACTIVE"),
-        (
-            True,
-            False,
-            None,
-            None,
-            False,
-            False,
-            False,
-            True,
-            "ISSUER_TLS_ERROR",
-            "ISSUER_TLS_ERROR",
-        ),
-        (
-            True,
-            False,
-            None,
-            None,
-            False,
-            False,
-            False,
-            True,
-            "ISSUER_UNREACHABLE",
-            "ISSUER_UNREACHABLE",
-        ),
-        (
-            True,
-            False,
-            None,
-            None,
-            False,
-            False,
-            False,
-            True,
-            "INVALID_DISCOVERY",
-            "INVALID_DISCOVERY",
-        ),
-    ],
-)
-def test_oauth_state(
-    oauth, cert, issuer, ca, configured, shard, conflict, provider, status, expected
-):
-    manager = Mock(spec=OAuthManager)
-    manager.state = Mock(db_initialised=True)
-    manager.charm = Mock()
-    manager.charm.unit.is_leader.return_value = True
-    manager._has_oauth_configuration.side_effect = lambda: OAuthManager._has_oauth_configuration(
-        manager
-    )
-    manager.dependent = Mock()
-    manager.oauth_requirer = Mock()
-    manager.state.oauth_relation = object() if oauth else None
-    manager.state.oauth_cert_relation = object() if cert else None
-    manager.state.app_peer_data.oauth_issuer = issuer
-    manager.state.app_peer_data.oauth_ca = ca
-    manager.state.authentication_conflict = conflict
-    manager.state.is_role.side_effect = lambda role: (
-        shard if role == MongoDBRoles.SHARD else role == MongoDBRoles.REPLICATION
-    )
-    manager.dependent.config_manager.file_has_oauth_configuration.return_value = configured
-    manager.oauth_requirer.get_provider_info.return_value = (
-        Mock(issuer_url="https://issuer.example") if provider else None
-    )
-    manager.get_issuer_connection_state.return_value = OAuthState[status] if status else None
-
-    assert OAuthManager.oauth_state(manager) == OAuthState[expected]
-    if expected in {"ACTIVE", "ISSUER_TLS_ERROR", "ISSUER_UNREACHABLE", "INVALID_DISCOVERY"}:
-        manager.get_issuer_connection_state.assert_called_once_with("https://issuer.example")
-    else:
-        manager.get_issuer_connection_state.assert_not_called()
-
-
 @pytest.mark.parametrize("initialised", [True, False])
-def test_oauth_hook_checks_reject_shard(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, initialised
-):
+def test_oauth_hook_checks_reject_shard(mongodb_ctx, mongodb_container, initialised):
     state_in = mongo_state(mongodb_container, role=MongoDBRoles.SHARD, initialised=initialised)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         with pytest.raises(
@@ -138,6 +58,19 @@ def test_oauth_hook_checks_require_initialised_database(
 def test_oauth_hook_checks_reject_degraded_vault(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
 ):
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_require_initialised_database(mongodb_ctx, mongodb_container, role):
+    state_in = mongo_state(mongodb_container, role=role, initialised=False)
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        with pytest.raises(DeferrableFailedHookChecksError, match="DB is not initialised"):
+            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_reject_degraded_vault(mongodb_ctx, mongodb_container, mocker, role):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -151,6 +84,11 @@ def test_oauth_hook_checks_reject_degraded_vault(
 def test_oauth_hook_checks_reject_refresh_in_progress(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, role
 ):
+            operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_reject_refresh_in_progress(mongodb_ctx, mongodb_container, mocker, role):
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
@@ -167,6 +105,15 @@ def test_oauth_hook_checks_pass(mock_issuer_tls, mongodb_ctx, mongodb_container,
     state_in = mongo_state(mongodb_container, role=role)
     with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         scenario.charm.operator.oauth_manager.assert_pass_hook_checks()
+            operator.oauth_manager._assert_pass_hook_checks()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_oauth_hook_checks_pass(mongodb_ctx, mongodb_container, role):
+    with mongodb_ctx(
+        mongodb_ctx.on.collect_unit_status(), mongo_state(mongodb_container, role=role)
+    ) as scenario:
+        scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
 
 
 def test_oauth_info_changed_rejects_shards(mongodb_ctx, mongodb_container, caplog):

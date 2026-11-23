@@ -406,7 +406,8 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
-                self.authentication_parameters,
+                self.ldap_parameters,
+                self.oauth_parameters,
                 self.vault_parameters,
             ],
         )
@@ -418,27 +419,6 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         """
         current = safe_load("\n".join(self.workload.read(self.file))) or {}
         return bool(current.get("setParameter", {}).get("oidcIdentityProviders"))
-
-    @property
-    def authentication_parameters(self) -> dict[str, Any]:
-        """LDAP and Oauth are mutually exclusive. This method decides what configuration is used.
-
-        Shards do not configure external authentication.
-        If there is no conflict, we merge the LDAP and OIDC parameters.
-        If there is a conflict, we keep the authentication method configured on this unit.
-        """
-        if self.state.app_peer_data.role == MongoDBRoles.SHARD:
-            return {}
-
-        if not self.state.authentication_conflict:
-            return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
-
-        current = safe_load("\n".join(self.workload.read(self.file))) or {}
-        if current.get("security", {}).get("ldap"):
-            return self.ldap_parameters
-        if current.get("setParameter", {}).get("oidcIdentityProviders"):
-            return self.oauth_parameters
-        return {}
 
     @property
     @abstractmethod

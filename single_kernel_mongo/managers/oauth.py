@@ -27,6 +27,9 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from charmlibs.interfaces.certificate_transfer import CertificateTransferRequires
+from logging import getLogger
+from typing import TYPE_CHECKING, final
+
 from charmlibs.interfaces.oauth import ClientConfig, OAuthRequirer
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import AbstractManagerStatus
@@ -41,6 +44,8 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WorkloadServiceError,
+    LdapAndOauthConflictError,
+    NonDeferrableFailedHookChecksError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 
@@ -79,18 +84,19 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             self.charm, ExternalRequirerRelations.OAUTH_CERT.value
         )
 
-    def assert_pass_hook_checks(self) -> None:
+    def _assert_pass_hook_checks(self) -> None:
         """Reject unsupported roles and defer OAuth hooks until MongoDB is ready.
 
         Raises:
             NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
             DeferrableFailedHookChecksError: The database is not initialised, Vault
                 is degraded, a refresh is in progress, or LDAP setup conflicts with OIDC.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if self.state.is_role(MongoDBRoles.SHARD):
             self.state.statuses.add(
                 OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value,
-                scope="unit",
+                scope="app",
                 component=self.name,
             )
             raise NonDeferrableFailedHookChecksError("Cannot integrate OAuth with shard.")
@@ -99,7 +105,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if self.dependent.refresh_in_progress:
             raise DeferrableFailedHookChecksError("OAuth hooks are not supported during a refresh.")
         if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
+            raise LdapAndOauthConflictError("LDAP and OIDC are mutually exclusive.")
         if self.dependent.vault_manager.get_degraded_state():
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly.")
 
@@ -117,13 +123,14 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             NonDeferrableFailedHookChecksError: OAuth is integrated with a shard.
             RollingOpsNoRelationError: A rolling restart is requested before its
                 relation is available.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if not self.state.oauth_relation:
             return
         if not self.charm.unit.is_leader():
             return
 
-        self.assert_pass_hook_checks()
+        self._assert_pass_hook_checks()
         self.reconcile()
 
     def _validate_and_store_issuer(self, issuer: str) -> bool:
@@ -145,6 +152,9 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         Config servers withdraw it from all Mongos through the cluster relation.
         Replica sets request an asynchronous rolling restart if the configuration
         has changed. Followers reconcile through peer relation events.
+
+        We allow clean up even if there is a conflict with LDAP,
+        because the relation is being removed.
 
         Raises:
             DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
@@ -205,8 +215,9 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
-            DeferrableFailedHookChecksError: If the unit is not ready to restart.
-            NonDeferrableFailedHookChecksError: If OAuth is integrated with a shard.
+            DeferrableFailedHookChecksError: Preconditions are temporarily unmet.
+            NonDeferrableFailedHookChecksError: Hook checks reject the configuration.
+            LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if not self.state.is_role(MongoDBRoles.REPLICATION):
             return
@@ -214,7 +225,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if not self.state.app_peer_data.oauth_issuer and not file_has_oauth_configuration:
             return
 
-        self.assert_pass_hook_checks()
+        self._assert_pass_hook_checks()
 
         if self.dependent.config_manager.config_changed():
             self.dependent.async_restart_charm_services(force=False)
@@ -406,3 +417,13 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             self.state.is_role(MongoDBRoles.REPLICATION)
             and self.dependent.config_manager.file_has_oauth_configuration()
         )
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Report the oauth status."""
+        if self.state.authentication_conflict:
+            return []
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+        if scope == "app":
+            if self.state.is_role(MongoDBRoles.SHARD) and self.state.oauth_relation:
+                return [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
+        return []

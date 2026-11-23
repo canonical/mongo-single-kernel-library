@@ -94,6 +94,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     InvalidPasswordError,
+    LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
     SetPasswordError,
@@ -409,6 +410,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             return
 
+        if self.state.authentication_conflict:
+            logger.warning("LDAP and OIDC mutual exclusivity unmet. This must be fixed first.")
+            return
+
         try:
             self._configure_workloads()
             self.start_charm_services()
@@ -586,6 +591,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
+
         # Publish this unit's address before waiting for every planned unit.
         self.update_ips_in_databag()
         if len(self.state.peer_database_addresses) < self.state.planned_units:
@@ -712,7 +720,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         if self.state.authentication_conflict:
-            raise DeferrableFailedHookChecksError("LDAP and OIDC are mutually exclusive.")
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         if state := self.vault_manager.get_degraded_state():
             logger.warning(
@@ -1228,6 +1236,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             return
 
+        if self.state.authentication_conflict:
+            logger.warning(
+                "LDAP and OIDC are mutually exclusive. Please update the configuration to resolve the conflict.",
+                state,
+            )
+            return
+
         if self.basic_statuses():
             logger.info("Early return invalid statuses.")
             return
@@ -1453,6 +1468,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             raise WorkloadServiceError("Workload not allowed to restart: DB not initialised.")
 
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
+
         if self.ldap_manager.should_not_restart():
             raise DeferrableError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
@@ -1495,7 +1513,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except (DeferrableError, DeferrableFailedHookChecksError) as e:
+        except (DeferrableError, DeferrableFailedHookChecksError, LdapAndOauthConflictError) as e:
             self.charm.state.statuses.add(
                 MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",

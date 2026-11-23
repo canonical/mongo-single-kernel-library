@@ -8,6 +8,10 @@ import pytest
 from ops.testing import Relation, Secret
 from yaml import safe_dump
 
+import pytest
+from charmlibs.rollingops import OperationResult
+from ops.testing import Relation, Secret
+
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import AuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -238,6 +242,21 @@ def test_conflict_keeps_existing_ldap_credentials_and_certificates(
 
 
 def test_mongos_conflict_without_configured_auth_does_not_enable_oidc(
+def test_conflict_blocks_ldap_cleanup_restart(mongodb_ctx, mocker, conflicting_authentication):
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), conflicting_authentication) as scenario:
+        operator = scenario.charm.operator
+        configure = mocker.patch.object(operator.config_manager, "configure_and_restart")
+        restart = mocker.patch.object(operator.workload, "restart")
+
+        assert (
+            operator.restart_charm_services_callback(force=False) == OperationResult.RETRY_RELEASE
+        )
+
+        configure.assert_not_called()
+        restart.assert_not_called()
+
+
+def test_mongos_holds_pending_restart_on_authentication_conflict(
     mongos_ctx, mongodb_container, mocker
 ):
     state_in = mongos_state(
@@ -249,9 +268,17 @@ def test_mongos_conflict_without_configured_auth_does_not_enable_oidc(
                 remote_app_data={"oauth-issuer": "https://possibly-new-issuer"},
             ),
             Relation(endpoint="ldap", remote_app_name="glauth"),
+                remote_app_data={
+                    "oauth-issuer": "https://issuer",
+                    "config-server-db": "config-server/10.0.0.1:27017",
+                },
+            ),
+            Relation(endpoint="ldap"),
         },
     )
     with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
-        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
-        assert operator.config_manager.authentication_parameters == {}
+        restart = mocker.patch.object(operator.cluster_manager, "update_mongos_and_restart")
+        assert operator.state.authentication_conflict
+        assert operator.restart_charm_services_callback(force=True) == OperationResult.RETRY_RELEASE
+        restart.assert_not_called()
