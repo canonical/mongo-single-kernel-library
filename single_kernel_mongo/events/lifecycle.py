@@ -58,6 +58,7 @@ from single_kernel_mongo.exceptions import (
     InvalidConfigRoleError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
+    LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardAuthError,
@@ -171,6 +172,10 @@ class LifecycleEventsHandler(Object):
             logger.info("Waiting for vault to be integrated.")
             event.defer()
             return
+        except LdapAndOauthConflictError:
+            logger.info("LDAP and OIDC are mutually exclusive. Please configure only one of them.")
+            event.defer()
+            return
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(
@@ -222,20 +227,27 @@ class LifecycleEventsHandler(Object):
                 )
             event.defer()
             return
+        except LdapAndOauthConflictError:
+            logger.info("LDAP and OIDC are mutually exclusive. Please configure only one of them.")
+            event.defer()
+            return
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
                 scope="unit",
                 component=self.dependent.name,
             )
+            return
         except InvalidLdapQueryTemplateError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value,
                 scope="unit",
                 component=self.dependent.name,
             )
+            return
         except (NonDeferrableFailedHookChecksError, WorkloadServiceError):
             logger.info(f"{str(type(event))} will be skipped.")
+            return
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""

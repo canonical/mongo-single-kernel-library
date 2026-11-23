@@ -285,6 +285,10 @@ class WaitingForVaultError(DeferrableError):
     """Raised when we're waiting for vault."""
 
 
+class LdapAndOauthConflictError(DeferrableError):
+    """Raised when LDAP and OIDC are both configured, which is not allowed."""
+
+
 class ImpossibleToRotateMasterKeyError(Exception):
     """Raised when it's impossible to rotate the master key."""
 
