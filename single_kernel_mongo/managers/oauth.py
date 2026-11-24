@@ -130,7 +130,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
         provider = self.oauth_requirer.get_provider_info()
         ca = self.state.app_peer_data.oauth_ca
-        if not self._is_valid_provider(provider, ca):
+        if provider is None or not self._is_valid_provider(provider, ca):
             return
 
         self.state.app_peer_data.oauth_issuer = provider.issuer_url
@@ -357,7 +357,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
                 raise OauthInvalidDiscoveryError("Discovery metadata does not match the provider.")
 
         except requests.HTTPError as err:
-            if 500 <= err.response.status_code < 600:
+            if err.response is not None and 500 <= err.response.status_code < 600:
                 raise OauthIssuerUnreachableError(
                     "OAuth issuer is temporarily unavailable."
                 ) from err
