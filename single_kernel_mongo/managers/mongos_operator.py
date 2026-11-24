@@ -36,7 +36,7 @@ from single_kernel_mongo.config.relations import (
     PeerRelationNames,
     RelationNames,
 )
-from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import AuthStatuses, CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -50,6 +50,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
     InvalidLdapStateError,
+    LdapAndOauthConflictError,
     MissingConfigServerError,
     UpgradeInProgressError,
     WaitingForSecretsError,
@@ -197,6 +198,10 @@ class MongosOperator(OperatorProtocol, Object):
         if not refresh.workload_allowed_to_start:
             return
 
+        if self.state.authentication_conflict:
+            logger.warning("LDAP and OIDC mutual exclusivity unmet. This must be fixed first.")
+            return
+
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
         try:
@@ -290,6 +295,9 @@ class MongosOperator(OperatorProtocol, Object):
             # Bypass the regular start if refresh is in progress
             logger.info("Refresh in progress, skipping regular start")
             return
+
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
 
         self._configure_workloads()
 
@@ -459,6 +467,9 @@ class MongosOperator(OperatorProtocol, Object):
             logger.error("Cannot start mongos without a config server db")
             raise MissingConfigServerError("Cannot start mongos without a config server db")
 
+        if self.state.authentication_conflict:
+            raise LdapAndOauthConflictError("LDAP and OIDC mutual exclusivity unmet.")
+
         if self.ldap_manager.should_not_restart():
             raise InvalidLdapStateError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
@@ -496,10 +507,10 @@ class MongosOperator(OperatorProtocol, Object):
             logger.warning("Invalid state before mongos restart: %s.", e)
             # No need to retry, it can only be resolved by manual intervention
             return OperationResult.RELEASE
-        except (WaitingForSecretsError,) as e:
+        except WaitingForSecretsError as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except WorkloadServiceError as e:
+        except (WorkloadServiceError, LdapAndOauthConflictError) as e:
             # Retry later
             logger.info("Error during mongos restart: %s.", e)
             return OperationResult.RETRY_RELEASE
@@ -781,6 +792,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
+
+        if self.state.authentication_conflict:
+            charm_statuses.append(AuthStatuses.LDAP_OAUTH_CONFLICT.value)
 
         if scope == "unit" and self.is_waiting_for_rolling_operation():
             charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)

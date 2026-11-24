@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -320,6 +321,47 @@ def test_mongodb_ldap_config(mocker):
     assert ldap_config["bind"]["queryPassword"] == "password"
     assert ldap_config["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
     assert ldap_config["transportSecurity"] == "tls"
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
+def test_replica_set_oauth_without_conflict(mongodb_config_manager, mocker):
+    manager, _ = mongodb_config_manager
+    manager.state.substrate = Substrates.VM
+    manager.state.app_peer_data.oauth_issuer = "https://replica-set-issuer.example"
+    manager.state.ldap_relation = None
+    read = mocker.patch.object(manager.workload, "read")
+
+    rendered = manager.build_config()
+
+    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
+    assert providers[0]["issuer"] == "https://replica-set-issuer.example"
+    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+    assert rendered["security"]["authorization"] == "enabled"
+    assert "ldap" not in rendered["security"]
+    read.assert_not_called()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.MONGOS])
+def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
+    mongodb_manager, _ = mongodb_config_manager
+    state = mongodb_manager.state
+    state.substrate = Substrates.VM
+    state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
+    state.cluster.oauth_issuer = "https://config-server-issuer.example"
+    state.config_server_uri = "config-server/10.0.0.1:27017"
+    state.ldap_relation = None
+    workload = VMMongosWorkload(VM_MONGOS, None)
+    manager = MongosConfigManager(MongosCharmConfig(), workload, state)
+    read = mocker.patch.object(workload, "read")
+
+    rendered = manager.build_config()
+
+    providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
+    assert providers[0]["issuer"] == "https://config-server-issuer.example"
+    assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
+    assert rendered["security"]["authorization"] == "enabled"
+    assert "ldap" not in rendered["security"]
+    read.assert_not_called()
 
 
 def test_mongodb_encryption_at_rest_config(mocker):

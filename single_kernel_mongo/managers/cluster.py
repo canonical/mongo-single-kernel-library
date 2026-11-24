@@ -147,14 +147,13 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
-        if issuer := self.state.app_peer_data.oauth_issuer:
-            relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = issuer
+        if oauth_issuer := self.state.app_peer_data.oauth_issuer:
+            relation_data[ClusterStateKeys.OAUTH_ISSUER.value] = oauth_issuer
 
         if client_id := self.state.app_peer_data.oauth_client_id:
             relation_data[ClusterStateKeys.OAUTH_CLIENT_ID.value] = client_id
-
-        if bundle := self.state.app_peer_data.oauth_ca:
-            relation_data[ClusterStateKeys.OAUTH_CA.value] = bundle
+        if oauth_ca := self.state.app_peer_data.oauth_ca:
+            relation_data[ClusterStateKeys.OAUTH_CA.value] = oauth_ca
 
         if cluster_id := self.state.get_cluster_id():
             relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
@@ -228,6 +227,9 @@ class ClusterProvider(Object):
             DeferrableFailedHookChecksError: If the checks fail but can be retried later.
             NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
         """
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+
         self.assert_pass_hook_checks()
         oauth_data = {
             ClusterStateKeys.OAUTH_ISSUER.value: self.state.app_peer_data.oauth_issuer,
@@ -235,7 +237,7 @@ class ClusterProvider(Object):
         }
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):
-                logger.info("Database Requested has not run yet, skipping.")
+                logger.info("Database Requested event has not run yet, skipping.")
                 continue
             for key, value in oauth_data.items():
                 if value:
@@ -244,16 +246,25 @@ class ClusterProvider(Object):
                     self.data_interface.delete_relation_data(relation.id, [key])
 
     def update_oauth_ca_to_mongos(self) -> None:
-        """Publish or withdraw the peer CA bundle on established mongos relations."""
+        """Publish or withdraw the peer CA bundle on established mongos relations.
+
+        Raises:
+            DeferrableFailedHookChecksError: If the checks fail but can be retried later.
+            NonDeferrableFailedHookChecksError: If the checks fail and cannot be retried later.
+        """
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+
         self.assert_pass_hook_checks()
-        bundle = self.state.app_peer_data.oauth_ca
+
+        oauth_ca = self.state.app_peer_data.oauth_ca
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):
-                logger.info("Database Requested has not run yet, skipping.")
+                logger.info("Database Requested event has not run yet, skipping.")
                 continue
-            if bundle:
+            if oauth_ca:
                 self.data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.OAUTH_CA.value: bundle}
+                    relation.id, {ClusterStateKeys.OAUTH_CA.value: oauth_ca}
                 )
             else:
                 self.data_interface.delete_relation_data(
@@ -523,13 +534,9 @@ class ClusterRequirer(Object):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            WorkloadServiceError: if the operations on the workload fail.
         """
         self.assert_pass_hook_checks()
-
-        if oauth_ca := self.state.cluster.oauth_ca:
-            self.workload.write(self.workload.paths.oauth_ca_file, oauth_ca)
-        elif self.workload.exists(self.workload.paths.oauth_ca_file):
-            self.workload.delete(self.workload.paths.oauth_ca_file)
 
         self.state.statuses.delete(
             MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
@@ -547,6 +554,8 @@ class ClusterRequirer(Object):
             self.workload.paths.config_server_ext_ca_file.write_text(external_tls_ca)
         else:  # if we don't have a cert, we'll remove it
             self.workload.paths.config_server_ext_ca_file.unlink(missing_ok=True)
+
+        self.update_oauth_ca()
 
         self.dependent.rollingops_manager.request_async_lock(
             callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": force}
@@ -611,6 +620,17 @@ class ClusterRequirer(Object):
             self.dependent.remove_connection_info()
         else:
             self.state.db_initialised = False
+
+    def update_oauth_ca(self) -> None:
+        """Updates the OAuth CA in the workload.
+
+        Raises:
+            WorkloadServiceError: if the operations on the workload fail.
+        """
+        if oauth_ca := self.state.cluster.oauth_ca:
+            self.workload.write(self.workload.paths.oauth_ca_file, oauth_ca)
+        elif self.workload.exists(self.workload.paths.oauth_ca_file):
+            self.workload.delete(self.workload.paths.oauth_ca_file)
 
     def cleanup_cluster_id(self) -> None:
         """On relation-broken event, the cluster ID is removed."""

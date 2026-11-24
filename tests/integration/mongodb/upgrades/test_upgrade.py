@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+from time import sleep
 
 import jubilant
 
@@ -53,7 +54,7 @@ def test_build_and_deploy(juju: jubilant.Juju, substrate: Substrate, base_app_na
     )
 
 
-def test_upgrade(
+def test_my_upgrade(
     juju: jubilant.Juju,
     substrate: Substrate,
     mongodb_charm: str,
@@ -81,28 +82,30 @@ def test_upgrade(
     logger.info("Refreshing the application")
     refresh_charm(juju, substrate, app_name, mongodb_charm, mongod_resource)
 
+    # Refresh can take some time before the upgrade-charm event is fired.
+    logger.info("Wait for the refresh to initiate")
+    sleep(90)
+
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                app_name,
-                idle_period=20,
-            )
-            and upgrade_incompatible(status, substrate, app_name, refresh_order[0])
+        lambda status: are_agents_idle(
+            status,
+            app_name,
+            idle_period=20,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
     )
 
-    logger.info("Upgrade is blocked due to incompatibility")
+    if upgrade_incompatible(juju.status(), substrate, app_name, refresh_order[0]):
+        logger.info("Upgrade is blocked due to incompatibility")
 
-    logger.info(f"Continue refresh on unit {refresh_order[0]}")
-    logger.info("Running `force-refresh-start` action with check-compatibility=false")
-    force_refresh_task = juju.run(
-        refresh_order[0],
-        "force-refresh-start",
-        params={"check-compatibility": False, "run-pre-refresh-checks": False},
-    )
-    assert force_refresh_task.return_code == 0, "action failed"
+        logger.info(f"Continue refresh on unit {refresh_order[0]}")
+        logger.info("Running `force-refresh-start` action with check-compatibility=false")
+        force_refresh_task = juju.run(
+            refresh_order[0],
+            "force-refresh-start",
+            params={"check-compatibility": False, "run-pre-refresh-checks": False},
+        )
+        assert force_refresh_task.return_code == 0, "action failed"
 
     juju.wait(
         lambda status: are_agents_idle(

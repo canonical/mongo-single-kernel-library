@@ -285,6 +285,30 @@ class WaitingForVaultError(DeferrableError):
     """Raised when we're waiting for vault."""
 
 
+class LdapAndOauthConflictError(DeferrableError):
+    """Raised when LDAP and OIDC are both configured, which is not allowed."""
+
+
+class OauthProviderError(Exception):
+    """Base error for OAuth provider validation failures."""
+
+
+class OauthProviderDataMissingError(OauthProviderError):
+    """Raised when OAuth provider information is incomplete."""
+
+
+class OauthIssuerTLSError(OauthProviderError):
+    """Raised when the issuer URL or certificate does not meet TLS requirements."""
+
+
+class OauthInvalidDiscoveryError(OauthProviderError):
+    """Raised when discovery metadata is invalid or inconsistent with provider data."""
+
+
+class OauthIssuerUnreachableError(OauthProviderError):
+    """Raised when the OIDC issuer is unreachable."""
+
+
 class ImpossibleToRotateMasterKeyError(Exception):
     """Raised when it's impossible to rotate the master key."""
 

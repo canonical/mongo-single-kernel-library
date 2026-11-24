@@ -119,6 +119,11 @@ class FileBasedConfigManager(CommonConfigManager):
             logger.info("Workload %s will be restarted now.", self.workload.service)
             self.workload.restart()
 
+    def config_changed(self) -> bool:
+        """Whether the desired configuration differs from the current file."""
+        current = safe_load("\n".join(self.workload.read(self.file)))
+        return current != self.build_config()
+
 
 class BackupConfigManager(CommonConfigManager):
     """Config manager for PBM."""
@@ -401,36 +406,19 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
-                self.authentication_parameters,
+                self.ldap_parameters,
+                self.oauth_parameters,
                 self.vault_parameters,
             ],
         )
 
-    @property
-    def authentication_parameters(self) -> dict[str, Any]:
-        """Build authentication settings, preserving existing settings during a conflict.
+    def file_has_oauth_configuration(self) -> bool:
+        """Return whether the current configuration contains OIDC identity providers.
 
-        Without an LDAP/OIDC conflict, merge the settings from the integrations.
-        During a conflict, copy authentication settings from the current config
-        file so other configuration updates cannot enable, disable, or modify
-        either authentication setup. Unrelated settings are rebuilt normally.
+        This remains true after relation removal until configuration is reconciled.
         """
-        if not self.state.authentication_conflict:
-            return always_merger.merge(self.ldap_parameters, self.oauth_parameters)
         current = safe_load("\n".join(self.workload.read(self.file))) or {}
-        security = current.get("security", {})
-        parameters = current.get("setParameter", {})
-        return {
-            "security": {
-                key: security[key] for key in ("authorization", "ldap") if key in security
-            },
-            "setParameter": {
-                key: value
-                for key, value in parameters.items()
-                if key in ("authenticationMechanisms", "oidcIdentityProviders")
-                or key.startswith("ldap")
-            },
-        }
+        return bool(current.get("setParameter", {}).get("oidcIdentityProviders"))
 
     @property
     @abstractmethod
@@ -472,8 +460,8 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             "authorizationClaim": "groups",
             "supportsHumanFlows": False,
         }
-        if ca_file:
-            provider["serverCAFile"] = str(ca_file)
+        if ca_file_path:
+            provider["serverCAFile"] = str(ca_file_path)
         return {
             "security": {"authorization": "enabled"},
             "setParameter": {
@@ -752,14 +740,17 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def oauth_parameters(self) -> dict[str, Any]:
-        """Render OIDC settings for an OAuth-enabled replica set."""
+        """Render OIDC settings for an OAuth-enabled replica set.
+
+        OIDC is not configured in config servers or shards.
+        """
         if self.state.app_peer_data.role != MongoDBRoles.REPLICATION:
             return {}
         ca_file = self.workload.paths.oauth_ca_file
         return self._build_oauth_parameters(
             self.state.app_peer_data.oauth_issuer,
             self.state.app_peer_data.oauth_client_id,
-            ca_file=ca_file if self.workload.exists(ca_file) else None,
+            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 
     @override
@@ -797,7 +788,7 @@ class MongosConfigManager(MongoConfigManager):
         return self._build_oauth_parameters(
             self.state.cluster.oauth_issuer,
             self.state.cluster.oauth_client_id,
-            ca_file=ca_file if self.workload.exists(ca_file) else None,
+            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 
     @property
