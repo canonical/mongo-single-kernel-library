@@ -118,6 +118,7 @@ def oauth_relation(
         remote_app_name="hydra",
         remote_app_data={
             "issuer_url": issuer,
+            "client_id": "client-id",
             "authorization_endpoint": f"{issuer}/authorize",
             "token_endpoint": f"{issuer}/token",
             "introspection_endpoint": f"{issuer}/introspect",
@@ -287,6 +288,7 @@ def oauth_certificate_transfer_relation(certificates, ca=None):
 @pytest.fixture
 def provider():
     return SimpleNamespace(
+        client_id="client-id",
         issuer_url="https://issuer.example",
         token_endpoint="https://issuer.example/token",
         jwks_endpoint="https://issuer.example/jwks",

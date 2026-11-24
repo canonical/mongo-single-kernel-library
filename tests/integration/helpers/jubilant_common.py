@@ -85,6 +85,11 @@ def mongodb_config_path(substrate: Substrate) -> str:
     return f"{mongodb_base_path(substrate)}/mongod.conf"
 
 
+def mongos_config_path(substrate: Substrate) -> str:
+    """Return the path to the Mongos configuration file."""
+    return f"{mongodb_base_path(substrate)}/mongos.conf"
+
+
 def external_cert_path(substrate: Substrate):
     return f"{mongodb_base_path(substrate)}/external-ca.crt"
 

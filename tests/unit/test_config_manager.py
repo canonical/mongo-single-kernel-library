@@ -328,6 +328,7 @@ def test_replica_set_oauth_without_conflict(mongodb_config_manager, mocker):
     manager, _ = mongodb_config_manager
     manager.state.substrate = Substrates.VM
     manager.state.app_peer_data.oauth_issuer = "https://replica-set-issuer.example"
+    manager.state.app_peer_data.oauth_client_id = "replica-set-client"
     manager.state.ldap_relation = None
     read = mocker.patch.object(manager.workload, "read")
 
@@ -335,6 +336,7 @@ def test_replica_set_oauth_without_conflict(mongodb_config_manager, mocker):
 
     providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
     assert providers[0]["issuer"] == "https://replica-set-issuer.example"
+    assert providers[0]["audience"] == "replica-set-client"
     assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
     assert rendered["security"]["authorization"] == "enabled"
     assert "ldap" not in rendered["security"]
@@ -348,6 +350,7 @@ def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
     state.substrate = Substrates.VM
     state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
     state.cluster.oauth_issuer = "https://config-server-issuer.example"
+    state.cluster.oauth_client_id = "mongos-client"
     state.config_server_uri = "config-server/10.0.0.1:27017"
     state.ldap_relation = None
     workload = VMMongosWorkload(VM_MONGOS, None)
@@ -358,6 +361,7 @@ def test_mongos_oauth_without_conflict(mongodb_config_manager, mocker):
 
     providers = json.loads(rendered["setParameter"]["oidcIdentityProviders"])
     assert providers[0]["issuer"] == "https://config-server-issuer.example"
+    assert providers[0]["audience"] == "mongos-client"
     assert rendered["setParameter"]["authenticationMechanisms"] == "SCRAM-SHA-256,MONGODB-OIDC"
     assert rendered["security"]["authorization"] == "enabled"
     assert "ldap" not in rendered["security"]

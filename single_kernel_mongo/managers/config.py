@@ -446,14 +446,14 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
 
     @staticmethod
     def _build_oauth_parameters(
-        issuer: str | None, ca_file_path: Path | None = None
+        issuer: str | None, client_id: str | None, ca_file_path: Path | None = None
     ) -> dict[str, Any]:
         """Build OIDC settings for the single supported identity provider."""
-        if not issuer:
+        if not issuer or not client_id:
             return {}
         provider = {
             "issuer": issuer,
-            "audience": "mongodb",  # TODO: use the client ID
+            "audience": client_id,
             "authNamePrefix": "oauth",
             "principalName": "sub",
             "useAuthorizationClaim": True,
@@ -749,6 +749,7 @@ class MongoDBConfigManager(MongoConfigManager):
         ca_file = self.workload.paths.oauth_ca_file
         return self._build_oauth_parameters(
             self.state.app_peer_data.oauth_issuer,
+            self.state.app_peer_data.oauth_client_id,
             ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 
@@ -786,6 +787,7 @@ class MongosConfigManager(MongoConfigManager):
         ca_file = self.workload.paths.oauth_ca_file
         return self._build_oauth_parameters(
             self.state.cluster.oauth_issuer,
+            self.state.cluster.oauth_client_id,
             ca_file_path=ca_file if self.workload.exists(ca_file) else None,
         )
 

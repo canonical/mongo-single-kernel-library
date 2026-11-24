@@ -107,7 +107,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def configure_oauth(self) -> None:
         """Store and propagate the OAuth issuer on the leader.
 
-        The leader stores the issuer in application peer databag.
+        The leader stores the validated issuer and client ID in the application peer databag.
 
         Config servers propagate the issuer to Mongos through the cluster relation.
         Replica sets request an asynchronous rolling restart if the configuration
@@ -134,6 +134,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return
 
         self.state.app_peer_data.oauth_issuer = provider.issuer_url
+        self.state.app_peer_data.oauth_client_id = provider.client_id
         self.dependent.cluster_manager.update_oauth_issuer_to_mongos()
         self.restart_replica_set_when_ready()
 
@@ -158,7 +159,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def remove_oauth(self) -> None:
         """Remove and propagate the OAuth issuer on the leader.
 
-        The leader clears the issuer from application peer databag.
+        The leader clears the issuer and the client ID from application peer databag.
         Config servers withdraw it from all Mongos through the cluster relation.
         Replica sets request an asynchronous rolling restart if the configuration
         has changed.
@@ -178,6 +179,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return
 
         self.state.app_peer_data.oauth_issuer = None
+        self.state.app_peer_data.oauth_client_id = None
         self.dependent.cluster_manager.update_oauth_issuer_to_mongos()
         self.restart_replica_set_when_ready()
 
@@ -258,6 +260,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             return
 
         self.state.app_peer_data.oauth_issuer = provider.issuer_url
+        self.state.app_peer_data.oauth_client_id = provider.client_id
         self.state.app_peer_data.oauth_ca = oauth_ca
         self.dependent.cluster_manager.update_oauth_ca_to_mongos()
         self.dependent.cluster_manager.update_oauth_issuer_to_mongos()
@@ -341,7 +344,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             OauthIssuerUnreachableError: A network failure or retryable HTTP error occurred.
             OauthInvalidDiscoveryError: The URL, response, or metadata is invalid.
         """
-        if provider is None or not provider.issuer_url:
+        if provider is None or not provider.issuer_url or not provider.client_id:
             raise OauthProviderDataMissingError("Waiting for OAuth provider information.")
 
         try:
@@ -462,8 +465,10 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         if oauth_relation is None and cert_relation:
             return OAuthState.MISSING_OAUTH_RELATION
 
-        issuer = self.state.app_peer_data.oauth_issuer
-        if not issuer:
+        if (
+            not self.state.app_peer_data.oauth_issuer
+            or not self.state.app_peer_data.oauth_client_id
+        ):
             return OAuthState.WAITING_FOR_PROVIDER_DATA
 
         provider = self.oauth_requirer.get_provider_info()
