@@ -7,9 +7,16 @@ import json
 from collections.abc import Iterable, Mapping
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    CertificateSigningRequest,
+    PrivateKey,
+)
 from ops.testing import Container, PeerRelation, Relation, RelationBase, Secret, State
 
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -133,13 +140,23 @@ def registered_oauth() -> tuple[Relation, Secret]:
 
 @pytest.fixture
 def config_server_relations() -> tuple[Relation, Relation, Relation]:
-    """Provide two configured router relations and one pending relation."""
+    """Provide two routers requesting CA secrets and one pending relation."""
     return (
         Relation(
-            endpoint="cluster", remote_app_name="mongos-one", remote_app_data={"database": "mongos"}
+            endpoint="cluster",
+            remote_app_name="mongos-one",
+            remote_app_data={
+                "database": "mongos",
+                "requested-secrets": json.dumps(["oauth-ca", "keyfile"]),
+            },
         ),
         Relation(
-            endpoint="cluster", remote_app_name="mongos-two", remote_app_data={"database": "mongos"}
+            endpoint="cluster",
+            remote_app_name="mongos-two",
+            remote_app_data={
+                "database": "mongos",
+                "requested-secrets": json.dumps(["oauth-ca", "keyfile"]),
+            },
         ),
         Relation(endpoint="cluster", remote_app_name="pending"),
     )
@@ -198,18 +215,86 @@ def shard_state(mongodb_container: Iterable[Container], initialised: bool, leade
 
 @pytest.fixture
 def mock_issuer_tls(mocker):
-    """Mocks the issuer checks and expose the TLS context to connection tests."""
-    context = mocker.patch("single_kernel_mongo.managers.oauth.ssl.create_default_context")
+    """Mock discovery requests without contacting the issuer."""
 
     def discovery_response(url, **kwargs):
         issuer = url.removesuffix("/.well-known/openid-configuration")
         response = mocker.MagicMock()
-        response.__enter__.return_value.read.return_value = json.dumps(
+        response.content = json.dumps(
             {"issuer": issuer, "token_endpoint": f"{issuer}/token", "jwks_uri": f"{issuer}/jwks"}
-        )
+        ).encode()
         return response
 
     request = mocker.patch(
-        "single_kernel_mongo.managers.oauth.urlopen", side_effect=discovery_response
+        "single_kernel_mongo.managers.oauth.requests.get", side_effect=discovery_response
     )
-    return SimpleNamespace(context=context, request=request)
+    return SimpleNamespace(request=request)
+
+
+@pytest.fixture
+def certificates():
+    """Generate a PEM chain and a replacement CA with TLS charmlibs."""
+    validity = timedelta(days=365)
+    root_key = PrivateKey.generate()
+    root = Certificate.generate_self_signed_ca(
+        attributes=CertificateRequestAttributes(common_name="Root CA"),
+        private_key=root_key,
+        validity=validity,
+    )
+    intermediate_key = PrivateKey.generate()
+    intermediate_csr = CertificateSigningRequest.generate(
+        attributes=CertificateRequestAttributes(common_name="Intermediate CA"),
+        private_key=intermediate_key,
+    )
+    intermediate = Certificate.generate(
+        csr=intermediate_csr,
+        ca=root,
+        ca_private_key=root_key,
+        validity=validity,
+        is_ca=True,
+    )
+    leaf_csr = CertificateSigningRequest.generate(
+        attributes=CertificateRequestAttributes(common_name="issuer.example"),
+        private_key=PrivateKey.generate(),
+    )
+    leaf = Certificate.generate(
+        csr=leaf_csr,
+        ca=intermediate,
+        ca_private_key=intermediate_key,
+        validity=validity,
+    )
+    rotated = Certificate.generate_self_signed_ca(
+        attributes=CertificateRequestAttributes(common_name="Rotated CA"),
+        private_key=PrivateKey.generate(),
+        validity=validity,
+    )
+    return SimpleNamespace(
+        root=str(root), intermediate=str(intermediate), leaf=str(leaf), rotated=str(rotated)
+    )
+
+
+def oauth_certificate_transfer_relation(certificates, ca=None):
+    return Relation(
+        endpoint="oauth-certificate-transfer",
+        remote_app_name="idp-ca",
+        remote_app_data={
+            "version": "1",
+            "certificates": json.dumps([certificates.intermediate, ca or certificates.root]),
+        },
+    )
+
+
+@pytest.fixture
+def provider():
+    return SimpleNamespace(
+        issuer_url="https://issuer.example",
+        token_endpoint="https://issuer.example/token",
+        jwks_endpoint="https://issuer.example/jwks",
+    )
+
+
+@pytest.fixture
+def isolate_oauth_events(mock_issuer_tls, mocker):
+    """Keep OAuth events independent of HTTP endpoints and database self-healing."""
+    mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_status")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.get_statuses", return_value=[])

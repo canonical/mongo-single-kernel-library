@@ -25,9 +25,11 @@ from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.exceptions import (
+    DeferrableError,
     DeferrableFailedHookChecksError,
     LdapAndOauthConflictError,
     NonDeferrableFailedHookChecksError,
+    OauthIssuerUnreachableError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
@@ -70,15 +72,19 @@ class OAuthEventHandler(Object):
             self._on_peer_relation_changed,
         )
 
-    def _on_peer_relation_changed(
-        self, event: RelationChangedEvent | SecretChangedEvent | UpdateStatusEvent
-    ) -> None:
-        """Retry OAuth reconciliation on peer, secret, and periodic updates."""
+    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Reconcile the replica set follower units' OIDC configuration.
+
+        This fires after the leader writes the validated OAuth configuration
+        to the application databag.
+        """
         try:
-            self.manager.reconcile()
+            self.manager.restart_replica_set_when_ready()
         except (
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
+            LdapAndOauthConflictError,
+            OauthIssuerUnreachableError,
             WorkloadServiceError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
@@ -86,35 +92,42 @@ class OAuthEventHandler(Object):
             logger.error("%s", err)
 
     def _on_oauth_info_changed(self, event: OAuthInfoChangedEvent) -> None:
-        """Handle available or updated provider information."""
+        """Store and propagate new or updated OAuth provider information."""
         try:
-            self.manager.configure()
+            self.manager.configure_oauth()
         except (
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
-            WorkloadServiceError,
             LdapAndOauthConflictError,
+            OauthIssuerUnreachableError,
+            WorkloadServiceError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
     def _on_oauth_info_removed(self, event: OAuthInfoRemovedEvent) -> None:
-        """Handle removal of provider information."""
+        """Remove and propagate the removal of the OAuth issuer."""
         try:
-            self.manager.remove()
+            self.manager.remove_oauth()
         except (
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
-            WorkloadServiceError,
             LdapAndOauthConflictError,
+            WorkloadServiceError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
     def _on_secret_changed(self, event: SecretChangedEvent) -> None:
-        """Reconcile CA rotations in the application peer secret."""
+        """Apply CA rotations stored in the application peer secret on followers.
+
+        When the CA certificate is available, the leader stores the OAuth CA
+        in the application peer secret. Updating its content creates a new revision
+        with the same ID and label. This is why replica set followers need to
+        catch up with a secret-changed event.
+        """
         label = generate_secret_label(
             self.charm.app.name, Scope.APP, self.charm.peer_rel_name.value
         )
@@ -123,40 +136,53 @@ class OAuthEventHandler(Object):
         self._on_peer_relation_changed(event)
 
     def _on_certificate_available(self, event: CertificatesAvailableEvent) -> None:
-        """Publish and reconcile the identity provider CA on the leader."""
+        """Store and propagate the identity provider's CA certificates."""
+        if not (
+            ca_certs := self.manager.certificate_transfer.get_all_certificates(
+                relation_id=event.relation_id
+            )
+        ):
+            return
         try:
-            self.manager.store_certificates(event.certificates)
+            self.manager.store_certificates(ca_certs)
         except (
             DeferrableFailedHookChecksError,
-            WorkloadServiceError,
+            LdapAndOauthConflictError,
+            OauthIssuerUnreachableError,
             RollingOpsNoRelationError,
+            DeferrableError,
+            WorkloadServiceError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
     def _on_certificate_removed(self, event: CertificatesRemovedEvent) -> None:
-        """Withdraw and reconcile the identity provider CA on the leader."""
+        """Remove and propagate the removal of the identity provider's CA."""
         try:
             self.manager.remove_certificates()
         except (
-            WorkloadServiceError,
             RollingOpsNoRelationError,
             DeferrableFailedHookChecksError,
+            LdapAndOauthConflictError,
+            OauthIssuerUnreachableError,
+            WorkloadServiceError,
         ) as err:
             defer_event_with_info_log(logger, event, str(type(event)), str(err))
         except NonDeferrableFailedHookChecksError as err:
             logger.error("%s", err)
 
     def _on_update_status(self, event: UpdateStatusEvent) -> None:
-        """On update-status, check if everything is alright and restart if needed."""
+        """Reconcile the OAuth configuration and restart if needed."""
         try:
-            self.manager.reconcile()
+            self.manager._update_status()
         except (
             DeferrableFailedHookChecksError,
             RollingOpsNoRelationError,
-            WorkloadServiceError,
             NonDeferrableFailedHookChecksError,
+            LdapAndOauthConflictError,
+            OauthIssuerUnreachableError,
+            WorkloadServiceError,
         ) as err:
             logger.warning(
                 "Update Status could not reconcile oauth integration. Please investigate. %s",

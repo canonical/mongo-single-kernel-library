@@ -3,9 +3,10 @@
 
 import json
 from dataclasses import replace
-from unittest.mock import PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
+import requests
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Relation, Secret
@@ -18,10 +19,20 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    OauthIssuerTLSError,
+    OauthIssuerUnreachableError,
+    OauthProviderDataMissingError,
 )
-from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
+from single_kernel_mongo.managers.oauth import OAuthManager
+from tests.unit.auth_scenario_helpers import (
+    get_relation,
+    mongo_state,
+    mongos_state,
+    oauth_relation,
+)
 
 pytest_plugins = ("tests.unit.auth_scenario_helpers",)
+pytestmark = pytest.mark.usefixtures("isolate_oauth_events")
 
 
 @pytest.mark.parametrize("initialised", [True, False])
@@ -400,7 +411,7 @@ def test_mongos_rolling_restart_removes_oidc(
 
 @pytest.mark.parametrize("initialised", [True, False])
 @pytest.mark.parametrize("leader", [True])
-def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
+def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker, initialised):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
         return_value=[StatusObject(status="active", message="")],
@@ -418,12 +429,131 @@ def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker):
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_oauth_relation_does_not_block_supported_roles(mongodb_ctx, mongodb_container, role):
+def test_oauth_relation_does_not_block_supported_roles(
+    mongodb_ctx, mongodb_container, registered_oauth, role
+):
+    oauth, secret = registered_oauth
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=role,
+            peer_data={"oauth-issuer": "https://new-issuer"},
+            relations={oauth},
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == [
+            OAuthStatuses.ACTIVE_IDLE.value
+        ]
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_update_status_waits_for_missing_oauth_provider_data(
+    mongodb_ctx, mongodb_container, mocker, role
+):
     state_in = mongo_state(
         mongodb_container,
         role=role,
         relations={Relation(endpoint="oauth", remote_app_name="hydra")},
     )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        assert scenario.charm.operator.oauth_manager.get_statuses("unit", recompute=True) == []
-        assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []
+    with mongodb_ctx(mongodb_ctx.on.update_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch.object(
+            operator.config_manager, "file_has_oauth_configuration", return_value=False
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        scenario.run()
+
+        manager = operator.oauth_manager
+        assert manager.get_statuses("unit") == [OAuthStatuses.WAITING_FOR_OAUTH_DATA.value]
+        restart.assert_not_called()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+@pytest.mark.parametrize(
+    "failure, expected_status",
+    [
+        (requests.exceptions.SSLError("untrusted CA"), OAuthStatuses.ISSUER_TLS_ERROR.value),
+        (requests.Timeout("issuer timed out"), OAuthStatuses.ISSUER_UNREACHABLE.value),
+        (None, OAuthStatuses.INVALID_DISCOVERY.value),
+    ],
+    ids=["tls-error", "unreachable", "invalid-discovery"],
+)
+def test_update_status_reports_provider_failure_without_restarting(
+    mongodb_ctx, mongodb_container, mocker, registered_oauth, role, failure, expected_status
+):
+    oauth, secret = registered_oauth
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=role,
+            peer_data={"oauth-issuer": "https://new-issuer"},
+            relations={oauth},
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(mongodb_ctx.on.update_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        mocker.patch(
+            "single_kernel_mongo.managers.oauth.OAuthManager._fetch_issuer_discovery",
+            side_effect=failure,
+            return_value=b"not json",
+        )
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+        manager = operator.oauth_manager
+        assert manager.get_statuses("unit") == [expected_status]
+        assert manager.get_statuses("unit", recompute=True) == [expected_status]
+        assert manager.get_statuses("app", recompute=True) == []
+        restart.assert_not_called()
+        assert (
+            get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+            == "https://new-issuer"
+        )
+        assert not state_out.deferred
+
+
+def test_check_provider_returns_none_on_success(provider):
+    document = {
+        "issuer": provider.issuer_url,
+        "token_endpoint": provider.token_endpoint,
+        "jwks_uri": provider.jwks_endpoint,
+    }
+    with patch.object(OAuthManager, "_fetch_issuer_discovery", return_value=json.dumps(document)):
+        assert OAuthManager._check_provider_connection(provider, None) is None
+        manager = object.__new__(OAuthManager)
+        assert manager._get_provider_connection_status(provider, None) is None
+
+
+@pytest.mark.parametrize(
+    "error, expected_error, expected_status",
+    [
+        (requests.Timeout(), OauthIssuerUnreachableError, OAuthStatuses.ISSUER_UNREACHABLE.value),
+        (
+            requests.exceptions.SSLError(),
+            OauthIssuerTLSError,
+            OAuthStatuses.ISSUER_TLS_ERROR.value,
+        ),
+    ],
+)
+def test_transport_failure_classification(provider, error, expected_error, expected_status):
+    with patch.object(OAuthManager, "_fetch_issuer_discovery", side_effect=error):
+        with pytest.raises(expected_error):
+            OAuthManager._check_provider_connection(provider, None)
+        manager = object.__new__(OAuthManager)
+        assert manager._get_provider_connection_status(provider, None) == expected_status
+
+
+def test_missing_provider():
+    with pytest.raises(OauthProviderDataMissingError):
+        OAuthManager._check_provider_connection(None, None)
+    manager = object.__new__(OAuthManager)
+    assert (
+        manager._get_provider_connection_status(None, None)
+        == OAuthStatuses.WAITING_FOR_OAUTH_DATA.value
+    )

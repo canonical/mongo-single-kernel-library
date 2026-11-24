@@ -664,7 +664,7 @@ class OAuthStatuses(Enum):
     INVALID_OAUTH_REL_ON_SHARD = StatusObject(
         status="blocked",
         message="Cannot integrate OIDC with shard.",
-        action="Remove the oauth relation from shard.",
+        action="Remove the oauth and the oauth-certificate-transfer relation from shard.",
     )
     MISSING_OAUTH_RELATION = StatusObject(
         status="blocked",

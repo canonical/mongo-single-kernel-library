@@ -1,607 +1,478 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 from dataclasses import replace
-from datetime import timedelta
-from types import SimpleNamespace
 
 import pytest
-from charmlibs.interfaces.tls_certificates import (
-    Certificate,
-    CertificateRequestAttributes,
-    CertificateSigningRequest,
-    PrivateKey,
-)
-from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops.model import BlockedStatus
+from charmlibs.interfaces.certificate_transfer import CertificateTransferRequires
 from ops.testing import Relation, Secret
 from yaml import safe_dump
 
 from single_kernel_mongo.config.literals import RollingOpsCallbackId
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import OAuthStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from tests.unit.auth_scenario_helpers import get_relation, mongo_state, mongos_state, oauth_relation
+from tests.unit.auth_scenario_helpers import (
+    get_relation,
+    mongo_state,
+    mongos_state,
+    oauth_certificate_transfer_relation,
+)
 
 pytest_plugins = ("tests.unit.auth_scenario_helpers",)
-
-pytestmark = pytest.mark.usefixtures("short_mock_fs_interactions")
-
-
-@pytest.fixture
-def certificates():
-    """Generate a PEM chain and a replacement CA with TLS charmlibs."""
-    validity = timedelta(days=365)
-    root_key = PrivateKey.generate()
-    root = Certificate.generate_self_signed_ca(
-        attributes=CertificateRequestAttributes(common_name="Root CA"),
-        private_key=root_key,
-        validity=validity,
-    )
-    intermediate_key = PrivateKey.generate()
-    intermediate_csr = CertificateSigningRequest.generate(
-        attributes=CertificateRequestAttributes(common_name="Intermediate CA"),
-        private_key=intermediate_key,
-    )
-    intermediate = Certificate.generate(
-        csr=intermediate_csr,
-        ca=root,
-        ca_private_key=root_key,
-        validity=validity,
-        is_ca=True,
-    )
-    leaf_csr = CertificateSigningRequest.generate(
-        attributes=CertificateRequestAttributes(common_name="issuer.example"),
-        private_key=PrivateKey.generate(),
-    )
-    leaf = Certificate.generate(
-        csr=leaf_csr,
-        ca=intermediate,
-        ca_private_key=intermediate_key,
-        validity=validity,
-    )
-    rotated = Certificate.generate_self_signed_ca(
-        attributes=CertificateRequestAttributes(common_name="Rotated CA"),
-        private_key=PrivateKey.generate(),
-        validity=validity,
-    )
-    return SimpleNamespace(
-        root=str(root), intermediate=str(intermediate), leaf=str(leaf), rotated=str(rotated)
-    )
+pytestmark = pytest.mark.usefixtures("isolate_oauth_events", "short_mock_fs_interactions")
 
 
-@pytest.fixture
-def workload_files(mocker):
-    """Keep workload I/O in memory while preserving read-after-write semantics."""
-
-    def attach(workload):
-        files = {}
-        mocker.patch.object(
-            workload, "read", side_effect=lambda path: files.get(path, "").splitlines()
-        )
-        mocker.patch.object(workload, "exists", side_effect=lambda path: path in files)
-        write = mocker.patch.object(
-            workload, "write", side_effect=lambda path, content: files.update({path: content})
-        )
-        delete = mocker.patch.object(
-            workload, "delete", side_effect=lambda path: files.pop(path, None)
-        )
-        return SimpleNamespace(files=files, write=write, delete=delete)
-
-    return attach
-
-
-def certificate_relation(certificates, ca=None):
-    return Relation(
-        endpoint="oauth-certificate-transfer",
-        remote_app_name="idp-ca",
-        remote_app_data={
-            "version": "1",
-            "certificates": json.dumps([certificates.intermediate, ca or certificates.root]),
-        },
-    )
-
-
-def test_replica_set_receives_pem_chain_in_peer_secret(
-    mongodb_ctx, mongodb_container, certificates, workload_files, mocker
+def test_on_certificates_available_replica_set_updates_databag_and_restarts(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, certificates, mocker, registered_oauth
 ):
-    relation = certificate_relation(certificates)
-    state_in = mongo_state(
-        mongodb_container,
-        peer_data={"oauth-issuer": "https://issuer.example"},
-        relations={relation},
+    oauth, secret = registered_oauth
+    oauth_certs_relation = oauth_certificate_transfer_relation(certificates)
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=MongoDBRoles.REPLICATION,
+            leader=True,
+            relations={oauth, oauth_certs_relation},
+        ),
+        secrets={secret},
     )
-    with mongodb_ctx(
-        mongodb_ctx.on.relation_changed(relation, remote_unit=0), state_in
-    ) as scenario:
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificate_set_updated,
+        certificates={certificates.root, certificates.intermediate},
+        relation_id=oauth_certs_relation.id,
+    )
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
+        )
         operator = scenario.charm.operator
-        io = workload_files(operator.workload)
-        io.files[operator.config_manager.file] = safe_dump(operator.config_manager.build_config())
-        request_restart = mocker.patch.object(operator, "async_restart_charm_services")
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        request = mocker.patch.object(operator, "async_restart_charm_services")
 
         state_out = scenario.run()
 
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://new-issuer"
+    )
     bundle = "\n".join(sorted([certificates.root, certificates.intermediate]))
-    secret = next(
+    ca_secret = next(
         secret
         for secret in state_out.secrets
         if secret.label == f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app"
     )
-    assert secret.latest_content["oauth-ca"] == bundle
-    assert io.files[operator.workload.paths.oauth_ca_file] == bundle
-    request_restart.assert_called_once_with(force=False)
+    assert ca_secret.latest_content["oauth-ca"] == bundle
+    request.assert_called_once_with(force=False)
 
 
-def test_new_router_receives_ca_from_peer_secret(
-    mongodb_ctx, mongodb_container, certificates, mocker
-):
-    relation = Relation(
-        endpoint="cluster", remote_app_name="new-router", remote_app_data={"database": "mongos"}
-    )
-    state_in = mongo_state(mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={relation})
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(relation), state_in) as scenario:
-        operator = scenario.charm.operator
-        operator.state.app_peer_data.oauth_ca = certificates.root
-        mocker.patch.object(operator.mongo_manager, "reconcile_mongo_users_and_dbs")
-        mocker.patch.object(
-            operator.state, "generate_config_server_db", return_value="rs/10.0.0.3:27017"
-        )
-        mocker.patch.object(operator.state, "get_keyfile", return_value="keyfile")
-
-        state_out = scenario.run()
-
-    assert state_out.get_relation(relation.id).local_app_data["oauth-ca"] == certificates.root
-
-
-@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
-def test_invalid_peer_ca_reports_tls_error(mongodb_ctx, mongodb_container, mocker, role):
-    state_in = mongo_state(
-        mongodb_container, role=role, relations={oauth_relation("https://issuer.example")}
-    )
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        operator.state.app_peer_data.oauth_ca = "invalid PEM"
-        mocker.patch.object(
-            operator, "get_statuses", return_value=[StatusObject(status="active", message="")]
-        )
-        restart = mocker.patch.object(operator, "async_restart_charm_services")
-
-        operator.oauth_manager.configure()
-        state_out = scenario.run()
-
-        assert state_out.unit_status == BlockedStatus(OAuthStatuses.ISSUER_TLS_ERROR.value.message)
-        restart.assert_not_called()
-
-
-def test_certificate_available_writes_replica_set_ca(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
-):
-    relation = Relation(
-        endpoint="oauth-certificate-transfer",
-        remote_app_name="idp-ca",
-        remote_app_data={
-            "version": "1",
-            "certificates": json.dumps(["root-ca", "intermediate-ca"]),
-        },
-    )
-    state_in = mongo_state(mongodb_container, leader=True, relations={relation})
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(relation), state_in) as scenario:
-        operator = scenario.charm.operator
-        write = mocker.patch.object(operator.workload, "write")
-
-        scenario.run()
-
-        write.assert_called_once_with(
-            operator.workload.paths.oauth_ca_file, "intermediate-ca\nroot-ca"
-        )
-
-
-def test_certificate_available_does_not_write_config_server_ca(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
-):
-    relation = Relation(
-        endpoint="oauth-certificate-transfer",
-        remote_app_name="idp-ca",
-        remote_app_data={"version": "1", "certificates": json.dumps(["root-ca"])},
-    )
-    state_in = mongo_state(mongodb_container, role=MongoDBRoles.CONFIG_SERVER, relations={relation})
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(relation), state_in) as scenario:
-        write = mocker.patch.object(scenario.charm.operator.workload, "write")
-
-        scenario.run()
-
-        write.assert_not_called()
-
-
-def test_certificate_removed_deletes_replica_set_ca(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
-):
-    relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state_in = mongo_state(mongodb_container, leader=True, relations={relation})
-    with mongodb_ctx(mongodb_ctx.on.relation_broken(relation), state_in) as scenario:
-        workload = scenario.charm.operator.workload
-        mocker.patch.object(workload, "exists", return_value=True)
-        delete = mocker.patch.object(workload, "delete")
-
-        scenario.run()
-
-        delete.assert_called_once_with(workload.paths.oauth_ca_file)
-
-
-@pytest.mark.parametrize("bundle", ["first-ca", "updated-ca"])
-def test_certificate_available_publishes_config_server_ca_to_mongos(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, config_server_relations, bundle
-):
-    first, second, pending = config_server_relations
-    certificate_relation = Relation(
-        endpoint="oauth-certificate-transfer",
-        remote_app_name="idp-ca",
-        remote_app_data={"version": "1", "certificates": json.dumps([bundle])},
-    )
-    state_in = mongo_state(
-        mongodb_container,
-        role=MongoDBRoles.CONFIG_SERVER,
-        relations={first, second, pending, certificate_relation},
-    )
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(certificate_relation), state_in) as scenario:
-        write = mocker.patch.object(scenario.charm.operator.workload, "write")
-
-        state_out = scenario.run()
-
-    assert state_out.get_relation(first.id).local_app_data["oauth-ca"] == bundle
-    assert state_out.get_relation(second.id).local_app_data["oauth-ca"] == bundle
-    assert "oauth-ca" not in state_out.get_relation(pending.id).local_app_data
-    write.assert_not_called()
-
-
-@pytest.mark.parametrize("leader", [True, False])
-@pytest.mark.parametrize("bundle", ["first-ca", "updated-ca"])
-def test_mongos_stores_oauth_ca_from_cluster_relation(
+def test_on_certificates_available_config_server_propagates_ca_and_does_not_restart(
     mock_issuer_tls,
-    mongos_ctx,
+    mongodb_ctx,
     mongodb_container,
-    mongos_oauth_restart,
-    mongos_cluster,
-    leader,
-    bundle,
+    certificates,
+    mocker,
+    registered_oauth,
+    config_server_relations,
 ):
-    cluster = replace(
-        mongos_cluster, remote_app_data={**mongos_cluster.remote_app_data, "oauth-ca": bundle}
+    oauth, secret = registered_oauth
+    oauth_certs_relation = oauth_certificate_transfer_relation(certificates)
+    first, second, pending = config_server_relations
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=MongoDBRoles.CONFIG_SERVER,
+            leader=True,
+            relations={oauth, oauth_certs_relation, first, second, pending},
+        ),
+        secrets={secret},
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
-    with mongos_oauth_restart(state_in, mongos_ctx.on.relation_changed(cluster)) as run:
-        run.scenario.run()
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificate_set_updated,
+        certificates={certificates.root, certificates.intermediate},
+        relation_id=oauth_certs_relation.id,
+    )
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
+        )
+        operator = scenario.charm.operator
+        request = mocker.patch.object(operator, "async_restart_charm_services")
 
-        run.write.assert_called_once_with(run.config.workload.paths.oauth_ca_file, bundle)
+        state_out = scenario.run()
+
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://new-issuer"
+    )
+    bundle = "\n".join(sorted([certificates.root, certificates.intermediate]))
+    ca_secret = next(
+        secret
+        for secret in state_out.secrets
+        if secret.label == f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app"
+    )
+    assert ca_secret.latest_content["oauth-ca"] == bundle
+    assert state_out.get_relation(first.id).local_app_data["oauth-issuer"] == "https://new-issuer"
+    for router in (first, second):
+        data = state_out.get_relation(router.id).local_app_data
+        assert "oauth-ca" not in data
+        router_secret = state_out.get_secret(id=data["secret-extra"])
+        assert router_secret.latest_content["oauth-ca"] == bundle
+    assert state_out.get_relation(second.id).local_app_data["oauth-issuer"] == "https://new-issuer"
+    assert "oauth-issuer" not in state_out.get_relation(pending.id).local_app_data
+    assert "secret-extra" not in state_out.get_relation(pending.id).local_app_data
+    request.assert_not_called()
 
 
-def test_replica_set_oidc_provider_uses_local_ca(
+def test_on_secret_changed_follower_replica_set_requests_restart(
     mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
 ):
-    state_in = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=True)
-
-        config = operator.config_manager.build_config()
-
-        providers = json.loads(config["setParameter"]["oidcIdentityProviders"])
-        assert len(providers) == 1
-        assert providers[0]["serverCAFile"] == str(operator.workload.paths.oauth_ca_file)
-
-
-def test_replica_set_oidc_provider_omits_missing_ca(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
-):
-    state_in = mongo_state(mongodb_container, peer_data={"oauth-issuer": "https://issuer.example"})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=False)
-
-        config = operator.config_manager.build_config()
-
-        providers = json.loads(config["setParameter"]["oidcIdentityProviders"])
-        assert len(providers) == 1
-        assert "serverCAFile" not in providers[0]
-
-
-def test_replica_set_ca_alone_does_not_enable_oidc(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker
-):
-    state_in = mongo_state(
-        mongodb_container,
+    secret = Secret(
+        tracked_content={"oauth-ca": "root-ca"},
+        label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
     )
-    with mongodb_ctx(
-        mongodb_ctx.on.collect_unit_status(),
-        state_in,
-    ) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=True)
-
-        assert operator.config_manager.oauth_parameters == {}
-
-
-def test_mongos_oidc_provider_uses_local_ca(
-    mock_issuer_tls, mongos_ctx, mongodb_container, mocker, mongos_cluster
-):
-    cluster = replace(
-        mongos_cluster,
-        remote_app_data={
-            **mongos_cluster.remote_app_data,
-            "oauth-issuer": "https://issuer.example",
-        },
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            leader=False,
+            peer_data={"oauth-issuer": "https://issuer.example"},
+        ),
+        secrets={secret},
     )
-    state_in = mongos_state(mongodb_container, relations={cluster})
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.secret_changed(secret), state_in) as scenario:
         operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=True)
-
-        config = operator.config_manager.build_config()
-
-        providers = json.loads(config["setParameter"]["oidcIdentityProviders"])
-        assert len(providers) == 1
-        assert providers[0]["serverCAFile"] == str(operator.workload.paths.oauth_ca_file)
-
-
-def test_mongos_oidc_provider_omits_missing_ca(
-    mock_issuer_tls, mongos_ctx, mongodb_container, mocker, mongos_cluster
-):
-    cluster = replace(
-        mongos_cluster,
-        remote_app_data={
-            **mongos_cluster.remote_app_data,
-            "oauth-issuer": "https://issuer.example",
-        },
-    )
-    state_in = mongos_state(mongodb_container, relations={cluster})
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=False)
-
-        config = operator.config_manager.build_config()
-
-        providers = json.loads(config["setParameter"]["oidcIdentityProviders"])
-        assert len(providers) == 1
-        assert "serverCAFile" not in providers[0]
-
-
-def test_mongos_ca_alone_does_not_enable_oidc(
-    mock_issuer_tls, mongos_ctx, mongodb_container, mocker, mongos_cluster
-):
-    state_in = mongos_state(mongodb_container, relations={mongos_cluster})
-    with mongos_ctx(mongos_ctx.on.collect_unit_status(), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator.workload, "exists", return_value=True)
-
-        assert operator.config_manager.oauth_parameters == {}
-
-
-def test_replica_set_ca_removal_requests_restart(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, workload_files
-):
-    relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state_in = mongo_state(
-        mongodb_container,
-        leader=True,
-        peer_data={"oauth-issuer": "https://issuer.example"},
-        relations={relation},
-    )
-    with mongodb_ctx(mongodb_ctx.on.relation_broken(relation), state_in) as scenario:
-        operator = scenario.charm.operator
-        files = workload_files(operator.workload).files
-        files[operator.workload.paths.oauth_ca_file] = "previous-ca"
-        files[operator.config_manager.file] = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
         request = mocker.patch.object(operator, "async_restart_charm_services")
 
         scenario.run()
 
-        request.assert_called_once_with(force=False)
-        assert operator.workload.paths.oauth_ca_file not in files
+    request.assert_called_once_with(force=False)
 
 
-@pytest.mark.parametrize("leader", [True, False])
-def test_mongos_ca_addition_requests_restart(
-    mock_issuer_tls,
-    mongos_oauth_restart,
-    mongos_ctx,
-    mongodb_container,
-    mongos_cluster,
-    workload_files,
-    leader,
+def test_on_certificate_removed_replica_set_remove_ca_from_databag_and_restart(
+    mock_issuer_tls, mongodb_ctx, mongodb_container, certificates, mocker, registered_oauth
 ):
-    cluster = replace(
-        mongos_cluster,
-        remote_app_data={
-            **mongos_cluster.remote_app_data,
-            "oauth-issuer": "https://issuer.example",
-            "oauth-ca": "root-ca",
-        },
+    oauth, oauth_secret = registered_oauth
+    ca_secret = Secret(
+        tracked_content={"oauth-ca": certificates.root, "keyfile": "keyfile"},
+        owner="app",
+        label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
-    with mongos_oauth_restart(state_in, mongos_ctx.on.relation_changed(cluster)) as run:
-        operator = run.scenario.charm.operator
-        files = workload_files(operator.workload).files
-        files[run.config.file] = safe_dump(run.config.build_config())
-
-        run.scenario.run()
-
-        run.request.assert_called_once_with(
-            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
-        )
-        assert files[operator.workload.paths.oauth_ca_file] == "root-ca"
-
-
-@pytest.mark.parametrize("leader", [True, False])
-def test_mongos_ca_rotation_does_not_restart_service(
-    mock_issuer_tls,
-    mongos_oauth_restart,
-    mongos_ctx,
-    mongodb_container,
-    mongos_cluster,
-    workload_files,
-    leader,
-):
-    cluster = replace(
-        mongos_cluster,
-        remote_app_data={
-            **mongos_cluster.remote_app_data,
-            "oauth-issuer": "https://issuer.example",
-            "oauth-ca": "updated-ca",
-        },
+    relation = oauth_certificate_transfer_relation(certificates)
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            peer_data={"oauth-issuer": "https://new-issuer"},
+            relations={oauth, relation},
+        ),
+        secrets={oauth_secret, ca_secret},
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
-    with mongos_oauth_restart(state_in, mongos_ctx.on.relation_changed(cluster)) as run:
-        operator = run.scenario.charm.operator
-        files = workload_files(operator.workload).files
-        files[operator.workload.paths.oauth_ca_file] = "previous-ca"
-        files[run.config.file] = safe_dump(run.config.build_config())
-
-        run.scenario.run()
-        run.cluster.update_mongos_and_restart(force=False)
-
-        run.request.assert_called_once_with(
-            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
-        )
-        run.restart.assert_not_called()
-        assert files[operator.workload.paths.oauth_ca_file] == "updated-ca"
-
-
-@pytest.mark.parametrize("leader", [True, False])
-def test_mongos_ca_removal_requests_restart(
-    mock_issuer_tls,
-    mongos_oauth_restart,
-    mongos_ctx,
-    mongodb_container,
-    mongos_cluster,
-    workload_files,
-    leader,
-):
-    cluster = replace(
-        mongos_cluster,
-        remote_app_data={
-            **mongos_cluster.remote_app_data,
-            "oauth-issuer": "https://issuer.example",
-        },
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificates_removed, relation_id=relation.id
     )
-    state_in = mongos_state(mongodb_container, leader=leader, relations={cluster})
-    with mongos_oauth_restart(state_in, mongos_ctx.on.relation_changed(cluster)) as run:
-        operator = run.scenario.charm.operator
-        files = workload_files(operator.workload).files
-        path = operator.workload.paths.oauth_ca_file
-        files[path] = "previous-ca"
-        files[run.config.file] = safe_dump(run.config.build_config())
-
-        run.scenario.run()
-
-        run.request.assert_called_once_with(
-            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
         )
-        assert path not in files
+        operator = scenario.charm.operator
+        assert operator.state.app_peer_data.oauth_ca == certificates.root
+        mocker.patch.object(operator.config_manager.workload, "read", return_value=["{}"])
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    peer = get_relation(state_out, PeerRelationNames.PEERS.value)
+    assert "oauth-ca" not in peer.local_app_data
+    assert peer.local_app_data["oauth-issuer"] == "https://new-issuer"
+    assert all("oauth-ca" not in secret.latest_content for secret in state_out.secrets)
+    restart.assert_called_once_with(force=False)
+    assert not state_out.deferred
 
 
-def test_config_server_ca_removal_is_shared_with_mongos(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, config_server_relations
+def test_on_certificate_removed_config_server_ca_from_mongos_not_restart(
+    mongodb_ctx, mongodb_container, certificates, mocker, registered_oauth, config_server_relations
 ):
+    oauth, oauth_secret = registered_oauth
+    ca_secret = Secret(
+        tracked_content={"oauth-ca": certificates.root, "keyfile": "keyfile"},
+        owner="app",
+        label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
+    )
+    relation = oauth_certificate_transfer_relation(certificates)
     first, second, pending = config_server_relations
-    first = replace(first, local_app_data={"oauth-ca": "previous-ca"})
-    second = replace(second, local_app_data={"oauth-ca": "previous-ca"})
-    certificate_relation = Relation(endpoint="oauth-certificate-transfer", remote_app_name="idp-ca")
-    state_in = mongo_state(
-        mongodb_container,
-        role=MongoDBRoles.CONFIG_SERVER,
-        relations={first, second, pending, certificate_relation},
+    router_secrets = {
+        router.id: Secret(
+            tracked_content={"oauth-ca": certificates.root, "keyfile": "keyfile"},
+            owner="app",
+            label=f"cluster.{router.id}.extra.secret",
+        )
+        for router in (first, second)
+    }
+    first, second = (
+        replace(router, local_app_data={"secret-extra": router_secrets[router.id].id})
+        for router in (first, second)
     )
-    with mongodb_ctx(mongodb_ctx.on.relation_broken(certificate_relation), state_in) as scenario:
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=MongoDBRoles.CONFIG_SERVER,
+            peer_data={"oauth-issuer": "https://new-issuer"},
+            relations={oauth, relation, first, second, pending},
+        ),
+        secrets={oauth_secret, ca_secret, *router_secrets.values()},
+    )
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificates_removed, relation_id=relation.id
+    )
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
+        )
+        operator = scenario.charm.operator
+        assert operator.state.app_peer_data.oauth_ca == certificates.root
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    assert all("oauth-ca" not in secret.latest_content for secret in state_out.secrets)
+    for router in (first, second, pending):
+        assert "oauth-ca" not in state_out.get_relation(router.id).local_app_data
+    for router in (first, second):
+        data = state_out.get_relation(router.id).local_app_data
+        secret = state_out.get_secret(id=data["secret-extra"])
+        assert secret.id == router_secrets[router.id].id
+        assert secret.latest_content == {"keyfile": "keyfile"}
+    assert (
+        get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data["oauth-issuer"]
+        == "https://new-issuer"
+    )
+    restart.assert_not_called()
+    assert not state_out.deferred
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_on_certificate_available_without_issuer_does_not_store_in_databag_and_defer(
+    mongodb_ctx, mongodb_container, certificates, mocker, role
+):
+    oauth = Relation(endpoint="oauth", remote_app_name="hydra")
+    relation = oauth_certificate_transfer_relation(certificates)
+    state_in = mongo_state(mongodb_container, role=role, relations={oauth, relation})
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificate_set_updated,
+        certificates={certificates.root, certificates.intermediate},
+        relation_id=relation.id,
+    )
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
+        )
         restart = mocker.patch.object(scenario.charm.operator, "async_restart_charm_services")
 
         state_out = scenario.run()
 
-    assert "oauth-ca" not in state_out.get_relation(first.id).local_app_data
-    assert "oauth-ca" not in state_out.get_relation(second.id).local_app_data
-    assert "oauth-ca" not in state_out.get_relation(pending.id).local_app_data
+    peer = get_relation(state_out, PeerRelationNames.PEERS.value)
+    assert "oauth-ca" not in peer.local_app_data
+    assert "oauth-issuer" not in peer.local_app_data
+    assert all("oauth-ca" not in secret.latest_content for secret in state_out.secrets)
     restart.assert_not_called()
+    assert len(state_out.deferred) == 1
 
 
-def test_peer_change_writes_follower_ca_and_requests_restart(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, workload_files
+@pytest.mark.parametrize("leader", [True, False])
+def test_replica_set_adds_oauth_ca_and_requests_restart(
+    mongodb_ctx, mongodb_container, mocker, certificates, leader
 ):
-    secret = Secret(
-        tracked_content={"oauth-ca": "root-ca"},
+    ca_secret = Secret(
+        tracked_content={"oauth-ca": certificates.rotated},
         owner="app",
         label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
     )
     state_in = replace(
         mongo_state(
             mongodb_container,
-            leader=False,
+            leader=leader,
             peer_data={"oauth-issuer": "https://issuer.example"},
         ),
-        secrets={secret},
+        secrets={ca_secret},
     )
-    original_peer = get_relation(state_in, PeerRelationNames.PEERS.value)
-    peer = replace(original_peer, peers_data={1: {}})
-    state_in = replace(state_in, relations=(state_in.relations - {original_peer}) | {peer})
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(peer, remote_unit=1), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
-        mocker.patch.object(operator, "peer_changed")
-        files = workload_files(operator.workload).files
-        files[operator.config_manager.file] = safe_dump(operator.config_manager.build_config())
+        ca_file = operator.workload.paths.oauth_ca_file
+        files = {}
+        mocker.patch.object(operator.workload, "exists", side_effect=lambda path: path in files)
+        write = mocker.patch.object(
+            operator.workload,
+            "write",
+            side_effect=lambda path, content: files.update({path: content}),
+        )
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
         request = mocker.patch.object(operator, "async_restart_charm_services")
-        state_out = scenario.run()
 
-    assert files[operator.workload.paths.oauth_ca_file] == "root-ca"
-    request.assert_called_once_with(force=False)
-    assert get_relation(state_out, peer.endpoint).local_app_data == peer.local_app_data
+        operator.oauth_manager.restart_replica_set_when_ready()
+
+        write.assert_called_once_with(ca_file, certificates.rotated)
+        assert files[ca_file] == certificates.rotated
+        request.assert_called_once_with(force=False)
 
 
-def test_peer_secret_rotation_updates_follower_ca_without_restart(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, workload_files
+@pytest.mark.parametrize("leader", [True, False])
+def test_replica_set_removes_oauth_ca_and_requests_restart(
+    mongodb_ctx, mongodb_container, mocker, certificates, leader
 ):
-    secret = Secret(
-        tracked_content={"oauth-ca": "updated-ca"},
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            leader=leader,
+            peer_data={"oauth-issuer": "https://issuer.example"},
+        ),
+        secrets=set(),
+    )
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
+        operator = scenario.charm.operator
+        ca_file = operator.workload.paths.oauth_ca_file
+        files = {ca_file: certificates.root}
+        mocker.patch.object(operator.workload, "exists", side_effect=lambda path: path in files)
+        delete = mocker.patch.object(
+            operator.workload, "delete", side_effect=lambda path: files.pop(path)
+        )
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
+        request = mocker.patch.object(operator, "async_restart_charm_services")
+
+        operator.oauth_manager.restart_replica_set_when_ready()
+
+        delete.assert_called_once_with(ca_file)
+        assert ca_file not in files
+        request.assert_called_once_with(force=False)
+
+
+@pytest.mark.parametrize("leader", [True, False])
+def test_replica_set_rotates_oauth_ca_without_requesting_restart(
+    mongodb_ctx, mongodb_container, mocker, certificates, leader
+):
+    ca_secret = Secret(
+        tracked_content={"oauth-ca": certificates.rotated},
+        owner="app",
         label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
     )
     state_in = replace(
         mongo_state(
             mongodb_container,
-            leader=False,
+            leader=leader,
             peer_data={"oauth-issuer": "https://issuer.example"},
         ),
-        secrets={secret},
+        secrets={ca_secret},
     )
-    peer = get_relation(state_in, PeerRelationNames.PEERS.value)
-    with mongodb_ctx(mongodb_ctx.on.secret_changed(secret), state_in) as scenario:
+    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
         operator = scenario.charm.operator
-        files = workload_files(operator.workload).files
-        files[operator.workload.paths.oauth_ca_file] = "previous-ca"
-        files[operator.config_manager.file] = safe_dump(operator.config_manager.build_config())
+        ca_file = operator.workload.paths.oauth_ca_file
+        files = {ca_file: certificates.root}
+        mocker.patch.object(operator.workload, "exists", side_effect=lambda path: path in files)
+        write = mocker.patch.object(
+            operator.workload,
+            "write",
+            side_effect=lambda path, content: files.update({path: content}),
+        )
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
         request = mocker.patch.object(operator, "async_restart_charm_services")
-        state_out = scenario.run()
 
-    assert files[operator.workload.paths.oauth_ca_file] == "updated-ca"
-    request.assert_not_called()
-    assert get_relation(state_out, peer.endpoint).local_app_data == peer.local_app_data
+        operator.oauth_manager.restart_replica_set_when_ready()
+
+        write.assert_called_once_with(ca_file, certificates.rotated)
+        assert files[ca_file] == certificates.rotated
+        request.assert_not_called()
 
 
-def test_peer_change_removes_follower_ca_and_requests_restart(
-    mock_issuer_tls, mongodb_ctx, mongodb_container, mocker, workload_files
+@pytest.mark.parametrize("leader", [True, False])
+def test_mongos_adds_oauth_ca_and_restarts(
+    mongos_ctx,
+    mongodb_container,
+    mongos_cluster,
+    mongos_oauth_restart,
+    mocker,
+    certificates,
+    leader,
 ):
-    state_in = mongo_state(
-        mongodb_container, leader=False, peer_data={"oauth-issuer": "https://issuer.example"}
+    ca_secret = Secret(tracked_content={"oauth-ca": certificates.rotated})
+    cluster = replace(
+        mongos_cluster,
+        remote_app_data={
+            **mongos_cluster.remote_app_data,
+            "oauth-issuer": "https://issuer.example",
+            "secret-extra": ca_secret.id,
+        },
     )
-    original_peer = get_relation(state_in, PeerRelationNames.PEERS.value)
-    peer = replace(original_peer, peers_data={1: {}})
-    state_in = replace(state_in, relations=(state_in.relations - {original_peer}) | {peer})
-    with mongodb_ctx(mongodb_ctx.on.relation_changed(peer, remote_unit=1), state_in) as scenario:
-        operator = scenario.charm.operator
-        mocker.patch.object(operator, "peer_changed")
-        files = workload_files(operator.workload).files
-        files[operator.workload.paths.oauth_ca_file] = "previous-ca"
-        files[operator.config_manager.file] = safe_dump(operator.config_manager.build_config())
-        request = mocker.patch.object(operator, "async_restart_charm_services")
-        state_out = scenario.run()
+    state_in = replace(
+        mongos_state(mongodb_container, leader=leader, relations={cluster}),
+        secrets={ca_secret},
+    )
+    with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status()) as context:
+        operator = context.scenario.charm.operator
+        ca_file = operator.workload.paths.oauth_ca_file
+        files = {}
+        mocker.patch.object(operator.workload, "exists", side_effect=lambda path: path in files)
+        context.write.side_effect = lambda path, content: files.update({path: content})
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
+        mocker.patch.object(operator.tls_manager, "reconcile_tls", return_value=False)
+        mocker.patch.object(operator, "finalize_after_restart")
+        mocker.patch.object(operator, "recompute_statuses")
 
-    assert operator.workload.paths.oauth_ca_file not in files
-    request.assert_called_once_with(force=False)
-    assert get_relation(state_out, peer.endpoint).local_app_data == peer.local_app_data
+        context.cluster.async_update_mongos_and_restart()
+
+        context.write.assert_called_once_with(ca_file, certificates.rotated)
+        assert files[ca_file] == certificates.rotated
+        context.request.assert_called_once_with(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
+        )
+
+
+@pytest.mark.parametrize("leader", [True, False])
+def test_mongos_removes_oauth_ca_and_restarts(
+    mongos_ctx,
+    mongodb_container,
+    mongos_cluster,
+    mongos_oauth_restart,
+    mocker,
+    certificates,
+    leader,
+):
+    cluster = replace(
+        mongos_cluster,
+        remote_app_data={
+            **mongos_cluster.remote_app_data,
+            "oauth-issuer": "https://issuer.example",
+        },
+    )
+    state_in = replace(
+        mongos_state(mongodb_container, leader=leader, relations={cluster}),
+        secrets=set(),
+    )
+    with mongos_oauth_restart(state_in, mongos_ctx.on.collect_unit_status()) as context:
+        operator = context.scenario.charm.operator
+        ca_file = operator.workload.paths.oauth_ca_file
+        files = {ca_file: certificates.root}
+        mocker.patch.object(operator.workload, "exists", side_effect=lambda path: path in files)
+        context.write.side_effect = lambda path, content: files.update({path: content})
+        delete = mocker.patch.object(
+            operator.workload, "delete", side_effect=lambda path: files.pop(path)
+        )
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
+        mocker.patch.object(operator.tls_manager, "reconcile_tls", return_value=False)
+        mocker.patch.object(operator, "finalize_after_restart")
+        mocker.patch.object(operator, "recompute_statuses")
+
+        context.cluster.async_update_mongos_and_restart()
+
+        delete.assert_called_once_with(ca_file)
+        assert ca_file not in files
+        context.request.assert_called_once_with(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": False}
+        )

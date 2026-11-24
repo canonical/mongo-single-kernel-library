@@ -554,23 +554,12 @@ class ClusterRequirer(Object):
         else:  # if we don't have a cert, we'll remove it
             self.workload.paths.config_server_ext_ca_file.unlink(missing_ok=True)
 
-        self._update_oauth_ca()
+        self.update_oauth_ca()
 
         self.dependent.rollingops_manager.request_async_lock(
             callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": force}
         )
         logger.info("Requested and async lock to update Mongos and restart.")
-
-    def _update_oauth_ca(self) -> None:
-        """Updates the OAuth CA in the workload.
-
-        Raises:
-            WorkloadServiceError: if the operations on the workload fail.
-        """
-        if oauth_ca := self.state.cluster.oauth_ca:
-            self.workload.write(self.workload.paths.oauth_ca_file, oauth_ca)
-        elif self.workload.exists(self.workload.paths.oauth_ca_file):
-            self.workload.delete(self.workload.paths.oauth_ca_file)
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """If the certificates are rotated for example, handle it immediately.
@@ -630,6 +619,17 @@ class ClusterRequirer(Object):
             self.dependent.remove_connection_info()
         else:
             self.state.db_initialised = False
+
+    def update_oauth_ca(self) -> None:
+        """Updates the OAuth CA in the workload.
+
+        Raises:
+            WorkloadServiceError: if the operations on the workload fail.
+        """
+        if oauth_ca := self.state.cluster.oauth_ca:
+            self.workload.write(self.workload.paths.oauth_ca_file, oauth_ca)
+        elif self.workload.exists(self.workload.paths.oauth_ca_file):
+            self.workload.delete(self.workload.paths.oauth_ca_file)
 
     def cleanup_cluster_id(self) -> None:
         """On relation-broken event, the cluster ID is removed."""
