@@ -288,6 +288,7 @@ def oauth_certificate_transfer_relation(certificates, ca=None):
 @pytest.fixture
 def provider():
     return SimpleNamespace(
+        client_id="client-id",
         issuer_url="https://issuer.example",
         token_endpoint="https://issuer.example/token",
         jwks_endpoint="https://issuer.example/jwks",

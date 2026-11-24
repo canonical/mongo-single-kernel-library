@@ -162,7 +162,7 @@ def test_oauth_info_changed_does_not_restart_unchanged_configuration_replica_set
     state_in = replace(
         mongo_state(
             mongodb_container,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
             relations={oauth_relation(client_id="client-id", client_secret_id=secret.id)},
         ),
         secrets={secret},
@@ -268,7 +268,7 @@ def test_oauth_follower_restarts_from_shared_issuer_replica_set(
     state_in = mongo_state(
         mongodb_container,
         leader=False,
-        peer_data={"oauth-issuer": "https://10.0.0.3"},
+        peer_data={"oauth-issuer": "https://10.0.0.3", "oauth-client-id": "client-id"},
         peers_data={1: {}},
     )
     peer = get_relation(state_in, PeerRelationNames.PEERS.value)
@@ -479,7 +479,7 @@ def test_oauth_relation_does_not_block_supported_roles(
         mongo_state(
             mongodb_container,
             role=role,
-            peer_data={"oauth-issuer": "https://new-issuer"},
+            peer_data={"oauth-issuer": "https://new-issuer", "oauth-client-id": "client-id"},
             relations={oauth},
         ),
         secrets={secret},
@@ -532,7 +532,7 @@ def test_update_status_reports_provider_failure_without_restarting(
         mongo_state(
             mongodb_container,
             role=role,
-            peer_data={"oauth-issuer": "https://new-issuer"},
+            peer_data={"oauth-issuer": "https://new-issuer", "oauth-client-id": "client-id"},
             relations={oauth},
         ),
         secrets={secret},
@@ -599,3 +599,45 @@ def test_missing_provider():
         manager._get_provider_connection_status(None, None)
         == OAuthStatuses.WAITING_FOR_OAUTH_DATA.value
     )
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
+def test_client_id_change_with_same_issuer_updates_configuration(
+    mongodb_ctx, mongodb_container, mocker, registered_oauth, config_server_relations, role
+):
+    oauth, secret = registered_oauth
+    first, second, pending = config_server_relations
+    routers = {first, second, pending} if role == MongoDBRoles.CONFIG_SERVER else set()
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            role=role,
+            peer_data={"oauth-issuer": "https://new-issuer", "oauth-client-id": "old-client-id"},
+            relations={oauth, *routers},
+        ),
+        secrets={secret},
+    )
+    with mongodb_ctx(mongodb_ctx.on.relation_changed(oauth), state_in) as scenario:
+        operator = scenario.charm.operator
+        current = safe_dump(operator.config_manager.build_config())
+        mocker.patch.object(operator.workload, "read", return_value=current.splitlines())
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+        peer = get_relation(state_out, PeerRelationNames.PEERS.value).local_app_data
+        assert peer["oauth-issuer"] == "https://new-issuer"
+        assert peer["oauth-client-id"] == "client-id"
+        if role == MongoDBRoles.REPLICATION:
+            providers = json.loads(
+                operator.config_manager.build_config()["setParameter"]["oidcIdentityProviders"]
+            )
+            assert providers[0]["audience"] == "client-id"
+            restart.assert_called_once_with(force=False)
+        else:
+            for router in (first, second):
+                data = state_out.get_relation(router.id).local_app_data
+                assert data["oauth-issuer"] == "https://new-issuer"
+                assert data["oauth-client-id"] == "client-id"
+            assert "oauth-client-id" not in state_out.get_relation(pending.id).local_app_data
+            restart.assert_not_called()

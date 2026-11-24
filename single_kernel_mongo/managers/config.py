@@ -446,7 +446,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
 
     @staticmethod
     def _build_oauth_parameters(
-        issuer: str | None, client_id: str | None, ca_file: Path | None = None
+        issuer: str | None, client_id: str | None, ca_file_path: Path | None = None
     ) -> dict[str, Any]:
         """Build OIDC settings for the single supported identity provider."""
         if not issuer or not client_id:

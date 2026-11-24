@@ -136,7 +136,7 @@ def test_on_secret_changed_follower_replica_set_requests_restart(
         mongo_state(
             mongodb_container,
             leader=False,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets={secret},
     )
@@ -163,7 +163,7 @@ def test_on_certificate_removed_replica_set_remove_ca_from_databag_and_restart(
     state_in = replace(
         mongo_state(
             mongodb_container,
-            peer_data={"oauth-issuer": "https://new-issuer"},
+            peer_data={"oauth-issuer": "https://new-issuer", "oauth-client-id": "client-id"},
             relations={oauth, relation},
         ),
         secrets={oauth_secret, ca_secret},
@@ -218,7 +218,7 @@ def test_on_certificate_removed_config_server_ca_from_mongos_not_restart(
         mongo_state(
             mongodb_container,
             role=MongoDBRoles.CONFIG_SERVER,
-            peer_data={"oauth-issuer": "https://new-issuer"},
+            peer_data={"oauth-issuer": "https://new-issuer", "oauth-client-id": "client-id"},
             relations={oauth, relation, first, second, pending},
         ),
         secrets={oauth_secret, ca_secret, *router_secrets.values()},
@@ -295,7 +295,7 @@ def test_replica_set_adds_oauth_ca_and_requests_restart(
         mongo_state(
             mongodb_container,
             leader=leader,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets={ca_secret},
     )
@@ -328,7 +328,7 @@ def test_replica_set_removes_oauth_ca_and_requests_restart(
         mongo_state(
             mongodb_container,
             leader=leader,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets=set(),
     )
@@ -364,7 +364,7 @@ def test_replica_set_rotates_oauth_ca_without_requesting_restart(
         mongo_state(
             mongodb_container,
             leader=leader,
-            peer_data={"oauth-issuer": "https://issuer.example"},
+            peer_data={"oauth-issuer": "https://issuer.example", "oauth-client-id": "client-id"},
         ),
         secrets={ca_secret},
     )
@@ -405,6 +405,7 @@ def test_mongos_adds_oauth_ca_and_restarts(
         remote_app_data={
             **mongos_cluster.remote_app_data,
             "oauth-issuer": "https://issuer.example",
+            "oauth-client-id": "client-id",
             "secret-extra": ca_secret.id,
         },
     )
@@ -448,6 +449,7 @@ def test_mongos_removes_oauth_ca_and_restarts(
         remote_app_data={
             **mongos_cluster.remote_app_data,
             "oauth-issuer": "https://issuer.example",
+            "oauth-client-id": "client-id",
         },
     )
     state_in = replace(
