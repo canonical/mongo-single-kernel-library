@@ -72,7 +72,7 @@ class OAuthEventHandler(Object):
             self._on_peer_relation_changed,
         )
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
+    def _on_peer_relation_changed(self, event: RelationChangedEvent | SecretChangedEvent) -> None:
         """Reconcile the replica set follower units' OIDC configuration.
 
         This fires after the leader writes the validated OAuth configuration
