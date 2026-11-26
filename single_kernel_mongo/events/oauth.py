@@ -2,7 +2,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Event handlers for the oauth and oaut-certificate-transfer relations."""
+"""Event handlers for the oauth and oauth-certificate-transfer relations."""
 
 from __future__ import annotations
 
@@ -142,9 +142,13 @@ class OAuthEventHandler(Object):
                 relation_id=event.relation_id
             )
         ):
+            logger.info(
+                "No OAuth CA certificates available on relation %s, skipping.",
+                event.relation_id,
+            )
             return
         try:
-            self.manager.store_certificates(ca_certs)
+            self.manager.store_ca_certificate(ca_certs)
         except (
             DeferrableFailedHookChecksError,
             LdapAndOauthConflictError,

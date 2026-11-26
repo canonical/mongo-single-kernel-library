@@ -93,7 +93,6 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             LdapAndOauthConflictError: LDAP and OIDC are mutual exclusivity is not respected.
         """
         if self.state.is_role(MongoDBRoles.SHARD):
-            self.set_status(OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value, scope="app")
             raise NonDeferrableFailedHookChecksError("Cannot integrate OAuth with shard.")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
@@ -204,7 +203,16 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
         self._assert_pass_hook_checks()
 
-        if issuer and not self._is_issuer_reachable(issuer, self.state.app_peer_data.oauth_ca):
+        removing_ca = (
+            self.state.app_peer_data.oauth_ca is None
+            and self.dependent.config_manager.file_has_oauth_ca_configuration()
+        )
+
+        if (
+            issuer
+            and not removing_ca
+            and not self._is_issuer_reachable(issuer, self.state.app_peer_data.oauth_ca)
+        ):
             raise OauthIssuerUnreachableError("Replica set is unable to reach the issuer.")
 
         self.reconcile_certificates_in_replica_set()
@@ -219,12 +227,12 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
         """
         try:
             self._fetch_issuer_discovery(issuer, ca)
-        except (requests.RequestException, OSError, ValueError) as e:
+        except (OauthIssuerTLSError, OauthIssuerUnreachableError, OauthInvalidDiscoveryError) as e:
             logger.error("The replica set was not able to reach the issuer %s: %s", issuer, e)
             return False
         return True
 
-    def store_certificates(self, certificates: set[str]) -> None:
+    def store_ca_certificate(self, certificates: set[str]) -> None:
         """Store and propagate the CA.
 
         The leader stores the CA in application peer databag.
@@ -314,17 +322,16 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             RollingOpsNoRelationError: If an async lock is requested too early.
             OauthIssuerUnreachableError: The issuer URL is unreachable or times out.
         """
-        self._assert_pass_hook_checks()
-
-        match self.oauth_state():
+        match state := self.oauth_state():
             case OAuthState.EMPTY:
                 return
             case OAuthState.ACTIVE | OAuthState.REMOVING:
                 self.restart_replica_set_when_ready()
                 self.set_status(OAuthStatuses.ACTIVE_IDLE.value, scope="both")
 
-            case OAuthState.MISSING_OAUTH_RELATION:
-                self.set_status(OAuthStatuses.MISSING_OAUTH_RELATION.value, scope="app")
+            case OAuthState.WRONG_ROLE | OAuthState.MISSING_OAUTH_RELATION:
+                if status := self._map_state_to_status(state):
+                    self.set_status(status, scope="app")
                 return
             case state:
                 self.state.statuses.clear(scope="unit", component=self.name)
@@ -345,29 +352,20 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
             raise OauthProviderDataMissingError("Waiting for OAuth provider information.")
 
         try:
-            if urlsplit(provider.issuer_url).scheme != "https":
-                raise OauthIssuerTLSError("The OAuth issuer must use HTTPS.")
+            scheme = urlsplit(provider.issuer_url).scheme
+        except ValueError as err:
+            raise OauthInvalidDiscoveryError("Discovery URL is invalid.") from err
+        if scheme != "https":
+            raise OauthIssuerTLSError("The OAuth issuer must use HTTPS.")
 
-            payload = OAuthManager._fetch_issuer_discovery(provider.issuer_url, ca)
+        payload = OAuthManager._fetch_issuer_discovery(provider.issuer_url, ca)
+        try:
             document = json.loads(payload)
-            if not OAuthManager._is_valid_discovery(document, provider):
-                raise OauthInvalidDiscoveryError("Discovery metadata does not match the provider.")
+        except ValueError as err:
+            raise OauthInvalidDiscoveryError("Discovery response is invalid.") from err
 
-        except requests.HTTPError as err:
-            if err.response is not None and 500 <= err.response.status_code < 600:
-                raise OauthIssuerUnreachableError(
-                    "OAuth issuer is temporarily unavailable."
-                ) from err
-            raise OauthInvalidDiscoveryError("Discovery request failed.") from err
-
-        except requests.exceptions.SSLError as err:
-            raise OauthIssuerTLSError("OAuth issuer certificate verification failed.") from err
-
-        except (requests.exceptions.InvalidURL, ValueError) as err:
-            raise OauthInvalidDiscoveryError("Discovery URL or response is invalid.") from err
-
-        except (requests.RequestException, OSError) as err:
-            raise OauthIssuerUnreachableError("OAuth issuer is unreachable.") from err
+        if not OAuthManager._is_valid_discovery(document, provider):
+            raise OauthInvalidDiscoveryError("Discovery metadata does not match the provider.")
 
     @staticmethod
     def _get_provider_connection_state(
@@ -397,19 +395,36 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
     def _fetch_issuer_discovery(issuer: str, ca: str | None) -> bytes:
         """Fetch discovery metadata using a temporary CA bundle when supplied.
 
-        Request errors propagate for callers to interpret. The temporary CA
-        file is cleaned up on success and failure.
+        The temporary CA file is cleaned up on success and failure.
+
+        Raises:
+            OauthIssuerTLSError: Certificate verification failed.
+            OauthIssuerUnreachableError: A network failure or retryable HTTP error occurred.
+            OauthInvalidDiscoveryError: The URL or HTTP response is invalid.
         """
         discovery_url = f"{issuer.rstrip('/')}/.well-known/openid-configuration"
-        if ca:
-            with NamedTemporaryFile(mode="w", encoding="utf-8") as bundle:
-                bundle.write(ca)
-                bundle.flush()
-                response = requests.get(discovery_url, verify=bundle.name, timeout=5)
-        else:
-            response = requests.get(discovery_url, timeout=5)
-        response.raise_for_status()
-        return response.content
+        try:
+            if ca:
+                with NamedTemporaryFile(mode="w", encoding="utf-8") as bundle:
+                    bundle.write(ca)
+                    bundle.flush()
+                    response = requests.get(discovery_url, verify=bundle.name, timeout=5)
+            else:
+                response = requests.get(discovery_url, timeout=5)
+            response.raise_for_status()
+            return response.content
+        except requests.HTTPError as err:
+            if err.response is not None and 500 <= err.response.status_code < 600:
+                raise OauthIssuerUnreachableError(
+                    "OAuth issuer is temporarily unavailable."
+                ) from err
+            raise OauthInvalidDiscoveryError("Discovery request failed.") from err
+        except requests.exceptions.SSLError as err:
+            raise OauthIssuerTLSError("OAuth issuer certificate verification failed.") from err
+        except (requests.exceptions.InvalidURL, ValueError) as err:
+            raise OauthInvalidDiscoveryError("Discovery URL or response is invalid.") from err
+        except (requests.RequestException, OSError) as err:
+            raise OauthIssuerUnreachableError("OAuth issuer is unreachable.") from err
 
     @staticmethod
     def _is_valid_discovery(document: object, provider: OauthProviderConfig) -> bool:
@@ -441,14 +456,16 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
     def oauth_state(self) -> OAuthState:
         """Evaluate OAuth readiness without changing shared or workload configuration."""
+        oauth_relation = self.state.oauth_relation
+        cert_relation = self.state.oauth_cert_relation
+
         if self.state.is_role(MongoDBRoles.SHARD):
+            if oauth_relation is None and cert_relation is None:
+                return OAuthState.EMPTY
             return OAuthState.WRONG_ROLE
 
         if not self.state.db_initialised:
             return OAuthState.EMPTY
-
-        oauth_relation = self.state.oauth_relation
-        cert_relation = self.state.oauth_cert_relation
 
         if self._is_replica_set_removing():
             return OAuthState.REMOVING
@@ -468,7 +485,7 @@ class OAuthManager(Object, AbstractManagerStatus[CharmState]):
 
         provider = self.oauth_requirer.get_provider_info()
         ca = self.state.app_peer_data.oauth_ca
-        if state := OAuthManager._get_provider_connection_state(provider, ca):
+        if state := self._get_provider_connection_state(provider, ca):
             return state
 
         return OAuthState.ACTIVE

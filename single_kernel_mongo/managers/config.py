@@ -420,6 +420,18 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         current = safe_load("\n".join(self.workload.read(self.file))) or {}
         return bool(current.get("setParameter", {}).get("oidcIdentityProviders"))
 
+    def file_has_oauth_ca_configuration(self) -> bool:
+        """Return whether the current OIDC configuration references a custom CA.
+
+        Inspect the saved configuration so pending CA removal remains detectable
+        even after the CA file has been deleted.
+        """
+        current = safe_load("\n".join(self.workload.read(self.file))) or {}
+        providers = current.get("setParameter", {}).get("oidcIdentityProviders")
+        if not providers:
+            return False
+        return any(provider.get("serverCAFile") for provider in json.loads(providers))
+
     @property
     @abstractmethod
     def cluster_ips(self) -> dict[str, Any]:
@@ -444,13 +456,11 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         """The OAuth parameters for this workload."""
         ...
 
-    @staticmethod
-    def _build_oauth_parameters(
-        issuer: str | None, ca_file_path: Path | None = None
-    ) -> dict[str, Any]:
+    def _build_oauth_parameters(self, issuer: str | None) -> dict[str, Any]:
         """Build OIDC settings for the single supported identity provider."""
         if not issuer:
             return {}
+
         provider = {
             "issuer": issuer,
             "audience": "mongodb",  # TODO: use the client ID
@@ -460,8 +470,11 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             "authorizationClaim": "groups",
             "supportsHumanFlows": False,
         }
-        if ca_file_path:
-            provider["serverCAFile"] = str(ca_file_path)
+
+        ca_file = self.workload.paths.oauth_ca_file
+        if self.workload.exists(ca_file):
+            provider["serverCAFile"] = str(ca_file)
+
         return {
             "security": {"authorization": "enabled"},
             "setParameter": {
@@ -746,11 +759,7 @@ class MongoDBConfigManager(MongoConfigManager):
         """
         if self.state.app_peer_data.role != MongoDBRoles.REPLICATION:
             return {}
-        ca_file = self.workload.paths.oauth_ca_file
-        return self._build_oauth_parameters(
-            self.state.app_peer_data.oauth_issuer,
-            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
-        )
+        return self._build_oauth_parameters(self.state.app_peer_data.oauth_issuer)
 
     @override
     def build_config(self) -> dict[str, Any]:
@@ -783,11 +792,7 @@ class MongosConfigManager(MongoConfigManager):
     @override
     def oauth_parameters(self) -> dict[str, Any]:
         """Render OIDC settings from the config server's cluster relation."""
-        ca_file = self.workload.paths.oauth_ca_file
-        return self._build_oauth_parameters(
-            self.state.cluster.oauth_issuer,
-            ca_file_path=ca_file if self.workload.exists(ca_file) else None,
-        )
+        return self._build_oauth_parameters(self.state.cluster.oauth_issuer)
 
     @property
     def config_server_db_parameter(self) -> dict[str, Any]:

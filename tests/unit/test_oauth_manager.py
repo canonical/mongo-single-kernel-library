@@ -19,6 +19,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    OauthInvalidDiscoveryError,
     OauthIssuerTLSError,
     OauthIssuerUnreachableError,
     OauthProviderDataMissingError,
@@ -403,7 +404,7 @@ def test_mongos_rolling_restart_removes_oidc(
         context.write.assert_called_once()
         path, content = context.write.call_args.args
         assert path == context.config.file
-        parameters = safe_load(content)["setParameter"]
+        parameters = safe_load(content).get("setParameter", {})
         assert "oidcIdentityProviders" not in parameters
         assert "MONGODB-OIDC" not in parameters.get("authenticationMechanisms", "")
         context.restart.assert_called_once()
@@ -411,21 +412,42 @@ def test_mongos_rolling_restart_removes_oidc(
 
 @pytest.mark.parametrize("initialised", [True, False])
 @pytest.mark.parametrize("leader", [True])
-def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker, initialised):
+@pytest.mark.parametrize("endpoint", ["oauth", "oauth-certificate-transfer"])
+def test_oauth_relation_blocks_shard(mongodb_ctx, shard_state, mocker, initialised, endpoint):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
         return_value=[StatusObject(status="active", message="")],
     )
-    oauth = Relation(endpoint="oauth", remote_app_name="hydra")
+    oauth = Relation(endpoint=endpoint, remote_app_name="hydra")
     state_in = replace(shard_state, relations={*shard_state.relations, oauth})
-    with mongodb_ctx(mongodb_ctx.on.collect_unit_status(), state_in) as scenario:
-        with pytest.raises(NonDeferrableFailedHookChecksError):
-            scenario.charm.operator.oauth_manager._assert_pass_hook_checks()
+    with mongodb_ctx(mongodb_ctx.on.update_status(), state_in) as scenario:
         statuses = scenario.charm.operator.oauth_manager.get_statuses("app", recompute=True)
         assert statuses == [OAuthStatuses.INVALID_OAUTH_REL_ON_SHARD.value]
         state_out = scenario.run()
-    assert state_out.unit_status == ActiveStatus()
+        assert scenario.charm.operator.oauth_manager.get_statuses("app") == statuses
+        assert scenario.charm.operator.oauth_manager.get_statuses("unit") == []
     assert state_out.app_status == BlockedStatus("Cannot integrate OIDC with shard.")
+
+
+@pytest.mark.parametrize("initialised", [True, False])
+@pytest.mark.parametrize("leader", [True])
+def test_shard_without_oauth_relations_is_not_blocked(
+    mongodb_ctx, shard_state, mocker, initialised
+):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.get_statuses",
+        return_value=[StatusObject(status="active", message="")],
+    )
+    with mongodb_ctx(mongodb_ctx.on.update_status(), shard_state) as scenario:
+        manager = scenario.charm.operator.oauth_manager
+        assert manager.get_statuses("app", recompute=True) == []
+        assert manager.get_statuses("unit", recompute=True) == []
+
+        state_out = scenario.run()
+
+        assert manager.get_statuses("app") == []
+        assert manager.get_statuses("unit") == []
+    assert state_out.app_status == ActiveStatus()
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION, MongoDBRoles.CONFIG_SERVER])
@@ -476,8 +498,8 @@ def test_update_status_waits_for_missing_oauth_provider_data(
 @pytest.mark.parametrize(
     "failure, expected_status",
     [
-        (requests.exceptions.SSLError("untrusted CA"), OAuthStatuses.ISSUER_TLS_ERROR.value),
-        (requests.Timeout("issuer timed out"), OAuthStatuses.ISSUER_UNREACHABLE.value),
+        (OauthIssuerTLSError("untrusted CA"), OAuthStatuses.ISSUER_TLS_ERROR.value),
+        (OauthIssuerUnreachableError("issuer timed out"), OAuthStatuses.ISSUER_UNREACHABLE.value),
         (None, OAuthStatuses.INVALID_DISCOVERY.value),
     ],
     ids=["tls-error", "unreachable", "invalid-discovery"],
@@ -534,6 +556,12 @@ def test_check_provider_returns_none_on_success(provider):
     "error, expected_error, expected_status",
     [
         (requests.Timeout(), OauthIssuerUnreachableError, OAuthStatuses.ISSUER_UNREACHABLE.value),
+        (OSError(), OauthIssuerUnreachableError, OAuthStatuses.ISSUER_UNREACHABLE.value),
+        (
+            requests.exceptions.InvalidURL(),
+            OauthInvalidDiscoveryError,
+            OAuthStatuses.INVALID_DISCOVERY.value,
+        ),
         (
             requests.exceptions.SSLError(),
             OauthIssuerTLSError,
@@ -542,7 +570,7 @@ def test_check_provider_returns_none_on_success(provider):
     ],
 )
 def test_transport_failure_classification(provider, error, expected_error, expected_status):
-    with patch.object(OAuthManager, "_fetch_issuer_discovery", side_effect=error):
+    with patch("single_kernel_mongo.managers.oauth.requests.get", side_effect=error):
         with pytest.raises(expected_error):
             OAuthManager._check_provider_connection(provider, None)
         manager = object.__new__(OAuthManager)

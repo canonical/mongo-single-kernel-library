@@ -4,6 +4,7 @@
 from dataclasses import replace
 
 import pytest
+import requests
 from charmlibs.interfaces.certificate_transfer import CertificateTransferRequires
 from ops.testing import Relation, Secret
 from yaml import safe_dump
@@ -187,6 +188,59 @@ def test_on_certificate_removed_replica_set_remove_ca_from_databag_and_restart(
     assert "oauth-ca" not in peer.local_app_data
     assert peer.local_app_data["oauth-issuer"] == "https://new-issuer"
     assert all("oauth-ca" not in secret.latest_content for secret in state_out.secrets)
+    restart.assert_called_once_with(force=False)
+    assert not state_out.deferred
+
+
+def test_on_certificate_removed_ca_replica_set_restarts_with_unreachable_issuer(
+    mock_issuer_tls,
+    mongodb_ctx,
+    mongodb_container,
+    certificates,
+    mocker,
+    registered_oauth,
+):
+    oauth, oauth_secret = registered_oauth
+    ca_secret = Secret(
+        tracked_content={"oauth-ca": certificates.root, "keyfile": "keyfile"},
+        owner="app",
+        label=f"{PeerRelationNames.PEERS.value}.{mongodb_ctx.app_name}.app",
+    )
+    relation = oauth_certificate_transfer_relation(certificates)
+    state_in = replace(
+        mongo_state(
+            mongodb_container,
+            peer_data={"oauth-issuer": "https://new-issuer"},
+            relations={oauth, relation},
+        ),
+        secrets={oauth_secret, ca_secret},
+    )
+    event = mongodb_ctx.on.custom(
+        CertificateTransferRequires.on.certificates_removed, relation_id=relation.id
+    )
+    with mongodb_ctx(event, state_in) as scenario:
+        # Scenario resolves custom events from objects exposed directly on the charm.
+        scenario.charm.certificate_transfer = (
+            scenario.charm.operator.oauth_manager.certificate_transfer
+        )
+        operator = scenario.charm.operator
+        assert operator.state.app_peer_data.oauth_ca == certificates.root
+        workload = operator.config_manager.workload
+        delete = mocker.patch.object(workload, "delete")
+        mocker.patch.object(workload, "exists", side_effect=lambda path: not delete.called)
+        current = safe_dump(operator.config_manager.build_config())
+        assert "serverCAFile" in current
+        mocker.patch.object(workload, "read", return_value=current.splitlines())
+        mock_issuer_tls.request.side_effect = requests.ConnectionError("Issuer is unreachable")
+        restart = mocker.patch.object(operator, "async_restart_charm_services")
+
+        state_out = scenario.run()
+
+    peer = get_relation(state_out, PeerRelationNames.PEERS.value)
+    assert "oauth-ca" not in peer.local_app_data
+    assert peer.local_app_data["oauth-issuer"] == "https://new-issuer"
+    assert all("oauth-ca" not in secret.latest_content for secret in state_out.secrets)
+    delete.assert_called_once_with(workload.paths.oauth_ca_file)
     restart.assert_called_once_with(force=False)
     assert not state_out.deferred
 

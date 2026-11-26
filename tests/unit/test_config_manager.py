@@ -599,3 +599,43 @@ def test_mongos_default_config_server(mocker):
     assert manager.config_server_db_parameter == {
         "sharding": {"configDB": "deadbeef/127.0.0.1:27017"}
     }
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
+def test_file_has_oauth_ca_configuration(mongodb_config_manager, mocker):
+    manager, _ = mongodb_config_manager
+    current = safe_dump(
+        {
+            "setParameter": {
+                "oidcIdentityProviders": json.dumps(
+                    [{"issuer": "https://issuer", "serverCAFile": "/etc/oauth-ca.pem"}]
+                )
+            }
+        }
+    )
+    mocker.patch.object(manager.workload, "read", return_value=current.splitlines())
+    mocker.patch.object(manager.workload, "exists", return_value=False)
+
+    assert manager.file_has_oauth_ca_configuration() is True
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.REPLICATION])
+@pytest.mark.parametrize(
+    "current",
+    [
+        "",
+        safe_dump({}),
+        safe_dump({"setParameter": {}}),
+        safe_dump({"setParameter": {"oidcIdentityProviders": "[]"}}),
+        safe_dump(
+            {"setParameter": {"oidcIdentityProviders": json.dumps([{"issuer": "https://issuer"}])}}
+        ),
+    ],
+    ids=["empty-file", "empty-config", "no-providers", "empty-providers", "no-ca"],
+)
+def test_file_has_no_oauth_ca_configuration(mongodb_config_manager, mocker, current):
+    manager, _ = mongodb_config_manager
+    mocker.patch.object(manager.workload, "read", return_value=current.splitlines())
+    mocker.patch.object(manager.workload, "exists", return_value=False)
+
+    assert manager.file_has_oauth_ca_configuration() is False
