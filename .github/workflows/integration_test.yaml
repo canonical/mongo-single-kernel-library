@@ -117,7 +117,7 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 282 # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 287 # Sum of steps `timeout-minutes` + 5
     permissions:
       contents: read
       actions: read # Needed for flake0 classify (run/job history)
@@ -316,7 +316,7 @@ jobs:
           verdict-path: ${{ steps.flake0-classify.outputs.verdict-path }}
           job-id: ${{ job.check_run_id }}
       - name: Load into OpenSearch
-        timeout-minutes: 10
+        timeout-minutes: 15
         continue-on-error: true
         if: ${{ github.event_name == 'pull_request' && failure() && steps.flake0-classify.outcome != 'skipped' && !github.event.pull_request.head.repo.fork }}
         uses: canonical/flake0/.github/actions/ingest@main
