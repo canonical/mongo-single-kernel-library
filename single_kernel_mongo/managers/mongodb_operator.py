@@ -978,6 +978,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             raise
 
+        # Members of a replica set do not report an address until they have run the
+        # start hook. This makes sure the address is shared with the client as soon
+        # as it's published instead of waiting for update-status.
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            for relation in self.state.client_relations:
+                self.mongo_manager.update_app_relation_data(relation)
+
     @override
     def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.

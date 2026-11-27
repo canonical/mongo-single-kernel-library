@@ -571,7 +571,8 @@ class CharmState(Object, AbstractStatusesState):
         if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
             if self.config.expose_external == ExposeExternal.NODEPORT:
                 return {f"{unit.node_ip}" for unit in self.units}
-        return {unit.address_for(relation.name) for unit in self.units}
+
+        return {address for unit in self.units if (address := unit.address_for(relation.name))}
 
     @property
     def unit_host(self) -> str | None:

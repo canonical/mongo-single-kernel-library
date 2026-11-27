@@ -1,6 +1,8 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
+
 import jubilant
 from tenacity import (
     RetryError,
@@ -18,6 +20,8 @@ from tests.integration.helpers.jubilant_common import (
 )
 from tests.integration.helpers.types import Substrate
 
+logger = logging.getLogger(__name__)
+
 
 def verify_application_data(
     juju: jubilant.Juju, substrate: Substrate, app_name: str, database_app: str, relation_name: str
@@ -27,6 +31,8 @@ def verify_application_data(
     Specifically, it verifies that all units are present in the URI and that there are no
     additional units
     """
+    endpoints_str = None
+    expected_addresses: dict[str, str] = {}
     try:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
@@ -35,19 +41,29 @@ def verify_application_data(
                 )
                 if not endpoints_str:
                     raise Exception("Missing endpoints URI")
-                for unit, unit_status in juju.status().get_units(database_app).items():
-                    public_address = get_mongodb_hostname_for_unit(
-                        juju, substrate, unit, unit_status
-                    )
+
+                units = juju.status().get_units(database_app)
+                expected_addresses = {
+                    unit: get_mongodb_hostname_for_unit(juju, substrate, unit, unit_status)
+                    for unit, unit_status in units.items()
+                }
+                for unit, public_address in expected_addresses.items():
                     if public_address not in endpoints_str:
                         raise Exception(f"unit {unit} not present in connection URI")
 
-                if len(endpoints_str.split(",")) != len(juju.status().get_units(database_app)):
+                if len(endpoints_str.split(",")) != len(units):
                     raise Exception(
                         "number of endpoints in replicaset URI do not match number of units"
                     )
 
     except RetryError:
+        logger.error(
+            "verify_application_data: gave up after retries. relation=%s "
+            "actual_endpoints=%r expected_addresses=%s",
+            relation_name,
+            endpoints_str,
+            expected_addresses,
+        )
         return False
 
     return True
