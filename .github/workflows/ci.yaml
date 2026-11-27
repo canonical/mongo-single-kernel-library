@@ -30,6 +30,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    cache-mode: none
 
   build:
     name: Build test charms
@@ -45,7 +46,7 @@ jobs:
           - tests/charms/mongos_k8s_test_charm
     steps:
       - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v50.2.1#subdirectory=_cli
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@v56.0.0#subdirectory=_cli
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -95,6 +96,7 @@ jobs:
           if-no-files-found: error
     permissions:
       contents: read
+    cache-mode: none
 
   build-helpers:
     needs: ci-quick-tests
@@ -105,12 +107,13 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v56.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
     permissions:
       contents: read
+    cache-mode: none
 
   integration-test:
     name: Integration test charm
@@ -128,3 +131,4 @@ jobs:
       GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
     permissions:
       contents: write # Needed for Allure Report
+    cache-mode: none
