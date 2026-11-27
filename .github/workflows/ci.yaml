@@ -21,6 +21,14 @@ on:
         required: true
       GCS_SERVICE_ACCOUNT:
         required: true
+      FLAKE0_INGEST_URL:
+        required: false
+      FLAKE0_INGEST_USER:
+        required: false
+      FLAKE0_INGEST_PASSWORD:
+        required: false
+      OPENROUTER_API_KEY:
+        required: false
 
 jobs:
   ci-quick-tests:
@@ -78,5 +86,11 @@ jobs:
       GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
       GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
       GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
+      FLAKE0_INGEST_URL: ${{ secrets.FLAKE0_INGEST_URL }}
+      FLAKE0_INGEST_USER: ${{ secrets.FLAKE0_INGEST_USER }}
+      FLAKE0_INGEST_PASSWORD: ${{ secrets.FLAKE0_INGEST_PASSWORD }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     permissions:
       contents: write # Needed for Allure Report
+      actions: read # Needed for flake0 classify (run/job history)
+      pull-requests: write # Needed for flake0 classify (PR diff) and summarize (PR comment)
