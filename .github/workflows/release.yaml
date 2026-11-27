@@ -19,6 +19,7 @@ jobs:
     permissions:
       pull-requests: write # Needed for lib-check
       contents: write # Needed for Allure Report
+    cache-mode: none
     secrets:
       AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
@@ -31,9 +32,10 @@ jobs:
     needs:
       - ci-tests
     name: Release to PyPI (part 1)
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v56.0.0
     permissions:
       contents: write # Needed to create git tag
+    cache-mode: none
 
   # Separate job needed to workaround https://github.com/pypi/warehouse/issues/11096
   release-trusted-publishing:
@@ -53,17 +55,19 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1.14.2 # This is an immutable release
     permissions:
       id-token: write # Needed for PyPI trusted publishing
+    cache-mode: none
 
   release-part2:
     name: Release to PyPI (part 2)
     needs:
       - release-part1
       - release-trusted-publishing
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v56.0.0
     with:
       git-tag: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
       contents: write # Needed to create GitHub release
+    cache-mode: none
 
   wait-for-pypi-available:
     name: Wait for PyPI release to be available
@@ -92,10 +96,11 @@ jobs:
 
           echo "Timed out waiting for ${DEP_NAME}==${VERSION_NUMBER} on PyPI."
           exit 1
-        env:
-          NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG: ${{ needs.release-part1.outputs.git-tag }}
+    env:
+      NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
       contents: read
+    cache-mode: none
 
   trigger-bump-dependent-charms:
     name: Trigger bump-dependent-charms workflow
@@ -110,6 +115,7 @@ jobs:
     permissions: # Needed to create PRs in dependent charm repos
       contents: write
       pull-requests: write
+    cache-mode: none
     secrets:
       PAT: ${{ secrets.PAT }}
       CI_COMMITS_SSH_SIGNING_KEY: ${{ secrets.CI_COMMITS_SSH_SIGNING_KEY }}

@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v50.2.1#subdirectory=_cli
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@v56.0.0#subdirectory=_cli
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -41,6 +41,7 @@ jobs:
       platforms: ${{ steps.collect.outputs.platforms }}
     permissions:
       contents: read
+    cache-mode: none
   build:
     needs: collect-platforms
     strategy:
@@ -51,7 +52,7 @@ jobs:
     runs-on: ${{ matrix.platform.runner }}
     steps:
       - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v50.2.1#subdirectory=_cli
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@v56.0.0#subdirectory=_cli
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -107,3 +108,4 @@ jobs:
           if-no-files-found: error
     permissions:
       contents: read
+    cache-mode: none
