@@ -19,6 +19,12 @@ on:
         required: true
       GCS_SERVICE_ACCOUNT:
         required: true
+      FLAKE0_INGEST_URL:
+        required: false
+      FLAKE0_INGEST_USER:
+        required: false
+      FLAKE0_INGEST_PASSWORD:
+        required: false
 
 jobs:
   collect-integration-tests:
@@ -195,6 +201,13 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+      - name: Start flake0 collection
+        timeout-minutes: 2
+        uses: canonical/flake0/.github/actions/collect@main
+        with:
+          phase: start
+          markers: true
+          artifact-name: flake0-${{ matrix.job.name_in_artifact }}
       - name: Run spread job
         timeout-minutes: 180
         id: spread
@@ -259,6 +272,22 @@ jobs:
         timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: df --human-readable
+      - name: Stop flake0 collection
+        id: flake0-collect
+        timeout-minutes: 3
+        if: always()
+        uses: canonical/flake0/.github/actions/collect@main
+        with:
+          phase: stop
+      - name: Load into OpenSearch
+        timeout-minutes: 10
+        if: always()
+        uses: canonical/flake0/.github/actions/ingest@main
+        with:
+          bundle-path: ${{ steps.flake0-collect.outputs.bundle-path }}
+          url: ${{ secrets.FLAKE0_INGEST_URL }}
+          username: ${{ secrets.FLAKE0_INGEST_USER }}
+          password: ${{ secrets.FLAKE0_INGEST_PASSWORD }}
 
   allure-report:
     # TODO future improvement: use concurrency group for job
