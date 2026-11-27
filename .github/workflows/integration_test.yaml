@@ -19,6 +19,14 @@ on:
         required: true
       GCS_SERVICE_ACCOUNT:
         required: true
+      FLAKE0_INGEST_URL:
+        required: false
+      FLAKE0_INGEST_USER:
+        required: false
+      FLAKE0_INGEST_PASSWORD:
+        required: false
+      OPENROUTER_API_KEY:
+        required: false
 
 jobs:
   collect-integration-tests:
@@ -109,7 +117,11 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 287 # Sum of steps `timeout-minutes` + 5
+    permissions:
+      contents: read
+      actions: read # Needed for flake0 classify (run/job history)
+      pull-requests: write # Needed for flake0 classify (PR diff) and summarize (PR comment)
     steps:
       - name: (GitHub hosted) Free up disk space
         timeout-minutes: 3
@@ -195,6 +207,14 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+      - name: Start flake0 collection
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: canonical/flake0/.github/actions/collect@main
+        with:
+          phase: start
+          markers: true
+          artifact-name: flake0-${{ matrix.job.name_in_artifact }}
       - name: Run spread job
         timeout-minutes: 180
         id: spread
@@ -259,6 +279,53 @@ jobs:
         timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: df --human-readable
+      - name: Stop flake0 collection
+        id: flake0-collect
+        timeout-minutes: 3
+        continue-on-error: true
+        if: always()
+        uses: canonical/flake0/.github/actions/collect@main
+        with:
+          phase: stop
+      - name: Render flake0 dashboard
+        timeout-minutes: 5
+        continue-on-error: true
+        if: always()
+        uses: canonical/flake0/.github/actions/plot@main
+        with:
+          bundle-path: ${{ steps.flake0-collect.outputs.bundle-path }}
+          artifact-name: flake0-plot-${{ matrix.job.name_in_artifact }}-${{ github.run_attempt }}
+      - name: Classify failure
+        id: flake0-classify
+        timeout-minutes: 25
+        continue-on-error: true
+        if: ${{ github.event_name == 'pull_request' && failure() && steps.spread.outcome == 'failure' && !github.event.pull_request.head.repo.fork }}
+        uses: canonical/flake0/.github/actions/classify@main
+        with:
+          openrouter-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          bundle-path: ${{ steps.flake0-collect.outputs.bundle-path }}
+          job-name: ${{ matrix.job.name }}
+      - name: Update flake0 PR comment
+        timeout-minutes: 5
+        continue-on-error: true
+        if: ${{ failure() && steps.flake0-classify.outcome != 'skipped' && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+        uses: canonical/flake0/.github/actions/summarize@main
+        with:
+          leg-id: ${{ matrix.job.name_in_artifact }}
+          job-name: ${{ matrix.job.name }}
+          verdict-path: ${{ steps.flake0-classify.outputs.verdict-path }}
+          job-id: ${{ job.check_run_id }}
+      - name: Load into OpenSearch
+        timeout-minutes: 15
+        continue-on-error: true
+        if: ${{ github.event_name == 'pull_request' && failure() && steps.flake0-classify.outcome != 'skipped' && !github.event.pull_request.head.repo.fork }}
+        uses: canonical/flake0/.github/actions/ingest@main
+        with:
+          bundle-path: ${{ steps.flake0-collect.outputs.bundle-path }}
+          url: ${{ secrets.FLAKE0_INGEST_URL }}
+          username: ${{ secrets.FLAKE0_INGEST_USER }}
+          password: ${{ secrets.FLAKE0_INGEST_PASSWORD }}
+          verdict-path: ${{ steps.flake0-classify.outputs.verdict-path }}
 
   allure-report:
     # TODO future improvement: use concurrency group for job
