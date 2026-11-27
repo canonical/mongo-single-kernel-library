@@ -664,7 +664,36 @@ class OAuthStatuses(Enum):
     INVALID_OAUTH_REL_ON_SHARD = StatusObject(
         status="blocked",
         message="Cannot integrate OIDC with shard.",
-        action="Remove the oauth relation from shard.",
+        action="Remove the oauth and the oauth-certificate-transfer relation from shard.",
+    )
+    MISSING_OAUTH_RELATION = StatusObject(
+        status="blocked",
+        message="Missing oauth relation.",
+        action="Add the oauth relation to the charm.",
+    )
+    INVALID_DISCOVERY = StatusObject(
+        status="blocked",
+        message="Invalid OIDC discovery metadata in the oauth relation.",
+        short_message="Invalid OIDC discovery metadata.",
+        action="Check the logs and verify the oauth relation.",
+    )
+    ISSUER_TLS_ERROR = StatusObject(
+        status="blocked",
+        message="Cannot verify the OAuth issuer's TLS certificate.",
+        short_message="Invalid OAuth issuer TLS certificate.",
+        action="Provide the issuer CA through oauth-certificate-transfer.",
+    )
+    ISSUER_UNREACHABLE = StatusObject(
+        status="waiting",  # TODO: why waiting?
+        message="Cannot reach the OAuth issuer.",
+    )
+    WAITING_FOR_OAUTH_DATA = StatusObject(
+        status="waiting",
+        message="Waiting for OIDC data from the oauth relation.",
+    )
+    ACTIVE_IDLE = StatusObject(
+        status="active",
+        message="",
     )
 
 

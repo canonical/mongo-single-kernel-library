@@ -173,7 +173,11 @@ class LDAPEventHandler(Object):
         """
         try:
             self.manager.remove_ldap_certificates()
-        except (RollingOpsNoRelationError, WorkloadServiceError) as e:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:

@@ -259,6 +259,7 @@ class CharmState(Object, AbstractStatusesState):
         )
         oauth_configured = bool(
             self.oauth_relation
+            or self.oauth_cert_relation
             or (self.charm_role.name == CharmKind.MONGOS and self.cluster.oauth_issuer)
         )
         return ldap_configured and oauth_configured
@@ -269,6 +270,16 @@ class CharmState(Object, AbstractStatusesState):
         if self.charm_role.name == CharmKind.MONGOS:
             return None
         return self.model.get_relation(ExternalRequirerRelations.OAUTH.value)
+
+    @property
+    def oauth_cert_relation(self) -> Relation | None:
+        """The certificate transfer relation for OAuth if it exists.
+
+        The relation is not available on Mongos charms.
+        """
+        if self.charm_role.name == CharmKind.MONGOS:
+            return None
+        return self.model.get_relation(ExternalRequirerRelations.OAUTH_CERT.value)
 
     @property
     def ldap_relation(self) -> Relation | None:
@@ -390,6 +401,7 @@ class CharmState(Object, AbstractStatusesState):
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
                 ClusterStateKeys.EXT_CA_SECRET.value,
+                ClusterStateKeys.OAUTH_CA.value,
                 ClusterStateKeys.CLUSTER_ID.value,
             ],
         )

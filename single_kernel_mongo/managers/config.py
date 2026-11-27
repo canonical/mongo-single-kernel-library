@@ -420,6 +420,18 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         current = safe_load("\n".join(self.workload.read(self.file))) or {}
         return bool(current.get("setParameter", {}).get("oidcIdentityProviders"))
 
+    def file_has_oauth_ca_configuration(self) -> bool:
+        """Return whether the current OIDC configuration references a custom CA.
+
+        Inspect the saved configuration so pending CA removal remains detectable
+        even after the CA file has been deleted.
+        """
+        current = safe_load("\n".join(self.workload.read(self.file))) or {}
+        providers = current.get("setParameter", {}).get("oidcIdentityProviders")
+        if not providers:
+            return False
+        return any(provider.get("serverCAFile") for provider in json.loads(providers))
+
     @property
     @abstractmethod
     def cluster_ips(self) -> dict[str, Any]:
@@ -444,28 +456,30 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         """The OAuth parameters for this workload."""
         ...
 
-    @staticmethod
-    def _build_oauth_parameters(issuer: str | None) -> dict[str, Any]:
-        """Build the shared OIDC settings for an issuer."""
+    def _build_oauth_parameters(self, issuer: str | None) -> dict[str, Any]:
+        """Build OIDC settings for the single supported identity provider."""
         if not issuer:
             return {}
+
+        provider = {
+            "issuer": issuer,
+            "audience": "mongodb",  # TODO: use the client ID
+            "authNamePrefix": "oauth",
+            "principalName": "sub",
+            "useAuthorizationClaim": True,
+            "authorizationClaim": "groups",
+            "supportsHumanFlows": False,
+        }
+
+        ca_file = self.workload.paths.oauth_ca_file
+        if self.workload.exists(ca_file):
+            provider["serverCAFile"] = str(ca_file)
+
         return {
             "security": {"authorization": "enabled"},
             "setParameter": {
                 "authenticationMechanisms": "SCRAM-SHA-256,MONGODB-OIDC",
-                "oidcIdentityProviders": json.dumps(
-                    [
-                        {
-                            "issuer": issuer,
-                            "audience": "mongodb",  # TODO: use the client ID
-                            "authNamePrefix": "oauth",
-                            "principalName": "sub",
-                            "useAuthorizationClaim": True,
-                            "authorizationClaim": "groups",
-                            "supportsHumanFlows": False,
-                        }
-                    ]
-                ),
+                "oidcIdentityProviders": json.dumps([provider]),
             },
         }
 

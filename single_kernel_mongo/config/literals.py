@@ -57,7 +57,7 @@ class InternalUsernames(str, Enum):
     CHARMED_LOGROTATE = "charmed-logrotate"
 
 
-SECRETS_APP = [f"{username}-password" for username in InternalUsernames] + ["keyfile"]
+SECRETS_APP = [f"{username}-password" for username in InternalUsernames] + ["keyfile", "oauth-ca"]
 
 VERSIONS_FILE = Path("refresh_versions.toml")
 
