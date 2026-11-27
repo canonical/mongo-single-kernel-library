@@ -53,6 +53,7 @@ jobs:
           poetry run pre-commit run --all-files
     permissions:
       contents: read
+    cache-mode: none
 
   check-pyproject-dynamic-versioning:
     name: Poetry dynamic versioning check
@@ -79,6 +80,7 @@ jobs:
           fi
     permissions:
       contents: read
+    cache-mode: none
 
   actionlint:
     name: Lint .github/workflows/
@@ -102,12 +104,14 @@ jobs:
           EXECUTABLE: ${{ steps.install.outputs.executable }}
     permissions:
       contents: read
+    cache-mode: none
 
   lint-workflows:
     name: Lint .github/workflows/
-    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v56.0.0
     permissions:
       contents: read
+    cache-mode: none
 
   lib-check:
     name: Check libraries
@@ -129,6 +133,7 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
+    cache-mode: none
 
   tox-lint:
     name: tox run -e lint
@@ -155,6 +160,7 @@ jobs:
         run: tox run -e lint
     permissions:
       contents: read
+    cache-mode: none
 
   unit-test:
     strategy:
@@ -186,6 +192,7 @@ jobs:
         run: tox run -e unit-${{ matrix.env }}
     permissions:
       contents: read
+    cache-mode: none
 
   build:
     strategy:
@@ -203,6 +210,7 @@ jobs:
       cache: true
     permissions:
       contents: read
+    cache-mode: none
 
   build-helpers:
     strategy:
@@ -212,13 +220,14 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v56.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
     permissions:
       contents: read
+    cache-mode: none
 
   integration-test:
     name: Integration test charm
@@ -238,3 +247,4 @@ jobs:
       GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
     permissions:
       contents: write # Needed for Allure Report
+    cache-mode: none
